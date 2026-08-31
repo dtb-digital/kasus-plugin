@@ -24,7 +24,7 @@
  */
 
 import { clip } from "../lib/table.mjs";
-import { bucketOf } from "./render.mjs";
+import { bucketOf, publishedNote, SIGNAL_BUCKETS, STALE_AFTER_DAYS } from "./render.mjs";
 
 /** Feltene et spørsmål om radarsignaler får se. */
 export const SIGNAL_WINDOW_FIELDS = [
@@ -87,23 +87,152 @@ export function compactSignal(signal) {
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// Lokale filtre
+// ---------------------------------------------------------------------------
+
+/**
+ * Filtrene API-et ikke kan gjøre.
+ *
+ * `/api/v1/signals` tar `status`, `type`, `hours`, `limit` og `cursor` — og
+ * verktøyet sender alle fem. Resten må gjøres på det som er hentet, og det er
+ * ikke en nødløsning: fire av spørsmålene redaksjonen faktisk stiller kan ikke
+ * uttrykkes serverside i det hele tatt.
+ *
+ * **`hours` måler `detectedAt`, ikke publiseringsdato.** Det er den viktigste av
+ * dem. Et fritt temasøk hentes uavhengig av når saken ble publisert, så
+ * `--hours 24` svarer på «hva fant radaren i dag», ikke «hva er ferskt». De to
+ * forveksles, og forvekslingen sender en journalist til en kilde om en sak som
+ * ble ferdigbehandlet i 2023.
+ *
+ * ÉN definisjon, fordi tre steder bruker svaret: forbeholdet, rendringen og
+ * `meta`. Tre kopier av «hva ble filtrert bort» har driftet før.
+ */
+const LOCAL_FILTERS = [
+  {
+    key: "origin",
+    flagg: (v) => `--origin ${v}`,
+    beskrivelse: () => "opphav",
+    test: (s, v) => (v === "null" || v === "topic_search" ? s.origin === null : s.origin === v),
+  },
+  {
+    key: "kategori",
+    flagg: (v) => `--kategori ${v}`,
+    beskrivelse: () => "pluginens egen kategori",
+    test: (s, v) => bucketOf(s) === v,
+  },
+  {
+    key: "pattern",
+    flagg: (v) => `--pattern «${v}»`,
+    beskrivelse: () => "mønstertreff",
+    test: (s, v) =>
+      typeof s.details?.matchedPattern === "string" &&
+      s.details.matchedPattern.toLowerCase().includes(String(v).toLowerCase()),
+  },
+  {
+    key: "utenMønster",
+    flagg: () => "--uten-monster",
+    beskrivelse: () => "signaler profilen IKKE forklarer",
+    test: (s) => !s.details?.matchedPattern,
+  },
+  {
+    key: "gamle",
+    flagg: () => "--gamle",
+    beskrivelse: () => `publisert mer enn ${STALE_AFTER_DAYS} dager før de ble oppdaget`,
+    test: (s) => publishedNote(s).startsWith("GAMMEL SAK"),
+  },
+  {
+    key: "ferske",
+    flagg: () => "--ferske",
+    // Ukjent dato er IKKE fersk. Det er dokumentert ellers i pluginen, og her er
+    // det en filterregel: et signal uten publiseringsdato faller ut, og antallet
+    // sies, framfor å bli med på et løfte om ferskhet ingen kan innfri.
+    beskrivelse: () => "kjent publiseringsdato, og ikke gammel sak",
+    test: (s) => {
+      const note = publishedNote(s);
+      return !note.startsWith("GAMMEL SAK") && !note.includes("ukjent dato");
+    },
+  },
+  {
+    key: "publisert",
+    flagg: (v) => `--publisert ${v}`,
+    beskrivelse: (v) => `PUBLISERT siste ${v} timer (ikke oppdaget — det er --hours)`,
+    test: (s, v) => {
+      const ms = Date.parse(s.details?.publishedDate ?? "");
+      if (Number.isNaN(ms)) return false;
+      return Date.now() - ms <= v * 3600_000;
+    },
+  },
+  {
+    key: "utenLenke",
+    flagg: () => "--uten-lenke",
+    beskrivelse: () => "signaler ingen kan åpne (må vurderes på tittelen alene)",
+    test: (s) => !s.url,
+  },
+];
+
+/** Kategoriene `--kategori` godtar. Samme nøkler som `meta.grupper`. */
+export const SIGNAL_CATEGORIES = SIGNAL_BUCKETS.map((b) => b.key);
+
+/**
+ * Bruker de lokale filtrene, og sier hva som skjedde.
+ *
+ * @param {object[]} items
+ * @param {Record<string, unknown>} filter
+ * @returns {{ kept: object[], lokale: Array<{flagg: string, beskrivelse: string}>, utenDato: number }}
+ */
+export function applyLocalFilters(items, filter = {}) {
+  const aktive = LOCAL_FILTERS.filter(
+    (f) => filter[f.key] !== null && filter[f.key] !== undefined && filter[f.key] !== false,
+  );
+
+  const kept = items.filter((s) => aktive.every((f) => f.test(s, filter[f.key])));
+
+  // Hvor mange som falt ut fordi datoen MANGLER, ikke fordi den var for gammel.
+  // Uten dette tallet ser «3 ferske» ut som hele bildet, mens tolv signaler kan
+  // ha falt ut på en tom `publishedDate` — og de er ikke vurdert, de er ukjente.
+  const datofilter = aktive.some((f) => f.key === "ferske" || f.key === "publisert");
+  const utenDato = datofilter
+    ? items.filter((s) => Number.isNaN(Date.parse(s.details?.publishedDate ?? ""))).length
+    : 0;
+
+  return {
+    kept,
+    lokale: aktive.map((f) => ({
+      flagg: f.flagg(filter[f.key]),
+      beskrivelse: f.beskrivelse(filter[f.key]),
+    })),
+    utenDato,
+  };
+}
+
 /**
  * Forbeholdet som følger signalvinduet.
  *
  * Bygd av filterets tilstand, av samme grunn som på artikkelsiden: et forbehold
- * som gjelder omtrent, blir et forbehold ingen leser. Men signalene har to
+ * som gjelder omtrent, blir et forbehold ingen leser. Men signalene har tre
  * feller artiklene ikke har, og de står her fordi de endrer hva svaret BETYR:
  *
  * - **Kvitteringen er ikke rørt.** Vinduet er et oppslag, ikke en runde. Det som
  *   ble lest her er fortsatt «nytt» i `/kasus:start`, og det skal det være.
- * - **`--origin` og `--pattern` filtreres LOKALT.** API-et støtter dem ikke, så
- *   de virker bare på det som alt er hentet — et lokalt filter på et avkortet
- *   vindu er ikke et søk.
+ * - **De fleste filtrene virker LOKALT.** API-et kan bare `status`, `type` og
+ *   `hours`, så resten treffer bare det som alt er hentet. Et lokalt filter på et
+ *   avkortet vindu er ikke et søk, og «2 treff» kan bety «2 av de 100 vi så».
+ * - **`hours` måler oppdaget, ikke publisert.** Et fritt temasøk kan levere en sak
+ *   fra 2023 som ble oppdaget i dag. `--publisert` og `--ferske` er de som måler
+ *   sakens egen alder.
  *
- * @param {{ vindu: number, hentet?: number, taketNådd?: boolean, filter?: object }} opts
+ * @param {{ vindu: number, hentet?: number, taketNådd?: boolean, filter?: object, lokale?: Array<{flagg: string, beskrivelse: string}>, utenDato?: number }} opts
  * @returns {string}
  */
-export function signalWindowCaveat({ vindu, hentet = vindu, taketNådd = false, filter = {} }) {
+export function signalWindowCaveat({
+  vindu,
+  hentet = vindu,
+  taketNådd = false,
+  filter = {},
+  lokale = [],
+  utenDato = 0,
+}) {
   const parts = [];
 
   if (taketNådd) {
@@ -123,31 +252,35 @@ export function signalWindowCaveat({ vindu, hentet = vindu, taketNådd = false, 
     );
   }
 
-  const lokalt = [
-    filter.origin ? `--origin ${filter.origin}` : null,
-    filter.pattern ? `--pattern «${filter.pattern}»` : null,
-  ].filter(Boolean);
-  if (lokalt.length) {
-    parts.push(
-      `${lokalt.join(" og ")} er filtrert LOKALT (API-et støtter det ikke): ${vindu} av ${hentet} ` +
-        `hentede passerte. Filteret virker bare på det som alt var hentet.`,
-    );
-  }
-
   const server = [
     filter.status ? `status=${filter.status}` : null,
     filter.type ? `type=${filter.type}` : null,
   ].filter(Boolean);
   if (server.length) {
-    parts.push(`Serveren filtrerte på ${server.join(" og ")} — resten er ikke vurdert.`);
+    parts.push(`Serveren filtrerte på ${server.join(" og ")} — resten er ikke hentet.`);
+  }
+
+  if (lokale.length) {
+    parts.push(
+      `${lokale.map((l) => `${l.flagg} (${l.beskrivelse})`).join(" + ")} er filtrert LOKALT ` +
+        `(API-et støtter det ikke): ${vindu} av ${hentet} hentede passerte. Filteret virker bare ` +
+        `på det som alt var hentet — hev --limit for å filtrere et større utvalg.`,
+    );
+  }
+
+  if (utenDato) {
+    parts.push(
+      `${utenDato} av de hentede har INGEN publiseringsdato og falt ut av datofilteret. De er ` +
+        `ukjente, ikke gamle — «mangler datoen» er ikke det samme som «ikke fersk».`,
+    );
   }
 
   parts.push(
     `Kvitteringen «siden sist» er IKKE rørt: dette er et oppslag, og alt her er fortsatt ` +
       `nytt i /kasus:start.`,
-    `oppdaget og publisert er to tall — et fritt temasøk kan levere en sak fra 2023 som ble ` +
-      `oppdaget i dag. Grunnlaget er tittel og sammendrag, ikke hele researchkonteksten: ` +
-      `bruk «signal <id>» for den.`,
+    `oppdaget og publisert er to tall — --hours måler oppdaget, --publisert måler sakens ` +
+      `egen alder. Grunnlaget er tittel og sammendrag, ikke hele researchkonteksten: bruk ` +
+      `«signal <id>» for den.`,
   );
 
   return parts.join(" ");

@@ -36,16 +36,47 @@ Svaret er signalene med id, kategori, status, begge datoer, mønster, kilde, url
 kildeantall og sammendrag — **ingen researchkontekst** (`description`, `snippet`,
 `actors`, `keyFigures`).
 
-**Filtrene er valget ditt, og det viktigste du gjør:**
+**Filtrene er valget ditt, og det viktigste du gjør.**
 
-| Spørsmålet | Vinduet |
-|---|---|
-| «Er det noe å skrive om i dag?» | `--kort --hours 24`. Da er svaret FULLSTENDIG for perioden, og det skal sies. |
-| «Hva har kommet inn denne uka?» | `--kort --hours 168`. |
-| «Er det noe om <tema>?» | `--kort` alene — default 100 sist oppdagede. Temaet er ikke et filter, det er det du leter etter når du leser. |
-| «Er det oppfølginger av våre egne saker?» | `--kort --origin own_followup`. Filtreres LOKALT, så det virker bare på det som ble hentet. |
-| «Hvor mange på mønsteret X?» | `--kort --pattern «X»`. Også lokalt. |
-| «Hva er alt løftet / forkastet?» | `--kort --status promoted` eller `--status dismissed`. Serverside. |
+Bare tre av dem går til serveren: `--status`, `--type` og `--hours`. Resten
+filtrerer det som ALT er hentet, fordi API-et ikke støtter dem. Det har én
+konsekvens du må ha i hodet: et lokalt filter på et avkortet vindu er ikke et søk.
+Får du 2 treff av 100 hentede, er svaret «2 av de 100 vi så» — hev `--limit` hvis
+det kan finnes flere.
+
+| Spørsmålet | Filteret | Hvor |
+|---|---|---|
+| «Er det noe å skrive om i dag?» | `--hours 24` | server |
+| «Hva har kommet inn denne uka?» | `--hours 168` | server |
+| «Hva er løftet / forkastet?» | `--status promoted` / `--status dismissed` | server |
+| «Er det noe om <tema>?» | ingen — temaet er ikke et filter, det er det du leter etter når du leser | — |
+| «Er det oppfølginger av EGNE saker?» | `--kategori egen_oppfolging` | lokalt |
+| «Er det noe fra konkurrentene?» | `--kategori konkurrentsak` eller `konkurrent_oppfolging` | lokalt |
+| «Hvor mye er bare temasøk?» | `--kategori temasok` | lokalt |
+| «Hvor mange på mønsteret X?» | `--pattern «X»` | lokalt |
+| «Finner radaren noe profilen ikke forklarer?» | `--uten-monster` | lokalt |
+| «Er det noe FERSKT å skrive om?» | `--publisert 24` eller `--ferske` | lokalt |
+| «Hvor mye av det er gamle saker?» | `--gamle` | lokalt |
+| «Er det signaler vi ikke kan åpne?» | `--uten-lenke` | lokalt |
+
+**`--hours` og `--publisert` er ikke det samme, og forvekslingen er dyr.**
+`--hours` måler når radaren FANT signalet. `--publisert` måler hvor gammel saken
+er. Et fritt temasøk hentes uavhengig av publiseringstidspunkt, så `--hours 24`
+kan gi deg en sak fra 2023 som ble oppdaget i dag. Spør noen «er det noe nytt å
+skrive om?», er det oftest sakens alder de mener — bruk `--publisert 48` eller
+`--ferske`, og **si hvilken av de to du målte.**
+
+**Et signal uten publiseringsdato faller ut av `--ferske` og `--publisert`.**
+`meta.utenPubliseringsdato` sier hvor mange. Si tallet: de er *ukjente*, ikke
+gamle, og «3 ferske» ser ut som hele bildet hvis tolv falt ut på en tom dato.
+
+`--kategori` er pluginens egen firedeling, og den finnes fordi `--origin` alene
+ikke kan uttrykke den: `origin` er `null` for både `konkurrentsak` og `temasok`, så
+kategorien krever at `type` leses samtidig. Bruk `--kategori` framfor å kombinere
+`--origin` og `--type` selv.
+
+`--gamle` og `--ferske` utelukker hverandre, og verktøyet sier fra.
+`meta.lokaleFiltre` lister hvert filter som var i bruk — gjenta dem.
 
 `meta.forbehold` sier hva vinduet faktisk dekker, bygd av filteret du valgte. Les
 det, og gjenta det. Er `meta.taketNådd` sann, mangler svaret ditt data — det er den

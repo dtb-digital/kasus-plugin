@@ -40,12 +40,35 @@ forbeholdet står i svaret: en tom treffliste betyr «ikke blant disse artiklene
 aldri «ikke dekket».
 
 **`hours` på artikler måles mot `published`.** Upublisert materiale faller derfor
-utenfor når `hours` settes. Matchingen bruker `--limit` framfor `hours`, slik at
-kladder er med — en kladd på samme tema er nettopp det man vil vite om.
+utenfor når `hours` settes.
 
-**`origin` kan ikke filtreres serverside.** Verktøyet filtrerer lokalt med
-`--origin`/`--pattern` og oppgir både antall hentet og antall som passerte, slik at
-et lokalt filter ikke forveksles med et tomt datasett.
+**Kladder er utenfor `--kort`-vinduet, alltid.** Her sto det tidligere at
+`--limit` ble brukt framfor `hours` «slik at kladder er med». Det var usant:
+ruten sorterer `published desc, nulls last`, så upublisert ligger BAKERST og
+faller utenfor i det øyeblikket taket nås. Verifisert — 250 publiserte saker og 5
+kladder ga 0 kladder i et vindu på 200, mens de samme 5 kom med når taket ble
+hevet. Utelatelsen var altså ikke en regel, men en funksjon av redaksjonens
+størrelse.
+
+Verktøyet skiller dem derfor eksplisitt, på `published` framfor på `status` —
+`status` er fritekst og varierer med CMS. Antallet oppgis som
+`meta.utenPublisering`, og forbeholdet sier at «ingen treff» ikke er «ingen jobber
+med dette». Kladdene er et eget oppslag: `articles --status D`.
+
+**Signal-ruten har bare tre filtre:** `status`, `type` og `hours` — verifisert mot
+`app/api/v1/signals/route.ts`. Alt annet redaksjonen faktisk spør om filtreres
+lokalt av verktøyet: `--kategori` (pluginens firedeling, som krever at `origin` og
+`type` leses samtidig), `--origin`, `--pattern`, `--uten-monster` (FRAVÆRET av et
+mønster, som ikke kan uttrykkes med `--pattern`), `--uten-lenke`, `--gamle`,
+`--ferske` og `--publisert <timer>`. Verktøyet oppgir antall hentet, antall som
+passerte og hvilke filtre som var i bruk, slik at et lokalt filter ikke forveksles
+med et tomt datasett.
+
+**`hours` på signaler måles mot `detectedAt`, ikke publiseringsdato.** Det er
+grensen som ikke kan lukkes serverside i det hele tatt: et fritt temasøk hentes
+uavhengig av når saken ble publisert. `--publisert` og `--ferske` måler sakens egen
+alder, lokalt — og et signal uten `details.publishedDate` faller ut av dem, med
+antallet oppgitt som `meta.utenPubliseringsdato`. Ukjent dato er ikke «gammel».
 
 ## Feltverdier som betyr noe redaksjonelt
 

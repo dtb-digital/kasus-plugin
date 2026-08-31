@@ -13,7 +13,9 @@
  *   kasus.mjs nytt     [--hours 24] [--limit 40] [--all] [--json]
  *   kasus.mjs kvitter  [--at <ISO>] [--ids id1,id2] [--ids-only] [--reset] [--json]
  *   kasus.mjs signals  [--kort] [--status new] [--type market_signal]
- *                      [--origin own_followup] [--pattern «navn»] [--hours 24]
+ *                      [--origin own_followup] [--kategori temasok]
+ *                      [--pattern «navn»] [--uten-monster] [--uten-lenke]
+ *                      [--gamle|--ferske] [--publisert 48] [--hours 24]
  *                      [--limit 20] [--json]
  *   kasus.mjs signal <id> [--json]
  *   kasus.mjs articles [--kort] [--status P] [--cms labrador]
@@ -55,8 +57,19 @@ import {
   SIGNAL_BUCKETS,
   STALE_AFTER_DAYS,
 } from "./render.mjs";
-import { ARTICLE_WINDOW_FIELDS, articleWindowCaveat, compactArticle } from "./articles.mjs";
-import { compactSignal, SIGNAL_WINDOW_FIELDS, signalWindowCaveat } from "./signals.mjs";
+import {
+  ARTICLE_WINDOW_FIELDS,
+  articleWindowCaveat,
+  compactArticle,
+  splitUnpublished,
+} from "./articles.mjs";
+import {
+  applyLocalFilters,
+  compactSignal,
+  SIGNAL_CATEGORIES,
+  SIGNAL_WINDOW_FIELDS,
+  signalWindowCaveat,
+} from "./signals.mjs";
 import { ConfigError, headerLine, hostOf, resolveTarget } from "./targets.mjs";
 import {
   ack,
@@ -74,7 +87,7 @@ import {
   writeState,
 } from "./state.mjs";
 
-const VERSION = "0.6.0";
+const VERSION = "0.9.0";
 const DEFAULT_LIMIT = 20;
 
 /**
@@ -130,8 +143,24 @@ const MODES = {
   },
   signals: {
     summary:
-      "Liste radarsignaler, nyeste først (etter detectedAt). Med --kort: vinduet et spørsmål om signalene leses mot, uten researchkontekst.",
-    flags: [...COMMON_FLAGS, "kort", "status", "type", "origin", "pattern", "hours", "limit"],
+      "Liste radarsignaler, nyeste først (etter detectedAt). Med --kort: vinduet et spørsmål om signalene leses mot, uten researchkontekst. Bare --status/--type/--hours går til serveren; resten filtrerer det som er hentet.",
+    flags: [
+      ...COMMON_FLAGS,
+      "kort",
+      "status",
+      "type",
+      "hours",
+      "limit",
+      // Lokale. API-et kan ikke gjøre disse — se LOCAL_FILTERS i signals.mjs.
+      "origin",
+      "kategori",
+      "pattern",
+      "uten-monster",
+      "uten-lenke",
+      "gamle",
+      "ferske",
+      "publisert",
+    ],
     run: runSignals,
   },
   signal: {
@@ -142,7 +171,7 @@ const MODES = {
   },
   articles: {
     summary:
-      "Redaksjonens EGNE artikler. Med --kort: vinduet et spørsmål om egen dekning leses mot, uten brødtekst. Filtrene avgjør hva svaret kan dekke.",
+      "Redaksjonens EGNE artikler. Med --kort: vinduet et spørsmål om egen dekning leses mot — uten brødtekst, og uten kladder (de sorteres sist av API-et; antallet oppgis). Rå liste uten --kort er tro mot endepunktet.",
     flags: [...COMMON_FLAGS, "kort", "status", "cms", "hours", "limit"],
     run: runArticles,
   },
@@ -348,8 +377,28 @@ async function runSignals(target, flags) {
   const type = assertOneOf(stringFlag(flags, "type"), SIGNAL_TYPES, "type");
   const hours = intFlag(flags, "hours");
   const limit = intFlag(flags, "limit", kort ? SIGNAL_WINDOW : DEFAULT_LIMIT);
-  const origin = stringFlag(flags, "origin");
-  const pattern = stringFlag(flags, "pattern");
+
+  const gamle = boolFlag(flags, "gamle");
+  const ferske = boolFlag(flags, "ferske");
+  // De to er motsatte påstander om samme signal, og «begge» er tomt per
+  // definisjon. En tom liste ville sett ut som «ingen gamle saker».
+  if (gamle && ferske) {
+    throw new UsageError(
+      "--gamle og --ferske utelukker hverandre: et signal er ikke både publisert lenge før " +
+        "det ble oppdaget og ferskt. Velg én.",
+    );
+  }
+
+  const local = {
+    origin: stringFlag(flags, "origin"),
+    kategori: assertOneOf(stringFlag(flags, "kategori"), SIGNAL_CATEGORIES, "kategori"),
+    pattern: stringFlag(flags, "pattern"),
+    utenMønster: boolFlag(flags, "uten-monster"),
+    utenLenke: boolFlag(flags, "uten-lenke"),
+    gamle,
+    ferske,
+    publisert: intFlag(flags, "publisert"),
+  };
 
   const { items, truncated, pages } = await apiList(
     target,
@@ -358,24 +407,24 @@ async function runSignals(target, flags) {
     limit,
   );
 
-  // `origin` og `matchedPattern` kan ikke filtreres serverside i denne
-  // API-versjonen (dokumentert i docs/signals-api-README.md). Filteret gjøres
-  // derfor lokalt — og hva som ble filtrert bort SIES, ellers ser et lokalt
-  // filter ut som et tomt datasett.
-  const filtered = items
-    .filter((s) => (origin ? matchOrigin(s, origin) : true))
-    .filter((s) => (pattern ? matchPattern(s.details?.matchedPattern, pattern) : true));
+  // Bare `status`, `type` og `hours` finnes serverside (verifisert mot
+  // app/api/v1/signals/route.ts). Resten filtreres på det som er hentet — og hva
+  // som ble filtrert bort SIES, ellers ser et lokalt filter ut som et tomt
+  // datasett.
+  const { kept, lokale, utenDato } = applyLocalFilters(items, local);
 
-  const filter = { status, type, hours, origin, pattern };
+  const filter = { status, type, hours, ...local };
 
   if (kort) {
-    const vindu = filtered.map(compactSignal);
+    const vindu = kept.map(compactSignal);
     const meta = {
       vindu: vindu.length,
       hentet: items.length,
       sider: pages,
       taketNådd: truncated,
       filter,
+      lokaleFiltre: lokale,
+      utenPubliseringsdato: utenDato,
       felter: SIGNAL_WINDOW_FIELDS,
       kvittering: "ikke rørt — dette er et oppslag, ikke en runde",
       forbehold: signalWindowCaveat({
@@ -383,6 +432,8 @@ async function runSignals(target, flags) {
         hentet: items.length,
         taketNådd: truncated,
         filter,
+        lokale,
+        utenDato,
       }),
     };
     return {
@@ -395,16 +446,18 @@ async function runSignals(target, flags) {
 
   return {
     kind: "signals",
-    items: filtered,
+    items: kept,
     meta: {
       hentet: items.length,
-      etterFilter: filtered.length,
+      etterFilter: kept.length,
       sider: pages,
       taketNådd: truncated,
       filter,
+      lokaleFiltre: lokale,
+      utenPubliseringsdato: utenDato,
     },
     render: () =>
-      listOutput(filtered, items.length, truncated, "signaler", (s) => renderSignal(s)),
+      listOutput(kept, items.length, truncated, "signaler", (s) => renderSignal(s), lokale),
   };
 }
 
@@ -470,10 +523,19 @@ async function runArticles(target, flags) {
     };
   }
 
-  const vindu = items.map(compactArticle);
+  // Kladder holdes utenfor. Ikke fordi de er uinteressante — en kladd på samme
+  // tema er det mest verdifulle treffet sjekken kan gi — men fordi API-et
+  // sorterer upublisert SIST, så alternativet er «med hvis redaksjonen er liten
+  // nok». Antallet sies, så utelatelsen ikke er stille.
+  const { publisert, utenPublisering, respektertStatus } = splitUnpublished(items, { status });
+
+  const vindu = publisert.map(compactArticle);
   const filter = { status, cms, hours };
   const meta = {
     vindu: vindu.length,
+    hentet: items.length,
+    utenPublisering,
+    kladderUtelatt: !respektertStatus,
     sider: pages,
     taketNådd: truncated,
     filter,
@@ -481,7 +543,12 @@ async function runArticles(target, flags) {
     // Forbeholdet er en del av SVARET, ikke en fotnote i dokumentasjonen: uten
     // det leses «0 treff» som «ikke dekket», og det er feilslutningen som får
     // noen til å skrive en sak redaksjonen publiserte i fjor.
-    forbehold: articleWindowCaveat({ vindu: vindu.length, taketNådd: truncated, filter }),
+    forbehold: articleWindowCaveat({
+      vindu: vindu.length,
+      taketNådd: truncated,
+      filter,
+      utenPublisering,
+    }),
   };
 
   return {
@@ -570,15 +637,6 @@ function gamleSaker(signals) {
     }));
 }
 
-function matchOrigin(signal, wanted) {
-  if (wanted === "null" || wanted === "topic_search") return signal.origin === null;
-  return signal.origin === wanted;
-}
-
-function matchPattern(value, wanted) {
-  return typeof value === "string" && value.toLowerCase().includes(wanted.toLowerCase());
-}
-
 function assertOneOf(value, allowed, name) {
   if (value === null) return null;
   if (!allowed.includes(value)) {
@@ -595,15 +653,19 @@ function requireId(positional, mode) {
   return id;
 }
 
-function listOutput(filtered, fetched, truncated, noun, renderOne) {
+function listOutput(filtered, fetched, truncated, noun, renderOne, lokale = []) {
   const parts = [];
 
   if (!filtered.length) {
-    // «Tomt» og «filtrert bort» er ikke samme svar, og forveksles lett.
+    // «Tomt» og «filtrert bort» er ikke samme svar, og forveksles lett. Hvilke
+    // filtre som var i bruk kommer fra ÉN definisjon framfor å bli listet her —
+    // en hardkodet liste her sa «--origin/--pattern» lenge etter at det fantes
+    // flere.
     parts.push(
       fetched === 0
         ? `Ingen ${noun} for denne organisasjonen med dette filteret.`
-        : `${fetched} ${noun} ble hentet, men ingen passerte det lokale filteret (--origin/--pattern).`,
+        : `${fetched} ${noun} ble hentet, men ingen passerte det lokale filteret` +
+            `${lokale.length ? ` (${lokale.map((l) => l.flagg).join(" + ")})` : ""}.`,
     );
     return parts.join("\n");
   }

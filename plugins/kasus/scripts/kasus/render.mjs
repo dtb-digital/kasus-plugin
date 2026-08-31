@@ -244,7 +244,8 @@ export function renderArticles(articles, { truncated = false } = {}) {
 export function renderArticleWindow(vindu, meta) {
   const parts = [
     "EGNE SAKER — VINDUET ET SPØRSMÅL OM EGEN DEKNING BESVARES MOT",
-    `  ${meta.vindu} artikler, nyest publisert først, hentet over ${meta.sider} side(r)`,
+    `  ${meta.vindu} publiserte artikler, nyest først, hentet over ${meta.sider} side(r)` +
+      `${meta.utenPublisering ? `  ·  ${meta.utenPublisering} kladd(er) holdt utenfor` : ""}`,
     `  felter: ${meta.felter.join(", ")}  (ingen brødtekst — bruk «article <id>»)`,
     `  FORBEHOLD: ${meta.forbehold}`,
   ];
@@ -296,6 +297,9 @@ export function renderSignalWindow(vindu, meta) {
     "RADARSIGNALER — VINDUET ET SPØRSMÅL LESES MOT",
     `  ${meta.vindu} signaler${meta.hentet !== meta.vindu ? ` (av ${meta.hentet} hentet)` : ""}, sist oppdaget først, over ${meta.sider} side(r)`,
     `  felter: ${meta.felter.join(", ")}  (ingen researchkontekst — bruk «signal <id>»)`,
+    meta.lokaleFiltre?.length
+      ? `  lokale filtre: ${meta.lokaleFiltre.map((l) => `${l.flagg} (${l.beskrivelse})`).join(" + ")}`
+      : null,
     `  KVITTERING: ${meta.kvittering}`,
     `  FORBEHOLD: ${meta.forbehold}`,
   ];
@@ -304,7 +308,8 @@ export function renderSignalWindow(vindu, meta) {
     parts.push(
       "",
       meta.hentet
-        ? `${meta.hentet} signaler ble hentet, men ingen passerte det lokale filteret.`
+        ? `${meta.hentet} signaler ble hentet, men ingen passerte det lokale filteret` +
+          `${meta.lokaleFiltre?.length ? ` (${meta.lokaleFiltre.map((l) => l.flagg).join(" + ")})` : ""}.`
         : "Ingen radarsignaler for denne organisasjonen med dette filteret.",
       "",
       "Det er ikke det samme som «ingenting skjer»: nøkkelen avgjør organisasjonen,",

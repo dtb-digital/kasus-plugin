@@ -1,6 +1,6 @@
 ---
 description: Status — hva har skjedd siden sist? Lesende blikk i radarsignalene, uten å starte en runde
-argument-hint: [--hours 72] [--pattern «navn»] [--origin own_followup] [--status new] [--limit 20] | [et spørsmål]
+argument-hint: [--hours 72] [--kategori temasok] [--gamle|--ferske] [--publisert 48] [--uten-monster] [--pattern «navn»] [--status new] [--limit 20] | [et spørsmål]
 allowed-tools: ["Bash", "Agent", "Task"]
 ---
 
@@ -28,7 +28,9 @@ Gjelder tom input og `--hours`/`--limit`/`--all`. Denne måler mot kvitteringen 
 undertrykker det som alt er sett, så den svarer på «hva er NYTT». Med `--hours`
 sier den selv at vinduet er overstyrt.
 
-**Med `--pattern`, `--origin`, `--status` eller `--type`** er det et oppslag
+**Med et filterflagg** — `--status`, `--type`, `--kategori`, `--origin`,
+`--pattern`, `--uten-monster`, `--uten-lenke`, `--gamle`, `--ferske`,
+`--publisert` — er det et oppslag
 framfor en status:
 
 ```bash
@@ -113,9 +115,16 @@ arbeidet her.
 
 ## Merk
 
-- **`--origin` og `--pattern` filtreres lokalt** — API-et støtter dem ikke.
-  `signals` oppgir både hvor mange som ble hentet og hvor mange som passerte, så et
-  lokalt filter ikke forveksles med et tomt datasett.
+- **Bare `--status`, `--type` og `--hours` går til serveren.** Resten filtrerer
+  det som alt er hentet, fordi API-et ikke støtter dem. `signals` oppgir hvor mange
+  som ble hentet, hvor mange som passerte, og hvilke filtre som var i bruk — så et
+  lokalt filter ikke forveksles med et tomt datasett. Er svaret smalt, hev
+  `--limit` framfor å konkludere.
+- **`--hours` måler oppdaget, `--publisert` måler sakens alder.** Et fritt temasøk
+  kan levere en sak fra 2023 som ble oppdaget i dag, så «er det noe nytt?» er
+  oftest `--publisert 48` og ikke `--hours 48`. Si hvilken du målte.
+- **Et signal uten publiseringsdato faller ut av datofiltrene**, og antallet står i
+  `meta.utenPubliseringsdato`. De er ukjente, ikke gamle.
 - Header-linja sier hvilken installasjon og nøkkel-variabel som ble brukt.
   **Nøkkelen avgjør organisasjonen** — «ingen signaler» betyr «ingen for DENNE
   organisasjonen», aldri «ingen i Kasus».

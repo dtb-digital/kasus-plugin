@@ -7,7 +7,8 @@ allowed-tools: ["Bash", "AskUserQuestion", "Agent", "Task", "Read", "Write", "Gl
 Kjør vaktrunden. Dette er **det eneste pluginen gjør**, og den gjør det i seks
 steg:
 
-1. Hent radarsignalene som har kommet inn **siden forrige runde**
+1. Hent radarsignalene som har kommet inn **siden forrige runde**, og premissene:
+   profilen og **ukas egen produksjon**
 2. Legg fram en prioritering — journalisten velger sak
 3. Sjekk den valgte saken mot **redaksjonens egne artikler**
 4. Gjør et **bredt søk** for å utvide og etterprøve
@@ -19,11 +20,12 @@ Du hopper ikke over et steg, og du velger ikke saken for journalisten.
 
 ## 1. Hent runden og premissene
 
-Kjør begge i **samme melding**, så de går parallelt:
+Kjør alle tre i **samme melding**, så de går parallelt:
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs nytt $ARGUMENTS --json
 node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs profile --json
+node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs articles --kort --hours 168 --limit 40 --json
 ```
 
 `nytt` måler mot **kvitteringen** — tidspunktet forrige runde ble gjort, lagret i
@@ -31,6 +33,16 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs profile --json
 
 Profilen er ikke et vedlegg. Den er grunnlaget for både prioriteringen i steg 2 og
 tonen i steg 5: uten `criteria.patterns` er en rangering magefølelse med tall på.
+
+Det tredje kallet er **ukas produksjon**: de 40 nyeste publiserte sakene, siste
+sju døgn. Profilen sier hva som fungerer for disse leserne i prinsippet; denne
+sier hva redaksjonen faktisk holder på med akkurat nå. De to er ikke det samme, og
+det er den andre journalisten kjenner igjen — «vi kjørte den saken på tirsdag».
+
+Vinduet er lite med vilje. Det skal leses her, i samtalen, fordi det brukes til å
+begrunne en rangering journalisten skal se. Er `taketNådd` sann, publiserte
+redaksjonen mer enn 40 saker på en uke — si det, og behandle vinduet som «de 40
+siste», ikke som uka.
 
 Tre svar krever noe annet enn å gå videre:
 
@@ -75,12 +87,13 @@ Rangér så, i denne rekkefølgen:
 1. **Mønstertreff.** `matchedPattern` peker på et mønster i profilen. Les
    `whatWorks` — treffer saken det, er den sterk. Står vinklingen i `whatToAvoid`,
    si det og ranger ned, uansett hvor fersk den er.
-2. **Hastverk og eierskap**, etter tabellen over.
-3. **Om det finnes en primærkilde å gå til i dag.** Et signal som peker på et
+2. **Kobling til ukas produksjon** — se under.
+3. **Hastverk og eierskap**, etter tabellen over.
+4. **Om det finnes en primærkilde å gå til i dag.** Et signal som peker på et
    sakspapir, en statistikkpublisering eller et vedtak kan researches nå. Et som
    bare peker på en omtale krever en telefon — og det er en annen slags dag.
-4. **Publiseringsdato**, ikke oppdaget-tidspunkt.
-5. **Nærhet til `keywords`** i profilen.
+5. **Publiseringsdato**, ikke oppdaget-tidspunkt.
+6. **Nærhet til `keywords`** i profilen.
 
 Si også i én linje **hva du vurderer som støy og hvorfor** — typisk frie temasøk
 uten mønstertreff og utenfor `keywords`. En liste som later som alt er interessant
@@ -88,6 +101,36 @@ er ingen prioritering.
 
 Finn ikke opp en begrunnelse. Er det uklart hvorfor et signal ble plukket opp, er
 det svaret: «uten mønstertreff — vet ikke hvorfor denne er her».
+
+### Koble signalene til ukas produksjon
+
+Les artikkelvinduet mot signallista FØR du rangerer. Tre av koblingene endrer
+prioriteringen, og de er lette å gå glipp av fordi radaren ikke kjenner dem:
+
+1. **En oppfølging radaren ikke visste var en oppfølging.** Et fritt temasøk
+   (`temasok`) har `origin: null` og ser ut som støy — men handler det om noe
+   redaksjonen publiserte i går, er det i praksis en oppfølging av egen sak, og
+   det er ofte den billigste gode saken på lista. Si koblingen eksplisitt, med
+   **lenke til den egne saken**: «henger sammen med [vår sak fra tirsdag](url)».
+   Dette er den mest verdifulle bruken av vinduet.
+2. **Et tema redaksjonen står i akkurat nå.** Har uka fire saker om strømpriser,
+   er et strømpris-signal ikke nøytralt. Si tallet framfor å tolke det:
+   «redaksjonen har publisert fire saker om dette siden mandag». Om det er en
+   grunn til å ta signalet (vi eier temaet, leserne forventer mer) eller la det
+   ligge (vi har mettet det) er journalistens vurdering, ikke din.
+3. **En åpenbar dublett, fanget før valget.** Ser et signal ut som noe som ble
+   publisert i går, si det NÅ. Ellers velger journalisten saken, og oppdager det
+   først i steg 4a — etter at en agent har lest to hundre artikler.
+
+**Dette erstatter IKKE steg 4a.** Vinduet er sju døgn og 40 saker, valgt for å
+svare på «hva holder vi på med», og det kan ikke svare på «har vi skrevet om dette
+før?». Den sjekken går mot 200 artikler, gjøres semantisk av `kasus-archivist`, og
+skal kjøres for hver valgte sak uansett hva du fant her. Et signal du IKKE koblet
+til noe i dette vinduet kan godt være dekket for tre måneder siden.
+
+Finner du ingen kobling, si det i én linje og gå videre. En oppdiktet forbindelse
+til en egen sak er verre enn ingen: den flytter et signal opp i rangeringen på et
+grunnlag som ikke finnes.
 
 ### Hvert signal skal være klikkbart
 
@@ -166,9 +209,15 @@ den leser 200 artikler mens du tenker. Men **send ingen `kasus-researcher` før
 dommen er inne.** Er svaret `SAMME SAK`, er de seks søkene bortkastet arbeid på en
 sak som ikke skal skrives — og det er en dyrere feil enn å vente et halvminutt.
 
-**Ikke hent `articles --kort` selv.** Vinduet er 200 artikler, og det hører i
-agentens kontekst, ikke i din. Trenger du én bestemt artikkel i full tekst
-etterpå — for tone, eller for å bygge videre — er det `article <id>` du bruker.
+**Ikke hent dekningsvinduet selv.** Du har ukas 40 saker fra steg 1, og det er alt
+du skal ha inline. Dekningssjekken går mot 200 artikler uten tidsgrense, og det
+vinduet hører i agentens kontekst — ikke i din. Trenger du én bestemt artikkel i
+full tekst etterpå, for tone eller for å bygge videre, er det
+`article <id> --json` du bruker (uten `--json` klippes teksten på 6 000 tegn).
+
+Og si til agenten hva du alt fant: fant du en kobling til ukas produksjon i steg 2,
+skal den vite det, slik at den ikke bruker et av sine fem kandidatplasser på å
+oppdage det samme på nytt.
 
 Dette steget avgjør tre ting samtidig: om saken er skrevet før (ikke gjenta), om
 det finnes en egen sak å bygge videre på (billigere og bedre), og hvilken tone

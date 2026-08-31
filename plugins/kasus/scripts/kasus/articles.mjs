@@ -80,27 +80,78 @@ export function compactArticle(article) {
 }
 
 /**
+ * Er artikkelen publisert?
+ *
+ * `published` er nullable i API-et, og en tom verdi betyr upublisert — en kladd.
+ * Det er en mer robust test enn `status`, som er FRITEKST og varierer med CMS-et:
+ * Labrador, Sanity og HubSpot bruker `P`/`D`, mens WordPress sender `draft`,
+ * `pending` og `private` rett gjennom. En sjekk på status ville derfor virket for
+ * noen redaksjoner og stille feilet for andre.
+ */
+const erPublisert = (article) => Boolean(article?.published);
+
+/**
+ * Deler vinduet i publisert og upublisert.
+ *
+ * **Kladder holdes utenfor vinduet, og det er et valg.** Grunnen er at
+ * alternativet ikke er «kladder er med» — det er «kladder er med HVIS redaksjonen
+ * er liten nok». API-et sorterer `published desc, nulls last`, så upublisert
+ * ligger bakerst: en redaksjon med 250 publiserte saker får null kladder i et
+ * vindu på 200, mens en med 100 saker får alle sine. Samme kommando, ulikt svar,
+ * uten at noe sier fra. Et eksplisitt skille er verre å oppdage og bedre å stole
+ * på.
+ *
+ * Antallet SIES, så utelatelsen ikke er stille. Skal kladdene ses, er de et eget
+ * oppslag: `articles --status D` (eller CMS-ets eget token).
+ *
+ * @param {object[]} items
+ * @returns {{ publisert: object[], utenPublisering: number }}
+ */
+export function splitUnpublished(items, { status = null } = {}) {
+  // Har noen SPURT om en status, har de sagt hva de vil ha. Da ville en stille
+  // utelatelse gjort «--status D» til et kall som alltid svarer tomt — altså
+  // gjort fluktveien ut av regelen ubrukelig. Regelen finnes for å gjøre
+  // DEFAULT-vinduet forutsigbart, ikke for å overstyre et eksplisitt filter.
+  if (status) return { publisert: items, utenPublisering: 0, respektertStatus: true };
+
+  const publisert = items.filter(erPublisert);
+  return {
+    publisert,
+    utenPublisering: items.length - publisert.length,
+    respektertStatus: false,
+  };
+}
+
+/**
  * Forbeholdet som følger vinduet.
  *
  * Det er BYGD av filterets faktiske tilstand framfor å være én fast setning, og
- * det er ikke pynt. De to spørsmålsformene har ulike svakheter, og en fast setning
- * ville løyet på den ene av dem:
+ * det er ikke pynt. Spørsmålsformene har ulike svakheter, og en fast setning ville
+ * løyet på minst én av dem:
  *
  * - **«Har vi skrevet om dette før?»** har ingen tidsgrense, så vinduet ER
  *   grensen: en eldre sak er usynlig, og et tomt svar må ikke leses som «finnes
  *   ikke».
  * - **«Hva har vi skrevet i dag?»** har en tidsgrense, og da er svaret
  *   FULLSTENDIG så lenge taket ikke er nådd. Å resitere et vindusforbehold der
- *   ville såd tvil om et svar som faktisk er komplett — og et forbehold som
+ *   ville sådd tvil om et svar som faktisk er komplett — og et forbehold som
  *   gjelder omtrent, blir et forbehold ingen leser.
+ * - **Kladder er utenfor.** Alltid, og med vilje. Det står i svaret fordi
+ *   «ingen treff» ellers leses som «ingen jobber med dette» — og en kollega som
+ *   alt har begynt på saken er nettopp det man ville vite om.
  *
  * `taketNådd` er det ene som alltid er alvorlig: da mangler svaret data, uansett
  * spørsmål.
  *
- * @param {{ vindu: number, taketNådd?: boolean, filter?: { hours?: number|null, status?: string|null, cms?: string|null } }} opts
+ * @param {{ vindu: number, taketNådd?: boolean, filter?: { hours?: number|null, status?: string|null, cms?: string|null }, utenPublisering?: number }} opts
  * @returns {string}
  */
-export function articleWindowCaveat({ vindu, taketNådd = false, filter = {} }) {
+export function articleWindowCaveat({
+  vindu,
+  taketNådd = false,
+  filter = {},
+  utenPublisering = 0,
+}) {
   const parts = [];
 
   if (taketNådd) {
@@ -110,16 +161,31 @@ export function articleWindowCaveat({ vindu, taketNådd = false, filter = {} }) 
     );
   } else if (filter.hours) {
     parts.push(
-      `Vinduet dekker de siste ${filter.hours} timene FULLSTENDIG (${vindu} artikler) — ` +
-        `for et spørsmål om denne perioden er svaret komplett.`,
+      `Vinduet dekker de siste ${filter.hours} timene FULLSTENDIG (${vindu} publiserte ` +
+        `artikler) — for et spørsmål om denne perioden er svaret komplett.`,
     );
   } else {
     parts.push(
-      `Vinduet er de ${vindu} nyeste egne artiklene. API-et har ingen tekstsøk, så dette ` +
-        `er alt som kan sjekkes: en eldre sak er usynlig her, og «ingen treff» betyr ` +
+      `Vinduet er de ${vindu} nyeste PUBLISERTE artiklene. API-et har ingen tekstsøk, så ` +
+        `dette er alt som kan sjekkes: en eldre sak er usynlig her, og «ingen treff» betyr ` +
         `«ikke blant disse», ikke «finnes ikke».`,
     );
   }
+
+  // Kladdene. Er --status satt, gjelder ikke regelen — og da må forbeholdet ikke
+  // påstå at den gjør det.
+  parts.push(
+    filter.status
+      ? `KLADDER: regelen om at upublisert holdes utenfor gjelder IKKE her — du spurte ` +
+        `eksplisitt om status=${filter.status}, og vinduet er det du ba om.`
+      : utenPublisering
+      ? `KLADDER: ${utenPublisering} upubliserte artikler ble holdt utenfor vinduet. En kladd ` +
+        `på samme tema betyr at en kollega alt skriver saken, så «ingen treff» her er ikke ` +
+        `«ingen jobber med dette». Se dem med «articles --status D».`
+      : `Kladder er utenfor vinduet — «ingen treff» er ikke «ingen jobber med dette». ` +
+        `Upublisert hentes med «articles --status D» (CMS-ets eget token; WordPress bruker ` +
+        `draft/pending/private).`,
+  );
 
   const filtrert = [
     filter.status ? `status=${filter.status}` : null,

@@ -3,7 +3,8 @@
 Vaktrunden for en journalist, i Claude Code. **Én arbeidsflyt** — `/kasus:start` —
 og den gjør seks ting i rekkefølge:
 
-1. Henter radarsignalene som har kommet inn **siden forrige runde**
+1. Henter radarsignalene som har kommet inn **siden forrige runde**, pluss
+   premissene: profilen og **ukas egen produksjon**
 2. Legger fram en prioritering — **du velger saken**
 3. Sjekker saken mot **redaksjonens egne artikler**: skrevet før? noe å bygge på?
 4. Gjør et **bredt søk** for å utvide og etterprøve
@@ -96,6 +97,29 @@ hvor gammel saken er. Et temasøk kan levere en artikkel fra 2023 som «oppdaget
 45 min siden», så runden viser begge og merker `GAMMEL SAK` når de er mer enn en
 uke fra hverandre. Mangler datoen, står det «ukjent dato» — ikke «fersk».
 
+## Ukas produksjon, før du velger
+
+Runden henter de 40 nyeste publiserte sakene fra siste uke i samme melding som
+signalene og profilen. Profilen sier hva som fungerer for disse leserne i
+prinsippet; dette sier hva redaksjonen faktisk holder på med nå — og det er den
+andre en journalist kjenner igjen.
+
+Tre koblinger endrer prioriteringen, og radaren kjenner ingen av dem:
+
+- **En oppfølging radaren ikke visste var en oppfølging.** Et fritt temasøk har
+  `origin: null` og ser ut som støy — men handler det om noe som ble publisert i
+  går, er det i praksis en oppfølging av egen sak. Ofte den billigste gode saken
+  på lista.
+- **Et tema redaksjonen står i nå.** «Fire saker om dette siden mandag» er et
+  tall, ikke en tolkning. Om det er en grunn til å ta signalet eller la det ligge,
+  avgjør journalisten.
+- **En åpenbar dublett, fanget før valget** — framfor etter at en agent har lest
+  to hundre artikler.
+
+Vinduet er lite (~2 000 tokens) fordi det skal leses i samtalen og begrunne en
+rangering du skal se. **Det erstatter ikke dekningssjekken:** sju døgn og 40 saker
+kan svare på «hva holder vi på med», ikke på «har vi skrevet om dette før?».
+
 ## «Har vi dekket dette før?»
 
 For hver valgte sak vurderes signalet mot redaksjonens egne artikler. Det svarer
@@ -122,11 +146,20 @@ Datoen avgjør oftere enn tittelen: signalet gjelder Q2, artikkelen fra i vår
 gjelder Q1, og det er en sak framfor en gjentakelse. Står forskjellen i
 brødteksten, hentes de avgjørende kandidatene i full tekst.
 
-To forbehold følger hvert svar, og de er ikke det samme:
+**Kladder er utenfor vinduet.** Ikke fordi de er uinteressante — en kladd på samme
+tema er det mest verdifulle treffet sjekken kan gi, fordi den betyr at en kollega
+alt skriver saken — men fordi alternativet ikke er «kladder er med». API-et
+sorterer `published desc, nulls last`, så upublisert ligger bakerst: en redaksjon
+med 250 publiserte saker fikk null kladder i et vindu på 200, mens en med 100 fikk
+alle sine. Samme kommando, ulikt svar. Nå er utelatelsen eksplisitt, antallet står
+i `meta.utenPublisering`, og kladdene er et eget oppslag: `articles --status D`.
+
+Tre forbehold følger hvert svar, og de er ikke det samme:
 
 - **Vindusgrensen.** **«Ingen treff» betyr «ikke blant disse artiklene»**, aldri
   «ikke dekket». En sak eldre enn vinduet er usynlig for enhver vurdering — det
   er en egenskap ved API-et, ikke ved vurderingen.
+- **Kladdene.** «Ingen treff» er ikke «ingen jobber med dette».
 - **At det er en vurdering.** Ikke en regning, og ikke reproduserbar. Derfor står
   artikkel-id, dato og url på hver kandidat: dommen skal kunne overprøves på
   tretti sekunder.
@@ -164,6 +197,27 @@ oppfølginger av egne saker ligger der?». Den svarer med kategori, begge datoer
 mønster og klikkbar lenke per signal — og **kvitterer aldri**. Et spørsmål om hva
 som ligger der skal ikke kunne spise runden, så forbudet er håndhevet i
 `/kasus:test` framfor å være et løfte i en prompt.
+
+Den bygger sitt eget filter, og **bare tre av filtrene finnes serverside**
+(`--status`, `--type`, `--hours`). Resten filtrerer det som er hentet, fordi
+API-et ikke støtter dem — og de er der fordi de svarer på spørsmål redaksjonen
+faktisk stiller:
+
+| Filter | Svarer på | Hvorfor lokalt |
+|---|---|---|
+| `--kategori` | «er det oppfølginger av EGNE saker?» | `origin` er `null` for både konkurrentsak og temasøk, så kategorien krever at `type` leses samtidig |
+| `--uten-monster` | «finner radaren noe profilen ikke forklarer?» | `--pattern` krever en streng — fraværet kan ikke uttrykkes |
+| `--publisert <timer>` / `--ferske` | «er det noe FERSKT å skrive om?» | `hours` måler når radaren fant signalet, ikke hvor gammel saken er |
+| `--gamle` | «hvor mye av det er gamle saker?» | `GAMMEL SAK` er pluginens egen utregning |
+| `--uten-lenke` | «er det signaler vi ikke kan åpne?» | — |
+
+**`--hours` og `--publisert` er ikke samme spørsmål.** Et fritt temasøk hentes
+uavhengig av publiseringstidspunkt, så `--hours 24` kan gi en sak fra 2023 som ble
+oppdaget i dag. Et signal uten publiseringsdato faller ut av datofiltrene, og
+antallet oppgis: de er *ukjente*, ikke gamle.
+
+Hvert svar sier hvor mange som passerte av hvor mange hentede, og hvilke filtre som
+var i bruk — et lokalt filter på et avkortet vindu er ikke et søk.
 
 `kasus-archivist` besvarer **ett spørsmål om redaksjonens egne artikler**. Den
 velger vinduet spørsmålet krever, henter det selv, og svarer med artikkel-id, dato

@@ -36,8 +36,15 @@ import {
   ARTICLE_WINDOW_FIELDS,
   articleWindowCaveat,
   compactArticle,
+  splitUnpublished,
 } from "./articles.mjs";
-import { compactSignal, SIGNAL_WINDOW_FIELDS, signalWindowCaveat } from "./signals.mjs";
+import {
+  applyLocalFilters,
+  compactSignal,
+  SIGNAL_CATEGORIES,
+  SIGNAL_WINDOW_FIELDS,
+  signalWindowCaveat,
+} from "./signals.mjs";
 import {
   ack,
   classify,
@@ -770,7 +777,10 @@ test("articleWindowCaveat: med tidsgrense er svaret FULLSTENDIG, og det sies", (
   // vindusforbehold her ville sådd tvil om et svar som faktisk er komplett.
   const c = articleWindowCaveat({ vindu: 7, filter: { hours: 24 } });
   assert.match(c, /FULLSTENDIG/);
-  assert.doesNotMatch(c, /ingen treff/i);
+  // Vindusforbeholdet skal IKKE resiteres her — det er kladdesetningen som
+  // (legitimt) også nevner «ingen treff», så testen må peke på selve påstanden.
+  assert.doesNotMatch(c, /ikke blant disse/);
+  assert.doesNotMatch(c, /en eldre sak er usynlig/);
 });
 
 test("articleWindowCaveat: uten tidsgrense ER vinduet grensen", () => {
@@ -791,6 +801,68 @@ test("articleWindowCaveat: sier alltid at brødteksten IKKE er med", () => {
   for (const filter of [{}, { hours: 24 }, { status: "P" }]) {
     assert.match(articleWindowCaveat({ vindu: 3, filter }), /article <id>/);
   }
+});
+
+test("splitUnpublished: kladd = ingen publiseringsdato, ikke et status-token", () => {
+  // `status` er FRITEKST og varierer med CMS: P/D hos Labrador, Sanity og
+  // HubSpot, men draft/pending/private hos WordPress. En sjekk på status ville
+  // virket for noen redaksjoner og stille feilet for andre.
+  const { publisert, utenPublisering } = splitUnpublished([
+    { id: "p1", published: "2026-08-01T00:00:00Z", status: "P" },
+    { id: "d1", published: null, status: "D" },
+    { id: "d2", status: "draft" },
+    { id: "d3", published: "", status: "pending" },
+  ]);
+  assert.deepEqual(
+    publisert.map((a) => a.id),
+    ["p1"],
+  );
+  assert.equal(utenPublisering, 3, "alle tre CMS-skrivemåtene skal fanges");
+});
+
+test("splitUnpublished: et EKSPLISITT --status skal ikke overstyres", () => {
+  // Regelen gjorde «--status D» til et kall som alltid svarte tomt — altså gjorde
+  // fluktveien ut av regelen ubrukelig. Fanget ende-til-ende, ikke av en test.
+  const kladder = [
+    { id: "d1", published: null, status: "D" },
+    { id: "d2", published: null, status: "D" },
+  ];
+  const r = splitUnpublished(kladder, { status: "D" });
+  assert.equal(r.publisert.length, 2, "spurte man om kladder, skal man få kladder");
+  assert.equal(r.utenPublisering, 0);
+  assert.equal(r.respektertStatus, true);
+
+  // Uten status gjelder regelen.
+  assert.equal(splitUnpublished(kladder).publisert.length, 0);
+});
+
+test("articleWindowCaveat: med --status påstår forbeholdet IKKE at regelen gjelder", () => {
+  const c = articleWindowCaveat({ vindu: 5, filter: { status: "D" } });
+  assert.match(c, /gjelder IKKE her/);
+  assert.doesNotMatch(c, /holdt utenfor vinduet/);
+});
+
+test("articleWindowCaveat: kladder er UTENFOR, og det sies uansett", () => {
+  // «Ingen treff» leses som «ingen jobber med dette», og en kollega som alt har
+  // begynt på saken er nettopp det man ville vite om.
+  for (const filter of [{}, { hours: 24 }]) {
+    const c = articleWindowCaveat({ vindu: 5, filter });
+    assert.match(c, /[Kk]ladder er utenfor|KLADDER/);
+    assert.match(c, /--status D/);
+  }
+});
+
+test("articleWindowCaveat: antallet kladder står der når det finnes noen", () => {
+  // Regelen alene og «3 kladder holdt utenfor» er to helt ulike opplysninger.
+  const c = articleWindowCaveat({ vindu: 5, filter: {}, utenPublisering: 3 });
+  assert.match(c, /3 upubliserte artikler ble holdt utenfor/);
+  assert.match(c, /en kollega alt skriver saken/);
+});
+
+test("articleWindowCaveat: vinduet sier PUBLISERTE, ikke bare «artikler»", () => {
+  // Uten ordet leses «de 200 nyeste» som alt redaksjonen har, kladder inkludert.
+  assert.match(articleWindowCaveat({ vindu: 200, filter: {} }), /200 nyeste PUBLISERTE/);
+  assert.match(articleWindowCaveat({ vindu: 6, filter: { hours: 24 } }), /publiserte/);
 });
 
 test("renderArticleWindow: hver artikkel bærer id og url, ellers kan svaret ikke ettergås", () => {
@@ -999,11 +1071,28 @@ test("signalWindowCaveat: sier ALLTID at kvitteringen ikke er rørt", () => {
 });
 
 test("signalWindowCaveat: et lokalt filter sier at det er lokalt, og hva som falt bort", () => {
-  // API-et støtter ikke origin/pattern. Et lokalt filter på et avkortet vindu er
+  // API-et kan bare status/type/hours. Et lokalt filter på et avkortet vindu er
   // ikke et søk, og forveksles med et tomt datasett.
-  const c = signalWindowCaveat({ vindu: 3, hentet: 100, filter: { origin: "own_followup" } });
+  const c = signalWindowCaveat({
+    vindu: 3,
+    hentet: 100,
+    lokale: [{ flagg: "--origin own_followup", beskrivelse: "opphav" }],
+  });
   assert.match(c, /LOKALT/);
   assert.match(c, /3 av 100/);
+  assert.match(c, /hev --limit/);
+});
+
+test("signalWindowCaveat: manglende publiseringsdato er UKJENT, ikke gammelt", () => {
+  // «3 ferske» ser ut som hele bildet hvis tolv falt ut på en tom dato.
+  const c = signalWindowCaveat({
+    vindu: 3,
+    hentet: 15,
+    lokale: [{ flagg: "--ferske", beskrivelse: "kjent publiseringsdato" }],
+    utenDato: 12,
+  });
+  assert.match(c, /12 av de hentede har INGEN publiseringsdato/);
+  assert.match(c, /ukjente, ikke gamle/);
 });
 
 test("signalWindowCaveat: taket nådd slår gjennom en tidsgrense", () => {
@@ -1047,8 +1136,132 @@ test("renderSignalWindow: tomt etter lokalt filter er ikke «ingenting skjer»",
     taketNådd: false,
     felter: SIGNAL_WINDOW_FIELDS,
     kvittering: "ikke rørt",
-    forbehold: signalWindowCaveat({ vindu: 0, hentet: 40, filter: { origin: "x" } }),
+    lokaleFiltre: [{ flagg: "--origin x", beskrivelse: "opphav" }],
+    forbehold: signalWindowCaveat({
+      vindu: 0,
+      hentet: 40,
+      lokale: [{ flagg: "--origin x", beskrivelse: "opphav" }],
+    }),
   });
   assert.match(out, /40 signaler ble hentet, men ingen passerte/);
+  // Hvilke filtre som var i bruk må STÅ der — ellers er «ingen passerte» uten
+  // informasjon om hva som stengte dem ute.
+  assert.match(out, /--origin x/);
   assert.match(out, /tomt for DENNE/);
+});
+
+// ---------------------------------------------------------------------------
+// Lokale filtre: det API-et ikke kan gjøre
+// ---------------------------------------------------------------------------
+
+const TIME = 3600_000;
+const nå = () => new Date().toISOString();
+const forDager = (d) => new Date(Date.now() - d * 24 * TIME).toISOString();
+
+/** Fire signaler som dekker de fire kategoriene og de tre datotilstandene. */
+const UTVALG = [
+  {
+    id: "egen",
+    origin: "own_followup",
+    type: "market_signal",
+    url: "https://a.no",
+    detectedAt: nå(),
+    details: { matchedPattern: "Boligmarkedet", publishedDate: nå() },
+  },
+  {
+    id: "konkurrentsak",
+    origin: null,
+    type: "competitor_article",
+    url: "https://b.no",
+    detectedAt: nå(),
+    details: { matchedPattern: "Boligmarkedet", publishedDate: forDager(3) },
+  },
+  {
+    // Fritt temasøk, uten mønster, GAMMEL SAK: publisert lenge før den ble funnet.
+    id: "gammel",
+    origin: null,
+    type: "market_signal",
+    url: null,
+    detectedAt: nå(),
+    details: { publishedDate: forDager(400) },
+  },
+  {
+    // Uten publiseringsdato i det hele tatt.
+    id: "udatert",
+    origin: null,
+    type: "market_signal",
+    url: "https://d.no",
+    detectedAt: nå(),
+    details: {},
+  },
+];
+
+const ider = (r) => r.kept.map((s) => s.id);
+
+test("--kategori: konkurrentsak er ikke uttrykkbar med --origin alene", () => {
+  // `--origin null` gir BÅDE konkurrentsak og temasok, fordi origin er null for
+  // begge. Kategorien krever at type leses samtidig — og da skal den komme fra
+  // pluginens ENE definisjon, ikke fra en leser som kombinerer to flagg riktig.
+  assert.deepEqual(ider(applyLocalFilters(UTVALG, { origin: "null" })).sort(), [
+    "gammel",
+    "konkurrentsak",
+    "udatert",
+  ]);
+  assert.deepEqual(ider(applyLocalFilters(UTVALG, { kategori: "konkurrentsak" })), ["konkurrentsak"]);
+  assert.deepEqual(ider(applyLocalFilters(UTVALG, { kategori: "egen_oppfolging" })), ["egen"]);
+  assert.ok(SIGNAL_CATEGORIES.includes("temasok"), "kategoriene er de samme som i meta.grupper");
+});
+
+test("--uten-monster: FRAVÆRET av et mønster kan ikke uttrykkes med --pattern", () => {
+  // «Radaren finner noe profilen ikke forklarer» er en opplysning pluginen selv
+  // fremhever, og --pattern krever en streng.
+  const r = applyLocalFilters(UTVALG, { utenMønster: true });
+  assert.deepEqual(ider(r).sort(), ["gammel", "udatert"]);
+  assert.deepEqual(r.lokale[0].flagg, "--uten-monster");
+});
+
+test("--gamle og --ferske: ukjent dato er INGEN av dem", () => {
+  assert.deepEqual(ider(applyLocalFilters(UTVALG, { gamle: true })), ["gammel"]);
+  // «udatert» er ikke fersk — mangler datoen, er svaret «ukjent dato», og et
+  // løfte om ferskhet ingen kan innfri er verre enn å utelate signalet.
+  assert.deepEqual(ider(applyLocalFilters(UTVALG, { ferske: true })).sort(), [
+    "egen",
+    "konkurrentsak",
+  ]);
+  // Og antallet som falt ut på manglende dato SIES.
+  assert.equal(applyLocalFilters(UTVALG, { ferske: true }).utenDato, 1);
+});
+
+test("--publisert måler sakens egen alder, ikke når radaren fant den", () => {
+  // Alle fire er oppdaget NÅ. Skilnaden ligger bare i publiseringsdatoen, og det
+  // er nettopp forskjellen --hours ikke kan uttrykke: et fritt temasøk kan levere
+  // en sak fra 2023 som ble oppdaget i dag.
+  assert.deepEqual(ider(applyLocalFilters(UTVALG, { publisert: 24 })), ["egen"]);
+  assert.deepEqual(ider(applyLocalFilters(UTVALG, { publisert: 24 * 7 })).sort(), [
+    "egen",
+    "konkurrentsak",
+  ]);
+  assert.equal(applyLocalFilters(UTVALG, { publisert: 24 }).utenDato, 1);
+});
+
+test("--uten-lenke: et signal ingen kan åpne", () => {
+  assert.deepEqual(ider(applyLocalFilters(UTVALG, { utenLenke: true })), ["gammel"]);
+});
+
+test("applyLocalFilters: flere filtre ANDes, og hvert av dem beskrives", () => {
+  const r = applyLocalFilters(UTVALG, { kategori: "temasok", utenMønster: true, utenLenke: true });
+  assert.deepEqual(ider(r), ["gammel"]);
+  assert.equal(r.lokale.length, 3, "alle tre skal beskrives i forbeholdet");
+  for (const l of r.lokale) {
+    assert.ok(l.flagg.startsWith("--"), "flagget skal være gjenkjennelig");
+    assert.ok(l.beskrivelse.length > 3, "og forklart, ellers sier «3 av 100» ingenting");
+  }
+});
+
+test("applyLocalFilters: uten filtre passerer alt, og utenDato telles ikke", () => {
+  const r = applyLocalFilters(UTVALG, {});
+  assert.equal(r.kept.length, UTVALG.length);
+  assert.deepEqual(r.lokale, []);
+  // Tallet ville vært misvisende uten et datofilter: ingen falt ut på datoen.
+  assert.equal(r.utenDato, 0);
 });

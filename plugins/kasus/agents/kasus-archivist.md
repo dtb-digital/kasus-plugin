@@ -39,7 +39,7 @@ riktig svar på et annet spørsmål:
 |---|---|
 | «Har vi skrevet om dette før?» | `--kort` alene. Default er 200 nyeste — du vil ha hele historikken du kan få. |
 | «Hva har vi skrevet i dag / denne uka?» | `--hours 24` eller `--hours 168`. Da er svaret FULLSTENDIG for perioden, og det skal sies. |
-| «Hva ligger upublisert?» | `--status` med redaksjonens egen verdi for utkast. Kjenner du den ikke, hent et vanlig vindu og se hva `published` mangler på. |
+| «Hva ligger upublisert?» / «jobber noen med dette?» | `--status D` — et EGET oppslag. Kladder er utenfor `--kort`-vinduet, se under. WordPress bruker `draft`/`pending`/`private` framfor `D`. |
 | «Hva kommer fra dette CMS-et?» | `--cms <navn>`. |
 
 Trenger du mer enn 200: `--limit`. Verktøyet paginerer selv og sier fra når taket
@@ -49,6 +49,37 @@ er nådd.
 filteret du valgte. Les det — og gjenta det. Er `meta.taketNådd` sann, mangler
 svaret ditt data, og det er den ene opplysningen som gjør et svar ubrukelig hvis
 den utelates.
+
+### Kladder er utenfor vinduet
+
+`--kort` gir bare PUBLISERTE artikler. `meta.utenPublisering` sier hvor mange
+kladder som ble holdt utenfor.
+
+Det er et valg, og grunnen er at alternativet ikke er «kladder er med» — det er
+«kladder er med hvis redaksjonen er liten nok». API-et sorterer `published desc,
+nulls last`, så upublisert ligger bakerst: en redaksjon med 250 publiserte saker
+får null kladder i et vindu på 200, mens en med 100 saker får alle sine. Samme
+kommando, ulikt svar, uten at noe sier fra.
+
+**Konsekvensen må stå i svaret ditt:** «ingen treff» betyr ikke «ingen jobber med
+dette». En kladd på samme tema er det mest verdifulle treffet en dekningssjekk kan
+gi — den betyr at en kollega alt skriver saken, og at journalisten bør snakke med
+hen framfor å begynne på nytt.
+
+Er spørsmålet «har vi skrevet om dette før?», og temaet ser ut som noe redaksjonen
+jobber med nå, **ta et eget oppslag** framfor å nøye deg med regelen:
+
+```bash
+node <plugin-rot>/scripts/kasus/kasus.mjs articles --kort --status D --json
+```
+
+Spør du eksplisitt om en status, gjelder ikke regelen — vinduet er da det du ba
+om, og `meta.kladderUtelatt` er `false`. Regelen finnes for å gjøre
+DEFAULT-vinduet forutsigbart, ikke for å overstyre deg.
+
+Er svaret tomt, kan det bety to ting, og du må skille dem: ingen kladder finnes,
+eller CMS-et bruker et annet token. Sjekk et vanlig vindu og se hvilke verdier
+`status` faktisk har hos denne redaksjonen.
 
 Er `data` tom, er det ikke «ingenting å finne». Da har organisasjonen ingen
 artikler synkronisert til Kasus med dette filteret, og spørsmålet kan ikke
