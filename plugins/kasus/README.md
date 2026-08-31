@@ -5,7 +5,8 @@ og den gjør seks ting i rekkefølge:
 
 1. Henter radarsignalene som har kommet inn **siden forrige runde**, pluss
    premissene: profilen og **ukas egen produksjon**
-2. Legger fram en prioritering — **du velger saken**
+2. Legger fram en prioritering — **du velger saken**, og kan be om hele lista
+   framfor bare de fire øverste
 3. Sjekker saken mot **redaksjonens egne artikler**: skrevet før? noe å bygge på?
 4. Gjør et **bredt søk** for å utvide og etterprøve
 5. Skriver et **saksforslag** på disk, i redaksjonens tone

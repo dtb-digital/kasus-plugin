@@ -157,14 +157,35 @@ Journalisten skal kunne **åpne kildene og lese seg opp før han velger**. Derfo
 Bruk **AskUserQuestion** med begge spørsmål i **samme kall**:
 
 **Spørsmål 1 — «Hvilke signaler skal du jobbe med?»** (`multiSelect: true`)
-Opptil fire alternativer: dine fire høyest rangerte. `label` er en kort tittel
-(maks 5 ord), `description` er kategori + begrunnelse + id, slik at valget er
-sporbart. Har lista flere kandidater, si i teksten hvilke som ikke kom med —
-brukeren kan svare «Other» og skrive noe annet.
+
+`label` er en kort tittel (maks 5 ord), `description` er kategori + begrunnelse +
+id, slik at valget er sporbart.
+
+**Verktøyet tar maks fire alternativer**, og hvor mange av dem som skal være
+signaler avhenger av hvor mange som finnes:
+
+- **Fire eller færre nye signaler:** legg dem alle fram. Da er ingenting skjult,
+  og et «vis meg resten»-alternativ ville vært et alternativ som ikke gjør noe.
+- **Fem eller flere:** tre høyest rangerte, og det fjerde alternativet er
+  **«List opp alle N forslag til artikler»**. Da er den fjerde plassen brukt på
+  det som faktisk mangler — de andre kandidatene — framfor på kandidat nummer
+  fire.
+
+Navngi perioden i det alternativet, og hent den fra `meta.vindu`. Er vinduet rundt
+et døgn, er «for siste døgn» riktig. Er kvitteringen fire dager gammel, holder
+runden fire dager, og da skal alternativet si det framfor å love et døgn. Er
+vinduet mye bredere enn et døgn og lista lang, tilby i samme åndedrag at
+`--hours 24` gir en runde på bare siste døgn.
+
+**Blir alternativet valgt**, legg fram HELE lista — hvert signal i prioritert
+rekkefølge, med kategori, begge datoer, mønster, eventuell kobling til ukas
+produksjon, og **klikkbar lenke på sakens egen linje**. Nummerér dem, slik at
+journalisten kan svare «3 og 7». Spør så på nytt med de samme to spørsmålene, men
+**uten** listealternativet: alt er vist, og en gjentakelse ville vært en løkke.
 
 Lenkene hører i teksten over spørsmålet, ikke i alternativene: journalisten skal
 kunne lese seg opp i kildene og deretter svare. Får du «Other» med et krav om å se
-mer først, legg fram flere saker med lenker og spør på nytt framfor å gå videre.
+noe annet, legg fram det framfor å gå videre.
 
 **Spørsmål 2 — «Hvor langt skal vi gå per sak?»** (ett valg)
 
