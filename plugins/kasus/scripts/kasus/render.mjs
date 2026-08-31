@@ -170,6 +170,7 @@ export function publishedNote(signal) {
 
 /** Ett signal på én til tre linjer — nok til å velge, ikke nok til å lese. */
 function renderSignalLine(signal) {
+  const kilder = Array.isArray(signal.sources) ? signal.sources.length : 0;
   const meta = [
     // «oppdaget» og «publisert» står side om side, i den rekkefølgen. Uten
     // ordet «oppdaget» leses tallet som sakens alder, og det er det ikke.
@@ -179,13 +180,20 @@ function renderSignalLine(signal) {
       ? `mønster: ${signal.details.matchedPattern}`
       : "uten mønstertreff",
     signal.sourceLabel,
+    // At det finnes flere lenker bak signalet må SIES her. Ellers ser
+    // runden ut som én kilde per signal, og de andre blir aldri åpnet.
+    kilder > 1 ? `+${kilder - 1} kilder til (se «signal ${signal.id}»)` : null,
   ].filter(Boolean);
 
   return block([
     `    ▸ [${signal.status}] ${clip(signal.title, 140)}`,
     `      ${meta.join(" · ")}`,
     line("id", signal.id, "      "),
-    line("url", signal.url, "      "),
+    // Lenka er ikke metadata — den er det journalisten klikker på FØR han
+    // velger sak. Derfor står den alltid på egen linje, og et signal UTEN
+    // lenke sier det: da er det ingenting å lese seg opp på, og det er i seg
+    // selv en grunn til å prioritere det ned.
+    line("LENKE", signal.url ?? "(ingen — signalet har ingen url å åpne)", "      "),
     line("kort", clip(signal.summary, 180), "      "),
   ]);
 }

@@ -198,6 +198,19 @@ else
   fail "kommandoer/agenter kaller ukjente modi:$UNKNOWN (kjente: $MODES)"
 fi
 
+# --- 4b. Statuskommandoen skriver ikke ------------------------------------
+# `/kasus:signals` lover at den aldri kvitterer. Et løfte i en prompt er lett å
+# bryte ved en senere redigering, så det håndheves her: refererer den til
+# «kvitter»-modusen, er den ikke lenger rent lesende.
+STATUS_CMD="$ROOT/commands/signals.md"
+if [ -f "$STATUS_CMD" ]; then
+  if grep -qE 'kasus\.mjs[[:space:]]+kvitter' "$STATUS_CMD"; then
+    fail "commands/signals.md kaller «kvitter» — statuskommandoen skal være rent lesende"
+  else
+    pass "commands/signals.md kvitterer ikke (rent lesende)"
+  fi
+fi
+
 # --- 5. Enhetstester -------------------------------------------------------
 if node --test "$ROOT/scripts/kasus/" >"${TMPDIR:-/tmp}/kasus-unit-$$.log" 2>&1; then
   pass "enhetstester ($(grep -c '^ok ' "${TMPDIR:-/tmp}/kasus-unit-$$.log" | tr -d ' ') tester)"

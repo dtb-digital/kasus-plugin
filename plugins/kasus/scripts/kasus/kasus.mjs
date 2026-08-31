@@ -5,7 +5,7 @@
  * Avhengighetsfri ESM, Node 18+ (bruker innebygd `fetch`). Pluginen kjører fra
  * en cache-mappe i konsumentens repo og kan ikke anta at noe er installert.
  *
- * Verktøyet betjener ÉN arbeidsflyt: vaktrunden i `/kasus:runde`. Modiene er
+ * Verktøyet betjener ÉN arbeidsflyt: vaktrunden i `/kasus:start`. Modiene er
  * stegene i den — radarsignaler inn, egne artikler til sammenligning, profilen
  * som premiss, og en kvittering til slutt.
  *
@@ -71,7 +71,7 @@ import {
   writeState,
 } from "./state.mjs";
 
-const VERSION = "0.3.0";
+const VERSION = "0.4.0";
 const DEFAULT_LIMIT = 20;
 
 /**
@@ -505,6 +505,7 @@ function gamleSaker(signals) {
     .map((s) => ({
       id: s.id,
       tittel: s.title,
+      url: s.url ?? null,
       kategori: bucketOf(s),
       publisert: s.details?.publishedDate ?? null,
       oppdaget: s.detectedAt ?? null,

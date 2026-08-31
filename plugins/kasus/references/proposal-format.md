@@ -1,6 +1,6 @@
 # Saksforslaget — formatet på det som legges på disk
 
-Lastes av `/kasus:runde`. **Én fil per signal**, og den er hele leveransen fra
+Lastes av `/kasus:start`. **Én fil per signal**, og den er hele leveransen fra
 runden: hva signalet er, hva redaksjonen alt har skrevet om det, hva et bredt søk
 fant, hva som fortsatt mangler, og et utkast som kan skrives videre på.
 

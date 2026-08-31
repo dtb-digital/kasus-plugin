@@ -16,9 +16,9 @@ claude plugin install kasus@kasus
 Start sesjonen på nytt etterpå — kommandoer, agenter og `env`-innslag plukkes opp
 ved oppstart.
 
-## Kommandoen
+## Kommandoene
 
-`/kasus:runde` — vaktrunden, og det eneste pluginen gjør:
+`/kasus:start` — vaktrunden, og det eneste pluginen gjør:
 
 1. **Nye radarsignaler siden forrige runde** — ikke «de 20 nyeste». Målt mot en
    kvittering på disk.
@@ -34,6 +34,11 @@ ved oppstart.
 6. **Kvittering**, og videre til neste sak.
 
 Laget for å gjentas: kjør runden, ta én sak, kvitter, kjør igjen.
+
+`/kasus:signals` gir en **status** uten å starte noe: hva har kommet inn siden
+sist, fordelt på redaksjonelle mønstre og de fire kategoriene, og hvor mye av det
+som er gamle saker. Den kvitterer aldri og skriver ingenting — blikket man tar før
+man setter av tid.
 
 I tillegg finnes `/kasus:env` (sjekker oppsettet) og `/kasus:test` (selvtest) som
 diagnostikk.

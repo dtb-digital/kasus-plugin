@@ -65,7 +65,7 @@ er de ikke til å skille fra et vanlig temasøk-treff:
 Nye `origin`-verdier er ikke en brytende endring. En ukjent verdi behandles som
 «annet opphav» framfor å avvise signalet.
 
-**Pluginens kategorinavn**, som er de samme i `/kasus:runde` og i
+**Pluginens kategorinavn**, som er de samme i `/kasus:start` og i
 `meta.grupper`:
 
 | API-felt | Kategori i pluginen |

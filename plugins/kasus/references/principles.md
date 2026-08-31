@@ -8,6 +8,11 @@ rundt et API. En kommando som «også kunne vært nyttig» konkurrerer med runde
 oppmerksomheten, og en journalist som må velge verktøy før hun velger sak har fått
 ett problem ekstra.
 
+`/kasus:signals` er unntaket som viser regelen: den er rent LESENDE — kvitterer
+ikke, skriver ingenting, gjør ingen research. Den kan bare svare på «er det noe
+her?», og en kommando som ikke kan utføre arbeid kan ikke bli et alternativt sted
+å gjøre det.
+
 Det er derfor `/api/v1/story-briefs` ikke er i bruk: et ferdig vurdert saksforslag
 fra pipelinen er et alternativt utgangspunkt, og to utgangspunkt i samme
 arbeidsflyt betyr at ingen av dem blir fulgt til ende.

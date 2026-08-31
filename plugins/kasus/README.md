@@ -1,7 +1,7 @@
 # kasus
 
-Vaktrunden for en journalist, i Claude Code. **Én kommando**, og den gjør seks
-ting i rekkefølge:
+Vaktrunden for en journalist, i Claude Code. **Én arbeidsflyt** — `/kasus:start` —
+og den gjør seks ting i rekkefølge:
 
 1. Henter radarsignalene som har kommet inn **siden forrige runde**
 2. Legger fram en prioritering — **du velger saken**
@@ -34,17 +34,20 @@ repo.
 
 3. Start sesjonen på nytt — `env`-innslag og komponenter plukkes opp ved oppstart.
 4. Verifiser: `/kasus:env --resolve`
-5. Kjør runden: `/kasus:runde`
+5. Kjør runden: `/kasus:start`
 
 ## Kommandoer
 
 | Kommando | Gjør |
 |---|---|
-| `/kasus:runde` | **Vaktrunden.** Alt over. Tar `--hours 72` for et bredere vindu og `--all` for å ta med forkastede signaler. |
+| `/kasus:start` | **Vaktrunden.** Alt over. Tar `--hours 72` for et bredere vindu og `--all` for å ta med forkastede signaler. |
+| `/kasus:signals` | **Status:** hva har skjedd siden sist? Fordeling over mønstre, kategorier, gamle saker. Kvitterer aldri, skriver ingenting. |
 | `/kasus:env` | Sjekker oppsettet. `--resolve` sier hvilken installasjon et kall treffer og hvilken variabel hver verdi kom fra. |
 | `/kasus:test` | Selvtester pluginen. `--live` også tilkoblingen og at serveren avviser skriv. |
 
-De to siste er diagnostikk. Pluginen gjør én ting, og det er runden.
+Arbeidet skjer i `/kasus:start`. `/kasus:signals` er blikket man tar først — det
+kan ikke gjøre noe, bare vise, og konkurrerer derfor ikke med runden. De to siste
+er diagnostikk.
 
 ## De fire kategoriene
 

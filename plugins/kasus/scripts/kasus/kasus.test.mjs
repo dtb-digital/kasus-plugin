@@ -27,6 +27,7 @@ import {
   bucketTitle,
   describeOrigin,
   publishedNote,
+  renderDigest,
   SIGNAL_BUCKETS,
 } from "./render.mjs";
 import {
@@ -794,4 +795,83 @@ test("rankArticles: tom tekst gir ingen treff framfor alle treff", () => {
   const r = rankArticles(EGNE_ARTIKLER, "   ", { top: 5 });
   assert.deepEqual(r.hits, []);
   assert.deepEqual(r.query, []);
+});
+
+// ---------------------------------------------------------------------------
+// Lenka er det journalisten klikker på FØR han velger sak
+// ---------------------------------------------------------------------------
+
+/** Minimal digest, slik runNytt bygger den. */
+function digestMed(signals) {
+  return {
+    stateSource: "KASUS_STATE_FILE",
+    lagHours: 2,
+    checkpoint: null,
+    window: { basis: "første runde", hours: 24, from: 0 },
+    skipped: { seen: 0, window: 0, dismissed: 0 },
+    signals,
+    fetched: signals.length,
+    truncated: false,
+    fordeling: [],
+    gamleSaker: [],
+    ack: { at: "2026-08-31T10:00:00.000Z", ids: signals.map((s) => s.id) },
+  };
+}
+
+test("renderDigest: hvert signal bærer LENKE-linja si", () => {
+  const out = renderDigest(
+    digestMed([
+      {
+        id: "s1",
+        status: "new",
+        type: "market_signal",
+        origin: "own_followup",
+        title: "SSB: prisene falt",
+        url: "https://ssb.no/tall",
+        detectedAt: new Date().toISOString(),
+        summary: "Kort.",
+        details: {},
+      },
+    ]),
+  );
+  assert.match(out, /LENKE: https:\/\/ssb\.no\/tall/);
+});
+
+test("renderDigest: et signal UTEN url sier det framfor å utelate linja", () => {
+  // En manglende linje leses som «ingen informasjon», og da er det ingenting som
+  // sier at saken må vurderes på tittelen alene.
+  const out = renderDigest(
+    digestMed([
+      {
+        id: "s2",
+        status: "new",
+        type: "market_signal",
+        origin: null,
+        title: "Uten lenke",
+        url: null,
+        detectedAt: new Date().toISOString(),
+        details: {},
+      },
+    ]),
+  );
+  assert.match(out, /LENKE: \(ingen — signalet har ingen url å åpne\)/);
+});
+
+test("renderDigest: flere kilder bak et signal SIES, ellers åpnes de aldri", () => {
+  const out = renderDigest(
+    digestMed([
+      {
+        id: "s3",
+        status: "new",
+        type: "market_signal",
+        origin: "competitor_followup",
+        title: "Tre kilder",
+        url: "https://a.no",
+        detectedAt: new Date().toISOString(),
+        details: {},
+        sources: [{ url: "https://a.no" }, { url: "https://b.no" }, { url: "https://c.no" }],
+      },
+    ]),
+  );
+  assert.match(out, /\+2 kilder til \(se «signal s3»\)/);
 });

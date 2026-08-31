@@ -82,6 +82,26 @@ er ingen prioritering.
 Finn ikke opp en begrunnelse. Er det uklart hvorfor et signal ble plukket opp, er
 det svaret: «uten mønstertreff — vet ikke hvorfor denne er her».
 
+### Hvert signal skal være klikkbart
+
+Journalisten skal kunne **åpne kildene og lese seg opp før han velger**. Derfor:
+
+- **Hver sak i lista du legger fram har sin lenke, som en markdown-lenke på
+  sakens egen linje** — `[SSB: kvadratmeterprisen falt 4,2 %](https://…)` — ikke
+  som en fotnote, ikke som en samlet lenkeliste nederst, og ikke bare som en id.
+- **Lenkene skal stå i teksten FØR du stiller spørsmålet.** Alternativene i
+  AskUserQuestion er korte og ikke noe man klikker på, så en URL som bare står
+  der er en URL journalisten ikke får åpnet. Legg fram den prioriterte lista med
+  lenker, og still spørsmålet etterpå.
+- **Har et signal flere kilder** (`+N kilder til` i outputen), si det og oppgi
+  lenkene fra `sources` — for et oppfølgingssøk er det ofte de ANDRE kildene som
+  er saken, ikke hovedlenka.
+- **Mangler et signal lenke** (`LENKE: (ingen …)`), si det rett ut. Det er ikke
+  en formalitet: et signal ingen kan åpne må vurderes på tittelen alene, og det
+  er en grunn til å prioritere det ned.
+- Skriv gjerne én linje om hva som er verdt å se etter i lenka, slik at
+  klikkingen har en retning: «sjekk om sakspapiret oppgir hvilket kvartal».
+
 ## 3. Spør hva som skal jobbes med
 
 Bruk **AskUserQuestion** med begge spørsmål i **samme kall**:
@@ -91,6 +111,10 @@ Opptil fire alternativer: dine fire høyest rangerte. `label` er en kort tittel
 (maks 5 ord), `description` er kategori + begrunnelse + id, slik at valget er
 sporbart. Har lista flere kandidater, si i teksten hvilke som ikke kom med —
 brukeren kan svare «Other» og skrive noe annet.
+
+Lenkene hører i teksten over spørsmålet, ikke i alternativene: journalisten skal
+kunne lese seg opp i kildene og deretter svare. Får du «Other» med et krav om å se
+mer først, legg fram flere saker med lenker og spør på nytt framfor å gå videre.
 
 **Spørsmål 2 — «Hvor langt skal vi gå per sak?»** (ett valg)
 
@@ -128,8 +152,9 @@ Er det et sterkt treff, les den faktiske teksten:
 node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs article <artikkel-id> --json
 ```
 
-Legg fram for brukeren: er dette samme sak (ikke skriv), overlappende (ny vinkling
-kreves), eller et fundament å bygge på? Er det samme sak, si det og gå videre til
+Legg fram for brukeren **med klikkbar lenke til hver egen sak** — han skal kunne
+åpne den og se hva som alt står der. Si så: er dette samme sak (ikke skriv),
+overlappende (ny vinkling kreves), eller et fundament å bygge på? Er det samme sak, si det og gå videre til
 neste signal framfor å skrive noe uansett.
 
 ### 4b. Bredt søk — utvid og etterprøv
@@ -209,7 +234,7 @@ behandlet:
 ordrett — ikke lag et tidspunkt selv.
 
 **Runden kan kjøres på nytt umiddelbart.** Kom det inn noe mens dere jobbet, viser
-`/kasus:runde` det nå; ellers sier den at det ikke er noe nytt. Det er den normale
+`/kasus:start` det nå; ellers sier den at det ikke er noe nytt. Det er den normale
 rytmen: kjør runden, ta én sak, kvitter, kjør igjen.
 
 ## 6. Rapporter
