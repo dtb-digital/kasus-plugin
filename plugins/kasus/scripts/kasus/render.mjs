@@ -382,7 +382,7 @@ export function renderArticle(article, { full = false } = {}) {
 }
 
 /**
- * Vaktrunden: hva som har kommet inn siden forrige kvittering.
+ * Runden: hva som har kommet inn siden forrige kvittering.
  *
  * Signalene er gruppert på opphav, og hver gruppe bærer forklaringen sin. Det er
  * distinksjonen hele runden hviler på: «vi kan utvide vår egen sak i dag» og «her

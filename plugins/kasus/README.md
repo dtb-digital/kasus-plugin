@@ -1,7 +1,7 @@
 # kasus
 
-Vaktrunden for en journalist, i Claude Code. **Én arbeidsflyt** — `/kasus:start` —
-og den gjør seks ting i rekkefølge:
+Fra radarsignal til saksforslag, for en journalist i Claude Code. **Én
+arbeidsflyt** — `/kasus:start` — og den gjør seks ting i rekkefølge:
 
 1. Henter radarsignalene som har kommet inn **siden forrige runde**, pluss
    premissene: profilen og **ukas egen produksjon**
@@ -71,7 +71,7 @@ Neste person som kloner repoet trenger bare sin egen nøkkel — resten står i
 
 | Kommando | Gjør |
 |---|---|
-| `/kasus:start` | **Vaktrunden.** Alt over. Tar `--hours 72` for et bredere vindu og `--all` for å ta med forkastede signaler. |
+| `/kasus:start` | **Hele arbeidsflyten.** Alt over. Tar `--hours 72` for et bredere vindu og `--all` for å ta med forkastede signaler. |
 | `/kasus:signals` | **Status:** hva har skjedd siden sist? Fordeling over mønstre, kategorier, gamle saker. Med et spørsmål framfor flagg (`/kasus:signals er det noe om strømpriser?`) går det til `kasus-lookout`. Kvitterer aldri, skriver ingenting. |
 | `/kasus:env` | Sjekker oppsettet. `--resolve` sier hvilken installasjon et kall treffer og hvilken variabel hver verdi kom fra. |
 | `/kasus:test` | Selvtester pluginen. `--live` også tilkoblingen og at serveren avviser skriv. |

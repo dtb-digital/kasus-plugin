@@ -5,7 +5,7 @@
  * Avhengighetsfri ESM, Node 18+ (bruker innebygd `fetch`). Pluginen kjører fra
  * en cache-mappe i konsumentens repo og kan ikke anta at noe er installert.
  *
- * Verktøyet betjener ÉN arbeidsflyt: vaktrunden i `/kasus:start`. Modiene er
+ * Verktøyet betjener ÉN arbeidsflyt: runden i `/kasus:start`. Modiene er
  * stegene i den — radarsignaler inn, egne artikler til sammenligning, profilen
  * som premiss, og en kvittering til slutt.
  *
@@ -87,11 +87,11 @@ import {
   writeState,
 } from "./state.mjs";
 
-const VERSION = "0.10.0";
+const VERSION = "0.10.1";
 const DEFAULT_LIMIT = 20;
 
 /**
- * Vaktrunden henter mer enn en vanlig liste, fordi den skal være HELE bildet
+ * Runden henter mer enn en vanlig liste, fordi den skal være HELE bildet
  * siden sist — ikke de 20 nyeste. Taket sies når det nås.
  */
 const DIGEST_LIMIT = 40;
@@ -131,7 +131,7 @@ const COMMON_FLAGS = ["env", "json"];
 const MODES = {
   nytt: {
     summary:
-      "Vaktrunden: radarsignaler som har kommet inn siden forrige kvittering, gruppert på opphav. Skriver ingenting.",
+      "Runden: radarsignaler som har kommet inn siden forrige kvittering, gruppert på opphav. Skriver ingenting.",
     flags: [...COMMON_FLAGS, "hours", "limit", "all"],
     run: runNytt,
   },
@@ -194,7 +194,7 @@ const MODES = {
 // ---------------------------------------------------------------------------
 
 /**
- * Vaktrunden. Henter begge strømmene for hvert sitt vindu, og deler i «nytt»,
+ * Runden. Henter signalene for vinduet siden sist, og deler i «nytt»,
  * «alt kvittert for» og «utenfor vinduet».
  *
  * Modusen er LESENDE. Den flytter ikke kvitteringen, og det er ikke en

@@ -2,7 +2,7 @@
  * Kvitteringen — hva er SETT, og hva er nytt siden sist.
  *
  * Uten en kvittering finnes ikke spørsmålet «hva er nytt?». `--hours 24` er ikke
- * det samme: kjører du vaktrunden kl. 08 og igjen kl. 11, viser et døgnvindu de
+ * det samme: kjører du runden kl. 08 og igjen kl. 11, viser et døgnvindu de
  * samme signalene tre ganger, og et treTIMES-vindu skjuler det som kom kl. 07.
  * Derfor lagres tidspunktet runden ble gjort, per organisasjon, på disk i
  * brukerens eget repo.
@@ -316,7 +316,7 @@ export function writeState(path, state) {
  *
  * En kvittering fram i tid er avvist framfor godtatt: den ville gjort at ALT er
  * «sett» til klokka tar den igjen, og en tastefeil i årstallet ville dermed
- * slått av vaktrunden i stillhet.
+ * slått av runden i stillhet.
  *
  * @param {string} raw
  * @param {number} [now]

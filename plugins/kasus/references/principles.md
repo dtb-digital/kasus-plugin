@@ -2,7 +2,7 @@
 
 ## 0. Én ting
 
-Pluginen gjør vaktrunden: nye radarsignaler → journalisten velger → sjekk mot egne
+Pluginen gjør én ting: nye radarsignaler → journalisten velger → sjekk mot egne
 artikler → bredt søk → saksforslag → kvittering. Ikke en samling oppslagsverktøy
 rundt et API. En kommando som «også kunne vært nyttig» konkurrerer med runden om
 oppmerksomheten, og en journalist som må velge verktøy før hun velger sak har fått

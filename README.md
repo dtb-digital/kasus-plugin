@@ -46,7 +46,7 @@ claude plugin install kasus@kasus
 
 ## Kommandoene
 
-`/kasus:start` — vaktrunden, og det eneste pluginen gjør:
+`/kasus:start` — fra radarsignal til saksforslag, og det eneste pluginen gjør:
 
 1. **Nye radarsignaler siden forrige runde** — ikke «de 20 nyeste». Målt mot en
    kvittering på disk.

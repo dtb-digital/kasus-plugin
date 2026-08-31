@@ -1,11 +1,11 @@
 ---
-description: Vaktrunden — nye radarsignaler, du velger sak, sjekk mot egne artikler, bredt søk, og et saksforslag på disk
+description: Fra radarsignal til saksforslag — nye signaler, du velger sak, sjekk mot egne artikler, bredt søk, og et saksforslag på disk
 argument-hint: [--hours 24] [--limit 40] [--all]
 allowed-tools: ["Bash", "AskUserQuestion", "Agent", "Task", "Read", "Write", "Glob", "WebSearch", "WebFetch"]
 ---
 
-Kjør vaktrunden. Dette er **det eneste pluginen gjør**, og den gjør det i seks
-steg:
+Gå fra radarsignal til saksforslag. Dette er **det eneste pluginen gjør**, og den
+gjør det i seks steg:
 
 1. Hent radarsignalene som har kommet inn **siden forrige runde**, og premissene:
    profilen og **ukas egen produksjon**
