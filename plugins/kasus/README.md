@@ -13,16 +13,41 @@ og den gjør seks ting i rekkefølge:
 Prosessen er laget for å gjentas rett etter hverandre: kjør runden, ta én sak,
 kvitter, kjør igjen.
 
-API-laget er **read-only**. Det pluginen skriver, skriver den til disk i ditt eget
-repo.
+API-laget er **read-only**. Det pluginen skriver, skriver den i prosjektet:
+saksforslagene i `./artikler`, kvitteringen «siden sist» i
+`.claude/kasus-state.json`. Begge stiene er relative til der du står, så to
+prosjekter teller sine egne runder.
 
 ## Kom i gang
 
-1. Lag en API-nøkkel i Kasus: **Innstillinger → API-nøkler → Ny nøkkel**. Den
+Pluginen hører til **prosjektet** — redaksjonens eget repo, der artiklene,
+saksforslagene og kvitteringen ligger. Da følger den med repoet, og hvilken
+versjon som gjelder står i git framfor i en maskin.
+
+1. Legg marketplacet og pluginen i prosjektets `.claude/settings.json`, og sjekk
+   fila inn:
+
+   ```json
+   {
+     "extraKnownMarketplaces": {
+       "kasus": {
+         "source": { "source": "github", "repo": "dtb-digital/kasus-plugin" }
+       }
+     },
+     "enabledPlugins": { "kasus@kasus": true }
+   }
+   ```
+
+   Trenger du den heller for deg selv, på tvers av prosjekter, gjør CLI-en det
+   samme brukerglobalt: `claude plugin marketplace add dtb-digital/kasus-plugin`
+   og `claude plugin install kasus@kasus`.
+
+2. Lag en API-nøkkel i Kasus: **Innstillinger → API-nøkler → Ny nøkkel**. Den
    vises kun én gang.
-2. Sett den i runtime-env. `settings.json` → `env` (bruker, prosjekt eller
-   `.claude/settings.local.json`, som er gitignorert) eller en eksport i skallet.
-   **`.env`-filer leses ikke av Claude Code.**
+3. Sett den under `env` i prosjektets `.claude/settings.local.json`. Den fila
+   hører til deg og ikke repoet — legg den i `.gitignore`, så deles
+   plugin-oppsettet mens nøkkelen blir liggende hos deg. En eksport i skallet
+   virker også. **`.env`-filer leses ikke av Claude Code.**
 
    ```json
    {
@@ -32,9 +57,13 @@ repo.
    }
    ```
 
-3. Start sesjonen på nytt — `env`-innslag og komponenter plukkes opp ved oppstart.
-4. Verifiser: `/kasus:env --resolve`
-5. Kjør runden: `/kasus:start`
+4. Start sesjonen på nytt i prosjektmappa — marketplacet hentes, pluginen
+   installeres, og `env`-innslag og komponenter plukkes opp ved oppstart.
+5. Verifiser: `/kasus:env --resolve`
+6. Kjør runden: `/kasus:start`
+
+Neste person som kloner repoet trenger bare sin egen nøkkel — resten står i
+`.claude/settings.json`.
 
 ## Kommandoer
 
@@ -102,7 +131,8 @@ Runden måler mot en **kvittering**: tidspunktet forrige runde ble gjort, lagret
   neste gang. Runden sier hvilken av de to som ble gjort.
 - Fila inneholder verter, tidspunkter og id-er. **Ingen nøkkel.** Organisasjoner
   skilles med et forkortet SHA-256 av nøkkelen, som ikke kan autentisere noe.
-  Legg den gjerne i `.gitignore` — den er per bruker, ikke per prosjekt.
+  Legg den i `.gitignore`: kvitteringen er DIN runde, ikke redaksjonens, og en
+  delt kvittering ville sagt at du har sett noe du ikke har sett.
 
 ## Agent
 
