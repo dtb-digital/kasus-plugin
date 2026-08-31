@@ -6,15 +6,43 @@
 Repoet er et **plugin-marketplace**. Du kjører ikke koden her direkte — du legger
 repoet til som kilde i Claude Code og installerer pluginen derfra.
 
-## Legg det til
+## Legg det til i prosjektet
+
+Pluginen hører til **prosjektet**, ikke brukeren: redaksjonens eget repo, der
+artiklene og saksforslagene ligger. Da følger den med repoet — alle som jobber
+der får de samme kommandoene, og hvilken versjon som gjelder er noe som står i
+git framfor i en maskin.
+
+Legg dette i prosjektets `.claude/settings.json` og sjekk fila inn:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "kasus": {
+      "source": {
+        "source": "github",
+        "repo": "dtb-digital/kasus-plugin"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "kasus@kasus": true
+  }
+}
+```
+
+Start sesjonen på nytt i prosjektmappa etterpå — marketplacet hentes, pluginen
+installeres, og kommandoer, agenter og `env`-innslag plukkes opp ved oppstart.
+Neste person som kloner repoet trenger ikke gjøre noe: de svarer ja på at mappa
+er til å stole på, og har `/kasus:start`.
+
+Trenger du den heller for deg selv, på tvers av prosjekter, er CLI-veien en
+**brukerglobal** installasjon av samme plugin:
 
 ```bash
 claude plugin marketplace add dtb-digital/kasus-plugin
 claude plugin install kasus@kasus
 ```
-
-Start sesjonen på nytt etterpå — kommandoer, agenter og `env`-innslag plukkes opp
-ved oppstart.
 
 ## Kommandoene
 
@@ -51,16 +79,28 @@ Full dokumentasjon: [`plugins/kasus/README.md`](plugins/kasus/README.md).
 - Node 18+ (verktøyet er avhengighetsfri ESM, ingen byggesteg)
 - En API-nøkkel fra Kasus: **Innstillinger → API-nøkler**
 
-Nøkkelen settes som `KASUS_API_KEY` i `settings.json` → `env`, ikke i en
-`.env`-fil — **Claude Code leser ikke `.env`**. Verifiser med
-`/kasus:env --resolve`.
+Nøkkelen settes som `KASUS_API_KEY` under `env` i prosjektets
+`.claude/settings.local.json`. Den fila hører til deg og ikke repoet — legg den i
+`.gitignore`, så blir nøkkelen liggende hos deg mens plugin-oppsettet i
+`.claude/settings.json` deles. Ikke i en `.env`-fil: **Claude Code leser ikke
+`.env`**. Verifiser med `/kasus:env --resolve`.
+
+```json
+{
+  "env": {
+    "KASUS_API_KEY": "kasus_sk_…"
+  }
+}
+```
 
 API-et er org-scopet av nøkkelen: den avgjør hvilken organisasjon kallene treffer,
 så «0 signaler» betyr tomt for *den* organisasjonen. Nøkkelen ekkoes aldri av
 verktøyet — den rapporteres som `(satt)` med variabelnavnet.
 
-API-laget er **read-only**. Det pluginen skriver, skriver den til disk i ditt eget
-repo.
+API-laget er **read-only**. Det pluginen skriver, skriver den i prosjektet:
+saksforslagene i `./artikler`, kvitteringen «siden sist» i
+`.claude/kasus-state.json`. Begge er relative til der du står, så to prosjekter
+teller sine egne runder.
 
 ## Utvikling
 
