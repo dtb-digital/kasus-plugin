@@ -70,18 +70,23 @@ uten å bli nevnt leses som at det ikke finnes mer.
 
 ## 8. «Ingen treff» er ikke «ikke dekket»
 
-Artikkel-API-et har ingen tekstsøk, så «har vi skrevet om dette før?» besvares med
-idf-vektet ordoverlapp mot et vindu av de nyeste egne artiklene. Det er en nyttig
-sjekk og en dårlig garanti, og forskjellen må stå i svaret — ikke i
-dokumentasjonen. Derfor rapporteres vindusstørrelsen, ordene som traff, hvor de
-traff, og søkeordene som ikke finnes i noen egen artikkel.
+Artikkel-API-et har ingen tekstsøk, så «har vi skrevet om dette før?» kan ikke
+stilles til serveren. Verktøyet henter et vindu av de nyeste egne artiklene, og
+`kasus-archivist` leser det. Det er en nyttig sjekk og en dårlig garanti,
+og forskjellen må stå i svaret — ikke i dokumentasjonen. Derfor rapporteres
+vindusstørrelsen, og hver kandidat bærer artikkel-id, dato og url.
 
-Terskelen er en REGEL framfor et poengtall: to fellesord, eller ett i tittel,
-stikktittel, undertittel eller emneknagg. Kostnadene er asymmetriske — å vise en
-artikkel som ikke var samme sak koster tretti sekunders lesing, å skjule en
-publisert sak koster en dublett på nett. «Styrke» i outputen er en
-sorteringsnøkkel, og sier selv at den er det: et normalisert tall ville blitt lest
-som en prosentvis likhet det ikke er.
+Vurderingen er semantisk fordi spørsmålet er det: samme sak kan være skrevet med
+helt andre ord. Her sto det idf-vektet ordoverlapp før, og den svarte nei på
+nettopp de tilfellene. Kostnadene er asymmetriske — å vise en artikkel som ikke
+var samme sak koster tretti sekunders lesing, å skjule en publisert sak koster en
+dublett på nett.
+
+Prisen er at sjekken ikke er reproduserbar, og den prisen skal ikke skjules. Den
+betales med etterprøvbarhet: id, dato og url på hver kandidat, og en begrunnelse
+som sier hva som er likt OG hva som skiller. Vindusgrensen er den andre halvparten
+av forbeholdet, og den forsvant ikke med ordmatchen — den er en egenskap ved
+API-et.
 
 ## 9. Kvitteringen er eksplisitt, og bare ett steg skriver den
 

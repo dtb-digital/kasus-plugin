@@ -2,6 +2,22 @@
  * Tekst-formatering for lesbar output. Ingen avhengigheter.
  */
 
+/**
+ * Fjerner HTML og normaliserer whitespace.
+ *
+ * `body` fra Labrador ER HTML, mens Sanity, WordPress og HubSpot leverer ren
+ * tekst. Alt som skal LESES av et menneske eller en agent må derfor gjennom
+ * denne — og den er en tekst-hjelper, ikke en del av noen vurdering.
+ */
+export function stripHtml(value) {
+  if (typeof value !== "string") return "";
+  return value
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&(?:nbsp|amp|quot|#39|laquo|raquo);/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** Klipper en streng til `max` tegn og sier at den er klippet. */
 export function clip(value, max = 240) {
   if (typeof value !== "string") return value;

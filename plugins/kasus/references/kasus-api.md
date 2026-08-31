@@ -34,8 +34,8 @@ arbeidsflyt.
 pagineres i stedet, og sier fra når taket er nådd.
 
 **Artikkel-API-et har ingen tekstsøk.** Det finnes ingen `q`. «Har vi dekket dette
-før?» besvares derfor ved å hente et VINDU av de nyeste artiklene og matche
-idf-vektet ordoverlapp lokalt. Både vindusstørrelsen, ordene som traff og
+før?» besvares derfor ved å hente et VINDU av de nyeste artiklene (`--kort`, uten
+brødtekst) og la `kasus-archivist` lese dem. Både vindusstørrelsen og
 forbeholdet står i svaret: en tom treffliste betyr «ikke blant disse artiklene»,
 aldri «ikke dekket».
 
@@ -107,8 +107,8 @@ eller `personas`. På artikler er `organizationId`, `siteId`, `imageId` og
 `createdBy` utelatt — `bylines` er den redaksjonelle visningsstrengen.
 
 **Ingen tekstsøk, ingen semantisk søk, ingen «relaterte saker».** Alt som ser ut
-som relevansvurdering i denne pluginen er gjort lokalt, og sier at det er gjort
-lokalt.
+som relevansvurdering i denne pluginen er gjort på klienten — av en agent som
+leser et vindu verktøyet har hentet — og sier at det er gjort der.
 
 `details` og `sources` på et signal er derimot **åpne** JSON-objekter satt sammen
 av `metadata` + `agentContext`. Hva som havner der bestemmes av pipelinen. Derfor

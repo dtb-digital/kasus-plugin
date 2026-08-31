@@ -58,6 +58,13 @@ ulike tiltak, og i rå API-felt ser de like ut:
 `meta.grupper` har kategoriene ferdig oppdelt med id-er og forklaring. Bruk dem —
 ikke utled kategorien selv.
 
+**Gjør prioriteringen selv, her i samtalen.** `kasus-lookout` besvarer spørsmål om
+signalene og er den rette agenten når noen bare vil vite hva som ligger der — men
+den hører ikke i runden. To grunner: den henter sitt eget vindu framfor rundens
+«siden sist», og den svarer med en oppsummering, mens journalisten skal ha den
+prioriterte lista med **klikkbare lenker foran seg før han velger**. En
+oppsummering av en oppsummering er ikke noe man klikker på.
+
 **Ferskhet er to tall.** `oppdaget` er når radaren fant signalet, `publisert` er
 hvor gammel saken er. `meta.gamleSaker` lister det som er publisert mer enn en uke
 før det ble oppdaget — **si det ved hver slik sak**, og ranger den ned med mindre
@@ -131,31 +138,60 @@ kilderapporter ingen leser.
 
 ### 4a. Hent signalet og sjekk egne saker
 
+Hent først signalet i full bredde:
+
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs signal <signal-id> --json
-node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs articles --match "<signalets tittel>. <sammendrag>" --json
 ```
+
+Send så ut **én `kasus-archivist`** for dette signalet, med spørsmålet **«har vi
+skrevet om dette før?»** — ordrett. Agenten besvarer spørsmål om egen dekning
+generelt, så den må få vite hvilket spørsmål den stiller: det er denne formen som
+har en fast dom per kandidat, og dommen er det du trenger her.
+
+Svaret blir semantisk, og det er poenget — samme sak kan være skrevet med helt
+andre ord, og det er nettopp de tilfellene som koster en dublett.
+
+Agenten henter artiklene selv. Gi den:
+
+- **spørsmålet**: «har vi skrevet om dette før?»
+- **plugin-roten**, som absolutt sti: `${CLAUDE_PLUGIN_ROOT}` — skriv ut den
+  faktiske verdien i prompten, ikke variabelnavnet
+- **`--env <navn>`** hvis runden kjører mot et annet miljø
+- **signalet**: tittel, sammendrag, og de av `details` som sier hva saken er —
+  `publishedDate`, `actors`, `keyFigures`, `matchedPattern`
+
+**Formulér** researchspørsmålene i 4b mens agenten jobber — de er uavhengige, og
+den leser 200 artikler mens du tenker. Men **send ingen `kasus-researcher` før
+dommen er inne.** Er svaret `SAMME SAK`, er de seks søkene bortkastet arbeid på en
+sak som ikke skal skrives — og det er en dyrere feil enn å vente et halvminutt.
+
+**Ikke hent `articles --kort` selv.** Vinduet er 200 artikler, og det hører i
+agentens kontekst, ikke i din. Trenger du én bestemt artikkel i full tekst
+etterpå — for tone, eller for å bygge videre — er det `article <id>` du bruker.
 
 Dette steget avgjør tre ting samtidig: om saken er skrevet før (ikke gjenta), om
 det finnes en egen sak å bygge videre på (billigere og bedre), og hvilken tone
 redaksjonen faktisk har på temaet.
 
-**Les forbeholdet i svaret, og gjenta det for brukeren.** Artikkel-API-et har
-ingen tekstsøk, så matchingen er ordoverlapp mot et vindu av de nyeste artiklene.
-`meta.ukjenteOrd` er ofte det mest opplysende: er alle søkeordene ukjente, er
-temaet i praksis udekket. **«Ingen treff» betyr «ikke blant disse artiklene», ikke
-«ikke dekket»** — og den forskjellen er det som skiller en ny sak fra en dublett.
+**Gjenta begge forbeholdene fra agenten**, og hold dem fra hverandre:
 
-Er det et sterkt treff, les den faktiske teksten:
+- **Vindusgrensen.** Vurderingen gjelder de 200 nyeste artiklene, fordi API-et
+  ikke har tekstsøk. **«Ingen treff» betyr «ikke blant disse artiklene», ikke
+  «ikke dekket»** — en eldre sak om samme tema er usynlig. Den forskjellen er det
+  som skiller en ny sak fra en dublett.
+- **At det er en vurdering.** Den er ikke reproduserbar og kan bomme. Derfor står
+  id, dato og url på hver kandidat: journalisten skal kunne overprøve den.
 
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs article <artikkel-id> --json
-```
+Har agenten ingen kandidater, si det som det er — og skill de to grunnene:
+temaet er udekket i vinduet, eller organisasjonen har ingen artikler
+synkronisert i det hele tatt. Det andre er ikke et svar på spørsmålet.
 
-Legg fram for brukeren **med klikkbar lenke til hver egen sak** — han skal kunne
-åpne den og se hva som alt står der. Si så: er dette samme sak (ikke skriv),
-overlappende (ny vinkling kreves), eller et fundament å bygge på? Er det samme sak, si det og gå videre til
-neste signal framfor å skrive noe uansett.
+Legg fram kandidatene for brukeren **med klikkbar lenke til hver egen sak** — han
+skal kunne åpne den og se hva som alt står der. Dommen fra agenten er
+`SAMME SAK` (ikke skriv), `OPPFØLGING` (skriv, men som oppfølging), `FUNDAMENT`
+(bygg på den) eller `SAMME TEMA` (ingen dublettrisiko, men tonebeviset). Er det
+samme sak, si det og gå videre til neste signal framfor å skrive noe uansett.
 
 ### 4b. Bredt søk — utvid og etterprøv
 
@@ -173,7 +209,8 @@ Et spørsmål skal kunne besvares med en kilde. «Se på boligmarkedet» er ikke
 spørsmål; «Hvor mye falt kvadratmeterprisen i Bodø i Q2, og fra hvilken kilde?» er.
 
 Send ut `kasus-researcher`-agenter, **ett spørsmål per agent, alle i samme
-melding**, maks 6. Hver agent får:
+melding**, maks 6. (`kasus-archivist` fra 4a er en annen agent med en annen jobb —
+den leser egne artikler og søker ikke på nett.) Hver agent får:
 
 - spørsmålet, ordrett
 - signalets tittel, sammendrag og URL

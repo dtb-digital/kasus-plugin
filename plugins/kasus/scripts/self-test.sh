@@ -198,17 +198,25 @@ else
   fail "kommandoer/agenter kaller ukjente modi:$UNKNOWN (kjente: $MODES)"
 fi
 
-# --- 4b. Statuskommandoen skriver ikke ------------------------------------
-# `/kasus:signals` lover at den aldri kvitterer. Et løfte i en prompt er lett å
-# bryte ved en senere redigering, så det håndheves her: refererer den til
-# «kvitter»-modusen, er den ikke lenger rent lesende.
-STATUS_CMD="$ROOT/commands/signals.md"
-if [ -f "$STATUS_CMD" ]; then
-  if grep -qE 'kasus\.mjs[[:space:]]+kvitter' "$STATUS_CMD"; then
-    fail "commands/signals.md kaller «kvitter» — statuskommandoen skal være rent lesende"
-  else
-    pass "commands/signals.md kvitterer ikke (rent lesende)"
+# --- 4b. Bare runden kvitterer -------------------------------------------
+# `/kasus:start` er det ENESTE som får flytte kvitteringen. Statuskommandoen og
+# agentene lover at de aldri gjør det, og et løfte i en prompt er lett å bryte
+# ved en senere redigering — så det håndheves her.
+#
+# Agentene er den farlige halvparten: de har Bash, de trigges av naturlig språk,
+# og en kvittering fra en av dem ville tømt runden for signaler UTEN at noen ba
+# om det. En kvittering er heller ikke til å angre — «siden sist» er borte.
+KVITTERERE=""
+for f in "$ROOT/commands/signals.md" $(find "$ROOT/agents" -name '*.md' 2>/dev/null | sort); do
+  [ -f "$f" ] || continue
+  if grep -qE 'kasus\.mjs[[:space:]]+kvitter' "$f"; then
+    KVITTERERE="$KVITTERERE ${f#"$ROOT"/}"
   fi
+done
+if [ -n "$KVITTERERE" ]; then
+  fail "disse kaller «kvitter», men skal være rent lesende:$KVITTERERE"
+else
+  pass "bare /kasus:start kvitterer (status og agenter er rent lesende)"
 fi
 
 # --- 5. Enhetstester -------------------------------------------------------

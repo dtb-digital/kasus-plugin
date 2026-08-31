@@ -18,7 +18,7 @@ import test from "node:test";
 
 import { envSuffix, envVar, readEnvValue } from "../lib/env.mjs";
 import { boolFlag, intFlag, parseArgs, requireKnownFlags, UsageError } from "../lib/args.mjs";
-import { clip, fmtAge } from "../lib/table.mjs";
+import { clip, fmtAge, stripHtml } from "../lib/table.mjs";
 import { isSecretKey, redact } from "./redact.mjs";
 import { ConfigError, DEFAULT_BASE_URL, headerLine, resolveTarget, variableNames } from "./targets.mjs";
 import { apiGet, apiList, ApiError } from "./api.mjs";
@@ -27,19 +27,17 @@ import {
   bucketTitle,
   describeOrigin,
   publishedNote,
+  renderArticleWindow,
   renderDigest,
+  renderSignalWindow,
   SIGNAL_BUCKETS,
 } from "./render.mjs";
 import {
-  documentFrequency,
-  HEAVY_FIELD_WEIGHT,
-  isCandidate,
-  MIN_TERMS,
-  rankArticles,
-  scoreArticle,
-  stripHtml,
-  terms,
-} from "./match.mjs";
+  ARTICLE_WINDOW_FIELDS,
+  articleWindowCaveat,
+  compactArticle,
+} from "./articles.mjs";
+import { compactSignal, SIGNAL_WINDOW_FIELDS, signalWindowCaveat } from "./signals.mjs";
 import {
   ack,
   classify,
@@ -699,22 +697,20 @@ const EGNE_ARTIKLER = [
     sectionTag: "Økonomi",
     excerpt: "Boligprisene i Bodø falt 3,1 prosent siste kvartal, viser tall fra SSB.",
     published: "2026-07-17T05:00:00Z",
+    url: "https://eksempel.no/bodo",
+    // De tunge feltene som IKKE skal med i vinduet.
+    body: "<p>Lang brødtekst med <b>markup</b>.</p>",
+    wordCount: 812,
+    bylines: ["Kari Nordmann"],
   },
   {
     id: "a2",
     title: "Tromsø mangler 2000 boliger",
-    tags: ["bolig", "tromsø"],
+    tags: [],
     sectionTag: "Nyheter",
-    excerpt: "Tromsø kommune mangler 2000 boliger fram mot 2030.",
-    published: "2026-08-19T05:00:00Z",
-  },
-  {
-    id: "a3",
-    title: "Norges Bank holder renten uendret",
-    tags: ["renter"],
-    sectionTag: "Økonomi",
-    excerpt: "Renten holdes uendret på 4,5 prosent.",
-    published: "2026-08-28T05:00:00Z",
+    excerpt: "",
+    published: null,
+    url: "https://eksempel.no/tromso",
   },
 ];
 
@@ -724,77 +720,122 @@ test("stripHtml: body fra Labrador ER html, og må bli lesbar tekst", () => {
   assert.equal(stripHtml(null), "");
 });
 
-test("terms: stoppord og for korte ord ut, forkortelser og årstall inn", () => {
-  const t = terms("SSB melder at prisene i Bodø falt med 4,2 prosent i 2026");
-  assert.ok(t.has("ssb"), "forkortelser er ofte hele poenget i en nyhetssak");
-  assert.ok(t.has("bodø"));
-  assert.ok(t.has("2026"), "årstall skiller to saker om samme tema");
-  assert.ok(!t.has("prosent"), "«prosent» treffer alt");
-  assert.ok(!t.has("med"));
-  assert.ok(!t.has("at"), "for kort");
+test("compactArticle: brødteksten er det tunge feltet, og skal IKKE med", () => {
+  // 200 brødtekster er hundretusener av tokens for et spørsmål som avgjøres på
+  // tittel, ingress og dato. De få som betyr noe hentes med «article <id>».
+  const kort = compactArticle(EGNE_ARTIKLER[0]);
+  assert.equal(kort.body, undefined);
+  assert.equal(kort.wordCount, undefined);
+  assert.equal(kort.bylines, undefined);
 });
 
-test("documentFrequency: et ord i alle artiklene veier nesten ingenting", () => {
-  const df = documentFrequency(EGNE_ARTIKLER);
-  // «bolig» står i to av tre; «renten» i én. Det er forskjellen som gjør at et
-  // treff på et særegent ord rangeres over et treff på husets favorittord.
-  assert.equal(df.get("bolig"), 2);
-  assert.equal(df.get("renten"), 1);
-  assert.equal(df.has("fiskeoppdrett"), false);
+test("compactArticle: feltene et spørsmål om egen dekning trenger, er med", () => {
+  const kort = compactArticle(EGNE_ARTIKLER[0]);
+  // id og url fordi et svar skal kunne ettergås, published fordi den avgjør
+  // dublett vs. oppfølging oftere enn tittelen gjør.
+  for (const felt of ["id", "title", "kicker", "subtitle", "tags", "sectionTag", "excerpt", "published", "url"]) {
+    assert.ok(felt in kort, `${felt} mangler i vinduet`);
+  }
+  assert.deepEqual(Object.keys(kort).sort(), [...ARTICLE_WINDOW_FIELDS].sort());
 });
 
-test("scoreArticle: et ord teller i det TYNGSTE feltet det står i", () => {
-  const df = documentFrequency(EGNE_ARTIKLER);
-  const corpus = { df, total: EGNE_ARTIKLER.length };
-  const query = terms("Boligprisene i Bodø falt");
-
-  const bodø = scoreArticle(EGNE_ARTIKLER[0], query, corpus);
-  const tromsø = scoreArticle(EGNE_ARTIKLER[1], query, corpus);
-
-  assert.ok(bodø.styrke > tromsø.styrke, "Bodø-saken skal rangeres først");
-  assert.ok(bodø.matched.includes("bodø"));
-  assert.equal(bodø.toppfelt, 4, "«bodø» står i tittelen, som er tyngste felt");
-  assert.deepEqual(scoreArticle(EGNE_ARTIKLER[0], new Set()).matched, []);
+test("compactArticle: tomme felt utelates framfor å bli null-støy", () => {
+  // 200 artikler med fire tomme nøkler hver er 800 linjer støy i et grunnlag
+  // som skal LESES.
+  const kort = compactArticle(EGNE_ARTIKLER[1]);
+  assert.equal("tags" in kort, false, "tom liste skal utelates");
+  assert.equal("excerpt" in kort, false, "tom streng skal utelates");
+  assert.equal("published" in kort, false, "null skal utelates — rendringen sier UPUBLISERT");
+  assert.equal(kort.id, "a2");
 });
 
-test("isCandidate: to fellesord, ELLER ett i et tungt felt", () => {
-  // Regelen er permissiv med vilje: å vise en artikkel som ikke var samme sak
-  // koster tretti sekunders lesing, å skjule en publisert sak koster en dublett.
-  assert.equal(isCandidate({ matched: ["a", "b"], toppfelt: 1 }), true);
-  assert.equal(isCandidate({ matched: ["a"], toppfelt: HEAVY_FIELD_WEIGHT }), true);
-  assert.equal(isCandidate({ matched: ["a"], toppfelt: 1 }), false);
-  assert.equal(isCandidate({ matched: [], toppfelt: 0 }), false);
-  assert.equal(MIN_TERMS, 2);
+test("compactArticle: ingressen strippes for html og får et tak", () => {
+  // Entiteter blir mellomrom, ikke tegnet — samme oppførsel som `body` har hatt.
+  const kort = compactArticle({ id: "x", excerpt: "<p>Ett  &amp;  to</p>" });
+  assert.equal(kort.excerpt, "Ett to");
+  const lang = compactArticle({ id: "y", excerpt: "a".repeat(900) });
+  assert.ok(lang.excerpt.length < 500, "ingressen skal klippes");
+  assert.ok(lang.excerpt.endsWith("…"), "og si at den er klippet");
 });
 
-test("rankArticles: finner egen dekning, og sier hvilke ord som traff", () => {
-  const r = rankArticles(
-    EGNE_ARTIKLER,
-    "SSB: kvadratmeterprisen i Bodø falt 4,2 prosent siste kvartal",
-    { top: 5 },
-  );
-  assert.equal(r.hits[0].article.id, "a1");
-  assert.ok(r.hits[0].matched.includes("kvadratmeterprisen"));
-  assert.equal(r.vurdert, 3);
+test("articleWindowCaveat: taket nådd er alvorlig uansett spørsmål", () => {
+  // Det ene forbeholdet som gjør et svar ubrukelig: det MANGLER data.
+  const c = articleWindowCaveat({ vindu: 200, taketNådd: true, filter: { hours: 24 } });
+  assert.match(c, /TAKET ER NÅDD/);
+  assert.match(c, /ufullstendig/);
 });
 
-test("rankArticles: ukjente ord er et SVAR — temaet er udekket", () => {
-  const r = rankArticles(EGNE_ARTIKLER, "Lakselus og fiskeoppdrett i Finnmark", { top: 5 });
-  assert.deepEqual(r.hits, []);
-  // Dette er den nyttige opplysningen: ingen av ordene finnes i egne saker.
-  assert.deepEqual(r.ukjenteOrd.sort(), ["fiskeoppdrett", "finnmark", "lakselus"].sort());
+test("articleWindowCaveat: med tidsgrense er svaret FULLSTENDIG, og det sies", () => {
+  // «Hva har vi skrevet i dag?» har ikke vindusproblemet. Å resitere et
+  // vindusforbehold her ville sådd tvil om et svar som faktisk er komplett.
+  const c = articleWindowCaveat({ vindu: 7, filter: { hours: 24 } });
+  assert.match(c, /FULLSTENDIG/);
+  assert.doesNotMatch(c, /ingen treff/i);
 });
 
-test("rankArticles: --top kutter, men SIER hvor mange som ikke ble vist", () => {
-  const r = rankArticles(EGNE_ARTIKLER, "bolig boliger", { top: 1 });
-  assert.equal(r.hits.length, 1);
-  assert.equal(r.flereTreff, 1);
+test("articleWindowCaveat: uten tidsgrense ER vinduet grensen", () => {
+  // «Har vi skrevet om dette før?» har ingen tidsgrense, og da er den ene
+  // feilslutningen som koster en dublett i spill.
+  const c = articleWindowCaveat({ vindu: 200, filter: {} });
+  assert.match(c, /200 nyeste/);
+  assert.match(c, /«ikke blant disse», ikke «finnes ikke»/);
 });
 
-test("rankArticles: tom tekst gir ingen treff framfor alle treff", () => {
-  const r = rankArticles(EGNE_ARTIKLER, "   ", { top: 5 });
-  assert.deepEqual(r.hits, []);
-  assert.deepEqual(r.query, []);
+test("articleWindowCaveat: et filter som utelater noe, sier at det utelater noe", () => {
+  const c = articleWindowCaveat({ vindu: 12, filter: { status: "P", cms: "labrador" } });
+  assert.match(c, /status=P og cms=labrador/);
+  assert.match(c, /ikke vurdert/);
+});
+
+test("articleWindowCaveat: sier alltid at brødteksten IKKE er med", () => {
+  for (const filter of [{}, { hours: 24 }, { status: "P" }]) {
+    assert.match(articleWindowCaveat({ vindu: 3, filter }), /article <id>/);
+  }
+});
+
+test("renderArticleWindow: hver artikkel bærer id og url, ellers kan svaret ikke ettergås", () => {
+  const vindu = EGNE_ARTIKLER.map(compactArticle);
+  const out = renderArticleWindow(vindu, {
+    vindu: vindu.length,
+    sider: 1,
+    taketNådd: false,
+    felter: ARTICLE_WINDOW_FIELDS,
+    forbehold: articleWindowCaveat({ vindu: vindu.length, filter: {} }),
+  });
+  assert.match(out, /id: a1/);
+  assert.match(out, /id: a2/);
+  assert.match(out, /https:\/\/eksempel\.no\/bodo/);
+  // Upublisert SIES framfor å bli en manglende linje: en tom linje leses som
+  // «ingen informasjon», og da er det ingenting som sier at datoen mangler.
+  assert.match(out, /UPUBLISERT/);
+});
+
+test("renderArticleWindow: forbeholdet står ØVERST, ikke som en fotnote", () => {
+  const forbehold = articleWindowCaveat({ vindu: 2, filter: {} });
+  const out = renderArticleWindow(EGNE_ARTIKLER.map(compactArticle), {
+    vindu: 2,
+    sider: 1,
+    taketNådd: false,
+    felter: ARTICLE_WINDOW_FIELDS,
+    forbehold,
+  });
+  // Konklusjonen «ikke dekket» trekkes i det øyeblikket lista ser tom ut. Etter
+  // det leser ingen en fotnote.
+  assert.ok(out.indexOf("FORBEHOLD") < out.indexOf("▸"), "forbeholdet må stå før artiklene");
+});
+
+test("renderArticleWindow: tomt vindu er ikke «ikke dekket»", () => {
+  const out = renderArticleWindow([], {
+    vindu: 0,
+    sider: 1,
+    taketNådd: false,
+    felter: ARTICLE_WINDOW_FIELDS,
+    forbehold: articleWindowCaveat({ vindu: 0, filter: {} }),
+  });
+  // Ingen artikler synkronisert betyr at spørsmålet ikke KAN besvares. Det er et
+  // annet svar enn «temaet er udekket», og forveksles lett.
+  assert.match(out, /ingen egne artikler/i);
+  assert.match(out, /kan spørsmålet ikke besvares/i);
 });
 
 // ---------------------------------------------------------------------------
@@ -874,4 +915,140 @@ test("renderDigest: flere kilder bak et signal SIES, ellers åpnes de aldri", ()
     ]),
   );
   assert.match(out, /\+2 kilder til \(se «signal s3»\)/);
+});
+
+// ---------------------------------------------------------------------------
+// Signalvinduet: det `kasus-lookout` leser
+// ---------------------------------------------------------------------------
+
+const RÅ_SIGNAL = {
+  id: "s1",
+  title: "SSB: kvadratmeterprisen falt 4,2 prosent",
+  status: "new",
+  type: "market_signal",
+  origin: "own_followup",
+  url: "https://ssb.no/tall",
+  sourceLabel: "SSB",
+  detectedAt: "2026-08-30T06:00:00Z",
+  summary: "Tallene for andre kvartal.",
+  sources: [{ url: "https://a.no" }, { url: "https://b.no" }],
+  details: {
+    matchedPattern: "Boligmarkedet i nord",
+    publishedDate: "2026-08-29T06:00:00Z",
+    // Researchkonteksten — den tunge halvparten, som IKKE skal med.
+    description: "x".repeat(3000),
+    snippet: "y".repeat(3000),
+    actors: [{ name: "SSB" }],
+    keyFigures: ["4,2 %"],
+  },
+};
+
+test("compactSignal: researchkonteksten er den tunge halvparten, og skal IKKE med", () => {
+  // 100 signaler med description + snippet er titusener av tokens for et
+  // spørsmål som avgjøres på tittel, kategori og to datoer.
+  const kort = compactSignal(RÅ_SIGNAL);
+  const serialisert = JSON.stringify(kort);
+  assert.equal(kort.details, undefined);
+  assert.ok(!serialisert.includes("xxx"), "description skal ikke være med");
+  assert.ok(!serialisert.includes("yyy"), "snippet skal ikke være med");
+  assert.ok(serialisert.length < 600, `for tungt: ${serialisert.length} tegn`);
+});
+
+test("compactSignal: kategorien er FERDIG utregnet, ikke noe leseren skal utlede", () => {
+  // Kategorien krever at origin og type leses SAMTIDIG. En leser som utleder den
+  // selv kan utlede den annerledes enn pluginen gjør ellers.
+  assert.equal(compactSignal(RÅ_SIGNAL).kategori, "egen_oppfolging");
+  assert.equal(
+    compactSignal({ ...RÅ_SIGNAL, origin: null, type: "competitor_article" }).kategori,
+    "konkurrentsak",
+  );
+  assert.equal(
+    compactSignal({ ...RÅ_SIGNAL, origin: null, type: "market_signal" }).kategori,
+    "temasok",
+  );
+  // Kategorien i vinduet må være DEN SAMME som resten av pluginen bruker.
+  assert.equal(compactSignal(RÅ_SIGNAL).kategori, bucketOf(RÅ_SIGNAL));
+});
+
+test("compactSignal: de to datoene er skilt, og flatet ut av details", () => {
+  const kort = compactSignal(RÅ_SIGNAL);
+  assert.equal(kort.oppdaget, "2026-08-30T06:00:00Z");
+  assert.equal(kort.publisert, "2026-08-29T06:00:00Z");
+  assert.equal(kort.mønster, "Boligmarkedet i nord");
+  assert.equal(kort.kilder, 2);
+});
+
+test("compactSignal: tomme felt BEHOLDES som null — de betyr noe her", () => {
+  // Motsatt av artikkelvinduet: «mønster: null» er «radaren fant dette uten at
+  // profilen forklarer hvorfor», og utelatt ville det blitt lest som at
+  // spørsmålet ikke ble stilt.
+  const kort = compactSignal({ id: "s2", title: "Uten noe", details: {} });
+  assert.equal(kort.mønster, null);
+  assert.equal(kort.publisert, null);
+  assert.equal(kort.url, null);
+  assert.equal(kort.kilder, 0);
+  assert.deepEqual(Object.keys(kort).sort(), [...SIGNAL_WINDOW_FIELDS].sort());
+});
+
+test("signalWindowCaveat: sier ALLTID at kvitteringen ikke er rørt", () => {
+  // Det er den ene opplysningen som skiller et oppslag fra en runde. Uten den
+  // kan en leser tro at signalene nå er «sett».
+  for (const filter of [{}, { hours: 24 }, { origin: "own_followup" }]) {
+    assert.match(signalWindowCaveat({ vindu: 3, filter }), /Kvitteringen .* IKKE rørt/);
+  }
+});
+
+test("signalWindowCaveat: et lokalt filter sier at det er lokalt, og hva som falt bort", () => {
+  // API-et støtter ikke origin/pattern. Et lokalt filter på et avkortet vindu er
+  // ikke et søk, og forveksles med et tomt datasett.
+  const c = signalWindowCaveat({ vindu: 3, hentet: 100, filter: { origin: "own_followup" } });
+  assert.match(c, /LOKALT/);
+  assert.match(c, /3 av 100/);
+});
+
+test("signalWindowCaveat: taket nådd slår gjennom en tidsgrense", () => {
+  const c = signalWindowCaveat({ vindu: 100, hentet: 100, taketNådd: true, filter: { hours: 24 } });
+  assert.match(c, /TAKET ER NÅDD/);
+  assert.doesNotMatch(c, /FULLSTENDIG/);
+});
+
+test("signalWindowCaveat: med tidsgrense og uten tak er svaret fullstendig", () => {
+  const c = signalWindowCaveat({ vindu: 6, hentet: 6, filter: { hours: 24 } });
+  assert.match(c, /FULLSTENDIG/);
+});
+
+test("renderSignalWindow: kategorien står på HVERT signal, ikke som overskrift", () => {
+  // En leser som plukker signaler ut av rekkefølgen tar ikke med seg en kategori
+  // som bare sto i en gruppeoverskrift lenger opp.
+  const vindu = [RÅ_SIGNAL, { id: "s2", title: "Uten lenke", details: {} }].map(compactSignal);
+  const out = renderSignalWindow(vindu, {
+    vindu: vindu.length,
+    hentet: vindu.length,
+    sider: 1,
+    taketNådd: false,
+    felter: SIGNAL_WINDOW_FIELDS,
+    kvittering: "ikke rørt",
+    forbehold: signalWindowCaveat({ vindu: vindu.length, filter: {} }),
+  });
+  assert.match(out, /\[egen_oppfolging\]/);
+  assert.match(out, /\[temasok\]/);
+  assert.match(out, /id: s1/);
+  // Manglende lenke og manglende dato SIES, framfor å bli tomme linjer.
+  assert.match(out, /\(ingen — må vurderes på tittelen alene\)/);
+  assert.match(out, /ukjent dato — IKKE «fersk»/);
+  assert.match(out, /uten mønstertreff/);
+});
+
+test("renderSignalWindow: tomt etter lokalt filter er ikke «ingenting skjer»", () => {
+  const out = renderSignalWindow([], {
+    vindu: 0,
+    hentet: 40,
+    sider: 1,
+    taketNådd: false,
+    felter: SIGNAL_WINDOW_FIELDS,
+    kvittering: "ikke rørt",
+    forbehold: signalWindowCaveat({ vindu: 0, hentet: 40, filter: { origin: "x" } }),
+  });
+  assert.match(out, /40 signaler ble hentet, men ingen passerte/);
+  assert.match(out, /tomt for DENNE/);
 });

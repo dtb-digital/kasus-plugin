@@ -64,14 +64,14 @@ kildelista derfor ikke kan bestå av konkurrenten.>
 
 ## Egne saker
 
-<Det artikkel-sjekken fant, med URL og dato, og hva forholdet er: bygge videre
-på, overlapper delvis, eller samme sak.>
+<Det artikkel-sjekken fant, med artikkel-id, URL og dato, og dommen den fikk:
+SAMME SAK, OPPFØLGING, FUNDAMENT eller SAMME TEMA.>
 
 **Fant ingen treff?** Da står det slik — med forbeholdet:
 
-> Ingen av de <N> nyeste egne artiklene traff på <søkeordene>. Sjekken er
-> ordoverlapp mot et vindu, ikke et fulltekstsøk: er temaet dekket tidligere
-> eller under en annen ordbruk, fanger den det ikke.
+> Ingen av de <N> nyeste egne artiklene er samme sak. Sjekken er en vurdering av
+> et vindu, ikke et fulltekstsøk: er temaet dekket tidligere enn vinduet rekker,
+> fanger den det ikke.
 
 Dette avsnittet skal ALDRI utelates. «Ingen treff» uten forbeholdet leses som
 «ikke dekket», og det er den feilslutningen som gir en dublett på nett.

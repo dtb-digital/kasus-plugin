@@ -1,45 +1,76 @@
 ---
 description: Status — hva har skjedd siden sist? Lesende blikk i radarsignalene, uten å starte en runde
-argument-hint: [--hours 72] [--pattern «navn»] [--origin own_followup] [--status new] [--type market_signal] [--limit 20]
-allowed-tools: ["Bash"]
+argument-hint: [--hours 72] [--pattern «navn»] [--origin own_followup] [--status new] [--limit 20] | [et spørsmål]
+allowed-tools: ["Bash", "Agent", "Task"]
 ---
 
-Gi en **status** på radarsignalene. Dette er blikket man tar før man bestemmer seg
-for om det er verdt å sette av tid: hva har kommet inn, hvordan fordeler det seg,
-er noe av det gammelt — og er det noe her i det hele tatt.
+Gi en **status** på radarsignalene, eller svar på et **spørsmål** om dem. Dette er
+blikket man tar før man bestemmer seg for om det er verdt å sette av tid: hva har
+kommet inn, hvordan fordeler det seg, er noe av det gammelt — og er det noe her i
+det hele tatt.
 
 **Denne kommandoen kvitterer ALDRI.** Den flytter ikke «siden sist», den merker
 ingenting som sett, og den skriver ingen filer. Det er hele poenget: du skal kunne
 se hva som ligger der uten at det får konsekvenser, og uten å forplikte deg til å
 gjøre noe med det. Arbeidet skjer i `/kasus:start`.
 
-## Hvilket kall
+## Hvilken av de tre
 
-Det avhenger av hva brukeren spurte om, og forskjellen er ikke kosmetisk:
+Det avhenger av hva brukeren spurte om, og forskjellen er ikke kosmetisk.
 
-**Ingen argumenter, eller bare `--hours`/`--limit`/`--all`** → status siden sist:
+### A. Ingen argumenter, eller bare flagg → status, her
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs nytt $ARGUMENTS
 ```
 
-Denne måler mot kvitteringen og undertrykker det som alt er sett, så den svarer på
-«hva er NYTT». Med `--hours` sier den selv at vinduet er overstyrt.
+Gjelder tom input og `--hours`/`--limit`/`--all`. Denne måler mot kvitteringen og
+undertrykker det som alt er sett, så den svarer på «hva er NYTT». Med `--hours`
+sier den selv at vinduet er overstyrt.
 
-**Med `--pattern`, `--origin`, `--status` eller `--type`** → oppslag:
+**Med `--pattern`, `--origin`, `--status` eller `--type`** er det et oppslag
+framfor en status:
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs signals $ARGUMENTS
 ```
 
 `--all` finnes ikke her — den hører til statusformen. Blandes de to (`--all
---pattern X`), stopper verktøyet med «Ukjent flagg» framfor å tolke det; velg
-hvilken av de to du vil ha.
+--pattern X`), stopper verktøyet med «Ukjent flagg» framfor å tolke det.
 
-Denne **ignorerer kvitteringen fullstendig** og lister alt som passer filteret,
-sett eller ikke. Si det når du bruker den — en filtrert liste ser ut som «siden
-sist» hvis ingen sier noe annet, og da er det umulig å vite om de sju treffene er
-nye eller noe man så i går.
+Oppslaget **ignorerer kvitteringen fullstendig** og lister alt som passer
+filteret, sett eller ikke. Si det når du bruker den — en filtrert liste ser ut som
+«siden sist» hvis ingen sier noe annet, og da er det umulig å vite om de sju
+treffene er nye eller noe man så i går.
+
+**Gjør begge disse selv, her i samtalen.** Outputen er alt lagd for å leses, og
+lenkene skal være klikkbare for brukeren — en agent som oppsummerer den ville
+gjort dem om til prosa.
+
+### B. Et spørsmål → `kasus-lookout`
+
+Er argumentet et spørsmål framfor flagg — «er det noe om strømpriser?», «hva har
+kommet inn denne uka?», «hvor mange oppfølginger av egne saker ligger der?» —
+send ut **én `kasus-lookout`** med spørsmålet ordrett.
+
+Grunnen er den samme som på artikkelsiden: `/api/v1/signals` har ingen tekstsøk og
+ingen `q`, så et tema er ikke et filter. Det må leses. Agenten henter selv opptil
+hundre signaler og leser dem, uten at de fyller denne samtalen.
+
+Gi den:
+
+- **spørsmålet**, ordrett
+- **plugin-roten**, som absolutt sti: `${CLAUDE_PLUGIN_ROOT}` — skriv ut den
+  faktiske verdien i prompten, ikke variabelnavnet
+- **`--env <navn>`** hvis det jobbes mot et annet miljø
+
+Agenten kvitterer aldri, og svarer med klikkbar lenke, id, kategori og begge
+datoer per signal. **Relayér lenkene videre** — de er poenget, og de forsvinner
+hvis du bare oppsummerer.
+
+Brukeren treffer ofte agenten direkte, uten denne kommandoen: «er det noe nytt å
+skrive om?» går rett til `kasus-lookout`. Det er meningen. Kommandoen finnes for
+den som vil ha statusen, eller vil styre filtrene selv.
 
 ## Les statusen
 

@@ -11,8 +11,7 @@
  * trenger å være mulig å skumme.
  */
 
-import { block, clip, fmtAge, fmtTime, line } from "../lib/table.mjs";
-import { stripHtml } from "./match.mjs";
+import { block, clip, fmtAge, fmtTime, line, stripHtml } from "../lib/table.mjs";
 
 /** Menneskelesbar forklaring av `origin` på et signal. */
 const ORIGIN_LABELS = {
@@ -231,61 +230,119 @@ export function renderArticles(articles, { truncated = false } = {}) {
 }
 
 /**
- * «Har vi dekket dette før?»
+ * Vinduet av egne artikler, i den formen `kasus-archivist` leser det.
  *
- * Forbeholdet står ØVERST, ikke nederst. En treffliste leses ovenfra, og
+ * Dette er IKKE en treffliste. Det er alle artiklene i vinduet, og formen er
+ * lagd for å bli lest av en agent OG av et menneske som vil ettergå svaret: én
+ * blokk per artikkel, med id-en som må oppgis for at en påstand om en egen sak
+ * skal kunne slås opp.
+ *
+ * Forbeholdet står ØVERST, ikke nederst. Grunnlaget leses ovenfra, og
  * konklusjonen «ikke dekket» trekkes i det øyeblikket lista ser tom ut — etter
  * det leser ingen en fotnote.
  */
-export function renderArticleMatches(ranked, meta) {
+export function renderArticleWindow(vindu, meta) {
   const parts = [
-    "EGNE SAKER — HAR VI DEKKET DETTE FØR?",
-    `  matchet mot: de ${meta.vindu} nyeste egne artiklene`,
-    `  søkeord: ${ranked.query.join(", ") || "(ingen brukbare ord i teksten)"}`,
+    "EGNE SAKER — VINDUET ET SPØRSMÅL OM EGEN DEKNING BESVARES MOT",
+    `  ${meta.vindu} artikler, nyest publisert først, hentet over ${meta.sider} side(r)`,
+    `  felter: ${meta.felter.join(", ")}  (ingen brødtekst — bruk «article <id>»)`,
+    `  FORBEHOLD: ${meta.forbehold}`,
   ];
 
-  if (ranked.ukjenteOrd.length) {
-    // Dette er ofte det mest nyttige i svaret: ord redaksjonen aldri har brukt.
-    parts.push(
-      `  finnes IKKE i noen av artiklene: ${ranked.ukjenteOrd.join(", ")}` +
-        `${ranked.ukjenteOrd.length === ranked.query.length ? "  ← alle søkeordene. Temaet er udekket med denne ordbruken." : ""}`,
-    );
-  }
-  parts.push(`  FORBEHOLD: ${meta.forbehold}`);
-
-  if (!ranked.hits.length) {
+  if (!vindu.length) {
     parts.push(
       "",
-      `Ingen av de ${meta.vindu} nyeste artiklene er en kandidat.`,
-      ranked.svake
-        ? `${ranked.svake} hadde ett svakt fellesord og ble utelatt (regelen er: to fellesord, eller ett i tittel/stikktittel/undertittel/emneknagg).`
-        : null,
+      "Ingen egne artikler for denne organisasjonen med dette filteret.",
       "",
-      "Det betyr at saken ikke er dekket NYLIG med disse ordene. Er temaet eldre",
-      "enn vinduet, eller dekket under en annen ordbruk, må det sjekkes manuelt.",
+      "Det er ikke det samme som «temaet er udekket»: har organisasjonen ingen",
+      "artikler synkronisert til Kasus, kan spørsmålet ikke besvares her i det hele",
+      "tatt — og da må det sies til journalisten framfor å svare «ingen treff».",
     );
     return block(parts);
   }
 
-  parts.push(
-    "",
-    `${ranked.hits.length} ${ranked.hits.length === 1 ? "kandidat" : "kandidater"}, sterkeste først:`,
-  );
-  for (const hit of ranked.hits) {
+  parts.push("");
+  for (const article of vindu) {
     parts.push(
+      `  ▸ ${clip(article.title, 140)}`,
+      line("id", article.id, "    "),
+      line("publisert", article.published ? fmtAge(article.published) : "UPUBLISERT", "    "),
+      line("stikktittel", article.kicker, "    "),
+      line("undertittel", clip(article.subtitle, 160), "    "),
+      line("seksjon", article.sectionTag, "    "),
+      line("emneknagger", article.tags, "    "),
+      line("ingress", clip(article.excerpt, 300), "    "),
+      line("url", article.url, "    "),
       "",
-      `  traff på: ${hit.matched.join(", ")}   [styrke ${hit.styrke} — kun sortering]`,
-      renderArticleLine(hit.article, "  "),
     );
   }
-  if (ranked.flereTreff) {
-    parts.push("", `  ${ranked.flereTreff} flere kandidater ble ikke vist. Øk --top.`);
+
+  if (meta.taketNådd) {
+    parts.push("Taket er nådd — det finnes MER enn dette. Øk --limit.");
   }
-  parts.push(
-    "",
-    "«Styrke» er en sorteringsnøkkel, ikke et likhetsmål — les ORDENE som traff.",
-    "En artikkel om samme tema er ikke nødvendigvis samme sak.",
-  );
+  return block(parts);
+}
+
+/**
+ * Vinduet av radarsignaler, i den formen `kasus-lookout` leser det.
+ *
+ * Kategorien står på hver linje, ikke som en gruppeoverskrift. Det er forskjellen
+ * fra `renderDigest`, og den er tilsiktet: en leser som skal svare på et spørsmål
+ * plukker signaler ut av rekkefølgen, og en kategori som bare sto i en overskrift
+ * lenger opp følger ikke med når signalet siteres.
+ */
+export function renderSignalWindow(vindu, meta) {
+  const parts = [
+    "RADARSIGNALER — VINDUET ET SPØRSMÅL LESES MOT",
+    `  ${meta.vindu} signaler${meta.hentet !== meta.vindu ? ` (av ${meta.hentet} hentet)` : ""}, sist oppdaget først, over ${meta.sider} side(r)`,
+    `  felter: ${meta.felter.join(", ")}  (ingen researchkontekst — bruk «signal <id>»)`,
+    `  KVITTERING: ${meta.kvittering}`,
+    `  FORBEHOLD: ${meta.forbehold}`,
+  ];
+
+  if (!vindu.length) {
+    parts.push(
+      "",
+      meta.hentet
+        ? `${meta.hentet} signaler ble hentet, men ingen passerte det lokale filteret.`
+        : "Ingen radarsignaler for denne organisasjonen med dette filteret.",
+      "",
+      "Det er ikke det samme som «ingenting skjer»: nøkkelen avgjør organisasjonen,",
+      "og et tomt svar betyr tomt for DENNE — aldri tomt i Kasus.",
+    );
+    return block(parts);
+  }
+
+  parts.push("");
+  for (const signal of vindu) {
+    parts.push(
+      `  ▸ [${signal.kategori}] ${clip(signal.title, 140)}`,
+      line("id", signal.id, "    "),
+      line("status", signal.status, "    "),
+      // De to datoene står SAMMEN, med ordene på. «oppdaget» alene leses som
+      // sakens alder, og et fritt temasøk kan levere en sak fra 2023 i dag.
+      line(
+        "oppdaget",
+        signal.oppdaget ? `${fmtAge(signal.oppdaget)} (${fmtTime(signal.oppdaget)})` : "ukjent",
+        "    ",
+      ),
+      line(
+        "publisert",
+        signal.publisert ? `${fmtAge(signal.publisert)} (${fmtTime(signal.publisert)})` : "ukjent dato — IKKE «fersk»",
+        "    ",
+      ),
+      line("mønster", signal.mønster ?? "uten mønstertreff — profilen forklarer ikke hvorfor", "    "),
+      line("kilde", signal.sourceLabel, "    "),
+      line("url", signal.url ?? "(ingen — må vurderes på tittelen alene)", "    "),
+      signal.kilder > 1 ? `    kilder: ${signal.kilder} (se «signal ${signal.id}»)` : null,
+      line("sammendrag", signal.summary, "    "),
+      "",
+    );
+  }
+
+  if (meta.taketNådd) {
+    parts.push("Taket er nådd — det finnes MER enn dette. Øk --limit.");
+  }
   return block(parts);
 }
 

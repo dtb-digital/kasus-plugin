@@ -70,7 +70,7 @@ Neste person som kloner repoet trenger bare sin egen nøkkel — resten står i
 | Kommando | Gjør |
 |---|---|
 | `/kasus:start` | **Vaktrunden.** Alt over. Tar `--hours 72` for et bredere vindu og `--all` for å ta med forkastede signaler. |
-| `/kasus:signals` | **Status:** hva har skjedd siden sist? Fordeling over mønstre, kategorier, gamle saker. Kvitterer aldri, skriver ingenting. |
+| `/kasus:signals` | **Status:** hva har skjedd siden sist? Fordeling over mønstre, kategorier, gamle saker. Med et spørsmål framfor flagg (`/kasus:signals er det noe om strømpriser?`) går det til `kasus-lookout`. Kvitterer aldri, skriver ingenting. |
 | `/kasus:env` | Sjekker oppsettet. `--resolve` sier hvilken installasjon et kall treffer og hvilken variabel hver verdi kom fra. |
 | `/kasus:test` | Selvtester pluginen. `--live` også tilkoblingen og at serveren avviser skriv. |
 
@@ -98,23 +98,38 @@ uke fra hverandre. Mangler datoen, står det «ukjent dato» — ikke «fersk».
 
 ## «Har vi dekket dette før?»
 
-For hver valgte sak matches signalet mot redaksjonens egne artikler. Det svarer på
-tre ting samtidig: er saken skrevet før (ikke gjenta), finnes det en egen sak å
+For hver valgte sak vurderes signalet mot redaksjonens egne artikler. Det svarer
+på tre ting samtidig: er saken skrevet før (ikke gjenta), finnes det en egen sak å
 bygge videre på (billigere og bedre), og hvilken tone har redaksjonen på temaet.
 
-**Artikkel-API-et har ingen tekstsøk.** Matchingen er derfor idf-vektet
-ordoverlapp mot et vindu av de nyeste artiklene, gjort lokalt — og det har to
-konsekvenser som står i hvert svar:
+**Artikkel-API-et har ingen tekstsøk.** Spørsmålet kan derfor ikke stilles til
+serveren. Verktøyet henter i stedet et vindu på de 200 nyeste egne artiklene —
+tittelfelt, emneknagger, ingress og dato, uten brødtekst — og
+`kasus-archivist` leser dem og svarer.
 
-- **«Ingen treff» betyr «ikke blant disse artiklene»**, aldri «ikke dekket». Er
-  temaet eldre enn vinduet, eller dekket under en annen ordbruk, fanger den det
-  ikke.
-- **Ordoverlapp er ikke semantikk.** «Prisfall i Bodø» og «nedgang i Nordland» er
-  samme sak for en leser og null treff her.
+Vurderingen er semantisk, og det er poenget: «prisfall i Bodø» og «nedgang i
+kvadratmeterprisen i Nordland» er samme sak for en leser og har ikke ett ord til
+felles. Hver kandidat får én av fire dommer:
 
-Derfor rapporteres ordene som traff, hvor de traff, og hvilke søkeord som ikke
-finnes i noen egen artikkel — det siste er ofte det mest opplysende svaret: er
-alle ukjente, er temaet i praksis udekket.
+| Dom | Betyr |
+|---|---|
+| **SAMME SAK** | Samme hendelse, samme periode. Ikke skriv. |
+| **OPPFØLGING** | Samme sakskompleks, men noe er nytt — et annet kvartal, en ny aktør. Skriv, som oppfølging. |
+| **FUNDAMENT** | Dekker bakgrunnen, ikke nyheten. Bygg på den. |
+| **SAMME TEMA** | Beslektet, ikke samme sak. Ingen dublettrisiko — men det er tonebeviset. |
+
+Datoen avgjør oftere enn tittelen: signalet gjelder Q2, artikkelen fra i vår
+gjelder Q1, og det er en sak framfor en gjentakelse. Står forskjellen i
+brødteksten, hentes de avgjørende kandidatene i full tekst.
+
+To forbehold følger hvert svar, og de er ikke det samme:
+
+- **Vindusgrensen.** **«Ingen treff» betyr «ikke blant disse artiklene»**, aldri
+  «ikke dekket». En sak eldre enn vinduet er usynlig for enhver vurdering — det
+  er en egenskap ved API-et, ikke ved vurderingen.
+- **At det er en vurdering.** Ikke en regning, og ikke reproduserbar. Derfor står
+  artikkel-id, dato og url på hver kandidat: dommen skal kunne overprøves på
+  tretti sekunder.
 
 ## «Siden sist»
 
@@ -134,7 +149,33 @@ Runden måler mot en **kvittering**: tidspunktet forrige runde ble gjort, lagret
   Legg den i `.gitignore`: kvitteringen er DIN runde, ikke redaksjonens, og en
   delt kvittering ville sagt at du har sett noe du ikke har sett.
 
-## Agent
+## Agenter
+
+Begge finnes av samme grunn: **API-et har ingen tekstsøk**, verken på signaler
+eller artikler. Et tema er ikke et filter — det må leses. Agentene henter vinduet
+selv, så de hundre eller to hundre elementene blir liggende i deres kontekst
+framfor i samtalens.
+
+Begge trigges på naturlig språk. Du trenger ingen kommando for å spørre.
+
+`kasus-lookout` besvarer **ett spørsmål om radarsignalene**: «er det noe nytt å
+skrive om?», «er det noe om strømpriser?», «hva kom inn denne uka?», «hvor mange
+oppfølginger av egne saker ligger der?». Den svarer med kategori, begge datoer,
+mønster og klikkbar lenke per signal — og **kvitterer aldri**. Et spørsmål om hva
+som ligger der skal ikke kunne spise runden, så forbudet er håndhevet i
+`/kasus:test` framfor å være et løfte i en prompt.
+
+`kasus-archivist` besvarer **ett spørsmål om redaksjonens egne artikler**. Den
+velger vinduet spørsmålet krever, henter det selv, og svarer med artikkel-id, dato
+og url på hvert punkt — pluss forbeholdet om hva vinduet dekket. De 200 artiklene
+blir liggende i agentens kontekst, ikke i rundens.
+
+Runden bruker den til «har vi skrevet om dette før?», som er den formen som har en
+fast dom per kandidat. Men spørsmålet er ikke begrenset til det: spør du «hva har
+vi skrevet om i dag?», «hvem hos oss dekker samferdsel?» eller «hvilken tone har
+vi hatt på strømpriser?», er det samme agent — og for et spørsmål med tidsgrense
+er svaret fullstendig framfor et utsnitt, fordi vinduet da kan dekke hele
+perioden.
 
 `kasus-researcher` besvarer **ett** researchspørsmål: søker bredt, leser smalt,
 går til primærkilden framfor omtalen, daterer alt, og skiller mellom bekreftet,
@@ -164,7 +205,8 @@ Forutsetter Node 18+ på PATH. Verktøyet er avhengighetsfri ESM — ingen
 - **Nøkkelen avgjør organisasjonen.** Ingen organisasjons-id sendes. «Ingen
   signaler» betyr «ingen for denne organisasjonen», og en `404` betyr «finnes
   ikke ELLER tilhører en annen organisasjon».
-- **Artikkel-matchingen er lokal ordoverlapp**, ikke et fulltekstsøk. Se over.
+- **Artikkel-sjekken er en vurdering av et vindu**, ikke et fulltekstsøk. Den er
+  ikke reproduserbar, og vinduet er 200 artikler. Se over.
 - **Menneskelig output klipper** lange tekstfelt og sier at den klipper. `--json`
   klipper ingenting.
 - **Ingenting oppdiktes.** Mangler en kilde, står det

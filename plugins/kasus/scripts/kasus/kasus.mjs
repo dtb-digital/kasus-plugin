@@ -12,11 +12,12 @@
  * Bruk:
  *   kasus.mjs nytt     [--hours 24] [--limit 40] [--all] [--json]
  *   kasus.mjs kvitter  [--at <ISO>] [--ids id1,id2] [--ids-only] [--reset] [--json]
- *   kasus.mjs signals  [--status new] [--type market_signal] [--origin own_followup]
- *                      [--pattern «navn»] [--hours 24] [--limit 20] [--json]
+ *   kasus.mjs signals  [--kort] [--status new] [--type market_signal]
+ *                      [--origin own_followup] [--pattern «navn»] [--hours 24]
+ *                      [--limit 20] [--json]
  *   kasus.mjs signal <id> [--json]
- *   kasus.mjs articles [--match «tekst»] [--status P] [--cms labrador]
- *                      [--hours N] [--limit 200] [--top 5] [--json]
+ *   kasus.mjs articles [--kort] [--status P] [--cms labrador]
+ *                      [--hours N] [--limit 200] [--json]
  *   kasus.mjs article <id> [--json]
  *   kasus.mjs profile  [--json]
  *   kasus.mjs --list --json
@@ -44,16 +45,18 @@ import {
   publishedNote,
   renderAck,
   renderArticle,
-  renderArticleMatches,
   renderArticles,
+  renderArticleWindow,
   renderDigest,
+  renderSignalWindow,
   renderProfile,
   renderReset,
   renderSignal,
   SIGNAL_BUCKETS,
   STALE_AFTER_DAYS,
 } from "./render.mjs";
-import { rankArticles, HEAVY_FIELD_WEIGHT } from "./match.mjs";
+import { ARTICLE_WINDOW_FIELDS, articleWindowCaveat, compactArticle } from "./articles.mjs";
+import { compactSignal, SIGNAL_WINDOW_FIELDS, signalWindowCaveat } from "./signals.mjs";
 import { ConfigError, headerLine, hostOf, resolveTarget } from "./targets.mjs";
 import {
   ack,
@@ -71,7 +74,7 @@ import {
   writeState,
 } from "./state.mjs";
 
-const VERSION = "0.4.0";
+const VERSION = "0.6.0";
 const DEFAULT_LIMIT = 20;
 
 /**
@@ -88,15 +91,22 @@ const SIGNAL_TYPES = ["competitor_article", "market_signal"];
  * Vinduet «har vi dekket dette før?» sjekkes mot.
  *
  * Artikkel-API-et har ingen tekstsøk, så spørsmålet besvares ved å hente de N
- * nyeste artiklene og matche lokalt. 200 er to sider paginering — nok til å
- * dekke flere måneders produksjon for en normal redaksjon, og lite nok til at
- * kallet går fort nok for en interaktiv runde. Tallet SIES i svaret, fordi en
- * tom treffliste ellers leses som «ikke dekket».
+ * nyeste artiklene og legge dem fram for vurdering. 200 er to sider paginering —
+ * nok til å dekke flere måneders produksjon for en normal redaksjon, og lite nok
+ * til at kallet går fort nok for en interaktiv runde. Tallet SIES i svaret, fordi
+ * en tom treffliste ellers leses som «ikke dekket».
  */
 const ARTICLE_WINDOW = 200;
 
-/** Hvor mange treff som vises. Flere enn dette leses ikke på en runde. */
-const ARTICLE_TOP = 5;
+/**
+ * Vinduet et spørsmål om signalene leses mot.
+ *
+ * Lavere enn artikkelvinduet, og det er ikke en forglemmelse: signalene er ferske
+ * av natur. Radaren leverer et titalls i døgnet, så 100 er flere dager tilbake —
+ * mens 200 artikler kan være et halvår. Et signal eldre enn det er dessuten
+ * sjelden en sak lenger.
+ */
+const SIGNAL_WINDOW = 100;
 
 const COMMON_FLAGS = ["env", "json"];
 
@@ -119,8 +129,9 @@ const MODES = {
     run: runKvitter,
   },
   signals: {
-    summary: "Liste radarsignaler, nyeste først (etter detectedAt).",
-    flags: [...COMMON_FLAGS, "status", "type", "origin", "pattern", "hours", "limit"],
+    summary:
+      "Liste radarsignaler, nyeste først (etter detectedAt). Med --kort: vinduet et spørsmål om signalene leses mot, uten researchkontekst.",
+    flags: [...COMMON_FLAGS, "kort", "status", "type", "origin", "pattern", "hours", "limit"],
     run: runSignals,
   },
   signal: {
@@ -131,8 +142,8 @@ const MODES = {
   },
   articles: {
     summary:
-      "Redaksjonens EGNE artikler. Med --match: har vi dekket dette før? (lokal ordmatch — API-et har ingen tekstsøk.)",
-    flags: [...COMMON_FLAGS, "match", "status", "cms", "hours", "limit", "top"],
+      "Redaksjonens EGNE artikler. Med --kort: vinduet et spørsmål om egen dekning leses mot, uten brødtekst. Filtrene avgjør hva svaret kan dekke.",
+    flags: [...COMMON_FLAGS, "kort", "status", "cms", "hours", "limit"],
     run: runArticles,
   },
   article: {
@@ -319,11 +330,24 @@ async function runKvitter(target, flags) {
   };
 }
 
+/**
+ * Liste radarsignaler.
+ *
+ * `--kort` legger fram vinduet et spørsmål om signalene skal leses MOT — uten
+ * `details`-bulken, og med forbeholdet om hva vinduet dekker. Modusen svarer ikke
+ * på spørsmålet: lesingen gjøres av `kasus-lookout`, fordi «er det noe å skrive om
+ * i dag?» og «er det noe om strømpriser?» ikke er filtre. API-et har ingen `q`.
+ *
+ * Modusen KVITTERER IKKE, i noen form. Den er et oppslag, og ignorerer
+ * kvitteringen fullstendig i begge retninger: den leser den ikke, og den flytter
+ * den ikke. Et spørsmål om hva som ligger der skal ikke kunne spise runden.
+ */
 async function runSignals(target, flags) {
+  const kort = boolFlag(flags, "kort");
   const status = assertOneOf(stringFlag(flags, "status"), SIGNAL_STATUSES, "status");
   const type = assertOneOf(stringFlag(flags, "type"), SIGNAL_TYPES, "type");
   const hours = intFlag(flags, "hours");
-  const limit = intFlag(flags, "limit", DEFAULT_LIMIT);
+  const limit = intFlag(flags, "limit", kort ? SIGNAL_WINDOW : DEFAULT_LIMIT);
   const origin = stringFlag(flags, "origin");
   const pattern = stringFlag(flags, "pattern");
 
@@ -342,6 +366,33 @@ async function runSignals(target, flags) {
     .filter((s) => (origin ? matchOrigin(s, origin) : true))
     .filter((s) => (pattern ? matchPattern(s.details?.matchedPattern, pattern) : true));
 
+  const filter = { status, type, hours, origin, pattern };
+
+  if (kort) {
+    const vindu = filtered.map(compactSignal);
+    const meta = {
+      vindu: vindu.length,
+      hentet: items.length,
+      sider: pages,
+      taketNådd: truncated,
+      filter,
+      felter: SIGNAL_WINDOW_FIELDS,
+      kvittering: "ikke rørt — dette er et oppslag, ikke en runde",
+      forbehold: signalWindowCaveat({
+        vindu: vindu.length,
+        hentet: items.length,
+        taketNådd: truncated,
+        filter,
+      }),
+    };
+    return {
+      kind: "signals-window",
+      items: vindu,
+      meta,
+      render: () => renderSignalWindow(vindu, meta),
+    };
+  }
+
   return {
     kind: "signals",
     items: filtered,
@@ -350,7 +401,7 @@ async function runSignals(target, flags) {
       etterFilter: filtered.length,
       sider: pages,
       taketNådd: truncated,
-      filter: { status, type, hours, origin, pattern },
+      filter,
     },
     render: () =>
       listOutput(filtered, items.length, truncated, "signaler", (s) => renderSignal(s)),
@@ -380,13 +431,28 @@ async function runSignal(target, flags, positional) {
  * ordoverlapp SIES i svaret — en tom treffliste her betyr «ikke blant disse
  * artiklene», aldri «ikke dekket».
  */
+/**
+ * Redaksjonens egne artikler.
+ *
+ * `--kort` legger fram vinduet et spørsmål om egne saker skal besvares MOT —
+ * uten brødtekst, og med forbeholdet om hva vinduet faktisk dekker. Modusen
+ * svarer ikke på spørsmålet: lesingen gjøres av `kasus-archivist`, fordi
+ * spørsmålene er semantiske og samme sak kan være skrevet med helt andre ord.
+ * En ordmatch sto her før og svarte nei på nettopp de tilfellene.
+ *
+ * Det betyr at modusen er ærlig om hva den er: en uthenting. Ingenting i dette
+ * svaret er en vurdering, og ingen «styrke» later som noe er målt.
+ *
+ * Filtrene er agentens verktøy, ikke pynt: «har vi skrevet om dette før?» vil ha
+ * hele vinduet, mens «hva har vi skrevet i dag?» vil ha `--hours 24` — og da er
+ * svaret fullstendig framfor et utsnitt. Forbeholdet sier hvilken av de to det er.
+ */
 async function runArticles(target, flags) {
-  const match = stringFlag(flags, "match");
+  const kort = boolFlag(flags, "kort");
   const status = stringFlag(flags, "status");
   const cms = stringFlag(flags, "cms");
   const hours = intFlag(flags, "hours");
-  const top = intFlag(flags, "top", ARTICLE_TOP);
-  const limit = intFlag(flags, "limit", match ? ARTICLE_WINDOW : DEFAULT_LIMIT);
+  const limit = intFlag(flags, "limit", kort ? ARTICLE_WINDOW : DEFAULT_LIMIT);
 
   const { items, truncated, pages } = await apiList(
     target,
@@ -395,7 +461,7 @@ async function runArticles(target, flags) {
     limit,
   );
 
-  if (!match) {
+  if (!kort) {
     return {
       kind: "articles",
       items,
@@ -404,34 +470,25 @@ async function runArticles(target, flags) {
     };
   }
 
-  const ranked = rankArticles(items, match, { top });
+  const vindu = items.map(compactArticle);
+  const filter = { status, cms, hours };
   const meta = {
-    match,
-    søkeord: ranked.query,
-    vindu: items.length,
+    vindu: vindu.length,
     sider: pages,
     taketNådd: truncated,
-    kandidater: ranked.hits.length,
-    flereTreff: ranked.flereTreff,
-    svake: ranked.svake,
-    ukjenteOrd: ranked.ukjenteOrd,
-    regel: `to fellesord, eller ett i et tungt felt (vekt ≥ ${HEAVY_FIELD_WEIGHT})`,
+    filter,
+    felter: ARTICLE_WINDOW_FIELDS,
     // Forbeholdet er en del av SVARET, ikke en fotnote i dokumentasjonen: uten
     // det leses «0 treff» som «ikke dekket», og det er feilslutningen som får
     // noen til å skrive en sak redaksjonen publiserte i fjor.
-    forbehold:
-      `Lokal ordmatch mot de ${items.length} nyeste artiklene — API-et har ingen tekstsøk. ` +
-      `Ingen treff betyr «ikke blant disse», ikke «ikke dekket». Ordoverlapp fanger ikke ` +
-      `omskrivinger: «prisfall i Bodø» og «nedgang i Nordland» er samme sak for en leser ` +
-      `og null treff her.`,
+    forbehold: articleWindowCaveat({ vindu: vindu.length, taketNådd: truncated, filter }),
   };
 
   return {
-    kind: "articles-match",
-    items: ranked.hits.map((h) => h.article),
-    data: ranked.hits,
+    kind: "articles-window",
+    items: vindu,
     meta,
-    render: () => renderArticleMatches(ranked, meta),
+    render: () => renderArticleWindow(vindu, meta),
   };
 }
 
