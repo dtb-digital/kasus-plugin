@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "kasus",
+  "version": "0.1.0",
+  "description": "Redaksjonell arbeidsflyt på Kasus-dataene dine: hent radarsignaler, story-briefs og redaksjonell profil fra det offentlige API-et, research en sak videre med søk og skraping, og skriv den ut som en markdown-artikkel. `/kasus:signals` og `/kasus:briefs` leser `GET /api/v1/signals` og `/api/v1/story-briefs` med paginering, klientside-filter på `origin` (som API-et ikke tilbyr) og lesbar output framfor rå JSON. `/kasus:profile` leser `GET /api/v1/profile` — redaksjonsprofilen, de utledede redaksjonelle mønstrene og radarens mandat — og er det som gjør at researchen og artikkelen treffer redaksjonens egne premisser framfor generisk nyhetsspråk. `/kasus:research` tar en brief eller et signal, henter profilen først, og fanner ut kilde-for-kilde: primærkilder framfor omtaler, hva kildene IKKE svarer på, og et eksplisitt skille mellom bekreftet, motstridende og ubekreftet — rapporten er verifiserbar fordi hvert faktum bærer URL-en sin. `/kasus:article` skriver utkastet som en markdown-fil med kilde-frontmatter og en KILDER-seksjon, i redaksjonens tone, med hull markert `[TRENGER VERIFISERING]` framfor fylt med plausibel tekst. API-laget er read-only — API-et har ingen skrivende ruter, og verktøyet har ingen kodesti for annet enn GET. Verktøyet følger med pluginen (avhengighetsfri ESM, Node 18+), maskerer hemmelig-navngitte nøkler i dybden, og ekkoer aldri API-nøkkelen — den rapporteres som `(satt)` med variabelnavnet. `/kasus:env` sjekker oppsettet og svarer med `--resolve` hvilken installasjon et kall faktisk treffer og hvilken variabel hver verdi kom fra; `/kasus:test` selvtester syntaks, manifest-kontrakten, enhetstestene og at mål-presedensen er den samme i shell og JS. Krever `KASUS_API_KEY` (Innstillinger → API-nøkler). `KASUS_BASE_URL` er valgfri og defaulter til app.kasus.io.",
+  "author": {
+    "name": "Glitch",
+    "email": "andreas@glitch.as"
+  },
+  "license": "MIT",
+  "keywords": [
+    "kasus",
+    "redaksjon",
+    "journalistikk",
+    "radar",
+    "signals",
+    "story-briefs",
+    "research",
+    "artikler",
+    "markdown",
+    "read-only"
+  ]
+}
