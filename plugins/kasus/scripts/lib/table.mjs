@@ -33,7 +33,14 @@ export function fmtTime(iso) {
   return `${d.toISOString().slice(0, 16).replace("T", " ")} UTC`;
 }
 
-/** «for 3 timer siden» — relativ alder, som er det man faktisk vurderer et signal på. */
+/**
+ * «for 3 timer siden» — relativ alder, som er det man faktisk vurderer et
+ * signal på.
+ *
+ * Grovere enheter for det gamle er ikke pynt: et fritt temasøk kan levere en
+ * artikkel fra 2023, og «for 912 d siden» må regnes om i hodet før det betyr
+ * noe. «for 2 år siden» avgjør prioriteringen med én gang.
+ */
 export function fmtAge(iso) {
   if (!iso) return null;
   const then = new Date(iso).getTime();
@@ -43,5 +50,9 @@ export function fmtAge(iso) {
   if (mins < 60) return `for ${mins} min siden`;
   const hours = Math.round(mins / 60);
   if (hours < 48) return `for ${hours} t siden`;
-  return `for ${Math.round(hours / 24)} d siden`;
+  const days = Math.round(hours / 24);
+  if (days < 60) return `for ${days} d siden`;
+  if (days < 365) return `for ${Math.round(days / 30)} mnd siden`;
+  const years = days / 365;
+  return years < 2 ? "for over ett år siden" : `for ${Math.round(years)} år siden`;
 }

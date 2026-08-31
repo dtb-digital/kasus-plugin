@@ -1,7 +1,7 @@
 # Kasus' offentlige API — kontrakten pluginen bygger på
 
 Lastes ved behov. Den autoritative dokumentasjonen bor i kasus-repoet
-(`docs/signals-api-README.md`, `docs/story-briefs-api-README.md`,
+(`docs/signals-api-README.md`, `docs/articles-api-README.md`,
 `docs/profile-api-README.md`); dette er det pluginen faktisk er avhengig av.
 
 ## Grunnlaget
@@ -21,17 +21,31 @@ Lastes ved behov. Den autoritative dokumentasjonen bor i kasus-repoet
 |---|---|---|
 | `GET /api/v1/signals` | `status`, `type`, `hours`, `limit` (maks 100), `cursor` | Sortert på `detectedAt` desc |
 | `GET /api/v1/signals/{id}` | — | 404 = finnes ikke eller annen org |
-| `GET /api/v1/story-briefs` | `status`, `hours`, `limit` (maks 100), `cursor` | Sortert på `createdAt` desc |
-| `GET /api/v1/story-briefs/{id}` | — | 404 = finnes ikke eller annen org |
+| `GET /api/v1/articles` | `status`, `cms`, `hours`, `limit` (maks 100), `cursor`, `include=body` | Redaksjonens EGNE saker. Nyest publisert først; upublisert sorteres sist. |
+| `GET /api/v1/articles/{id}` | — | Alltid med `body`. 404 = finnes ikke eller annen org |
 | `GET /api/v1/profile` | — | Ett objekt per organisasjon |
+
+`/api/v1/story-briefs` finnes i API-et, men **pluginen bruker det ikke**. Runden
+går fra rått radarsignal til saksforslag i én prosess, og et ferdig vurdert
+saksforslag fra pipelinen ville vært et konkurrerende utgangspunkt i samme
+arbeidsflyt.
 
 `nextCursor` er `null` på siste side. `limit` over 100 finnes ikke — verktøyet
 pagineres i stedet, og sier fra når taket er nådd.
 
-**`origin` kan ikke filtreres serverside.** Verken på signaler eller briefs.
-Verktøyet filtrerer lokalt med `--origin`/`--pattern` og oppgir både antall hentet
-og antall som passerte, slik at et lokalt filter ikke forveksles med et tomt
-datasett.
+**Artikkel-API-et har ingen tekstsøk.** Det finnes ingen `q`. «Har vi dekket dette
+før?» besvares derfor ved å hente et VINDU av de nyeste artiklene og matche
+idf-vektet ordoverlapp lokalt. Både vindusstørrelsen, ordene som traff og
+forbeholdet står i svaret: en tom treffliste betyr «ikke blant disse artiklene»,
+aldri «ikke dekket».
+
+**`hours` på artikler måles mot `published`.** Upublisert materiale faller derfor
+utenfor når `hours` settes. Matchingen bruker `--limit` framfor `hours`, slik at
+kladder er med — en kladd på samme tema er nettopp det man vil vite om.
+
+**`origin` kan ikke filtreres serverside.** Verktøyet filtrerer lokalt med
+`--origin`/`--pattern` og oppgir både antall hentet og antall som passerte, slik at
+et lokalt filter ikke forveksles med et tomt datasett.
 
 ## Feltverdier som betyr noe redaksjonelt
 
@@ -51,13 +65,35 @@ er de ikke til å skille fra et vanlig temasøk-treff:
 Nye `origin`-verdier er ikke en brytende endring. En ukjent verdi behandles som
 «annet opphav» framfor å avvise signalet.
 
-**Brief-`status`:** `candidate`, `proposal` (klar for redaksjonen), `draft`,
-`final`, `dismissed`.
+**Pluginens kategorinavn**, som er de samme i `/kasus:runde` og i
+`meta.grupper`:
 
-**Brief-`origin`:** `innhold` (innholdspipelinen), `radar` (fra et signal), `url`
-(innlimt lenke), `triage`.
+| API-felt | Kategori i pluginen |
+|---|---|
+| `origin: own_followup` | Oppfølging av EGEN sak (`egen_oppfolging`) |
+| `origin: competitor_followup` | Oppfølging av KONKURRENTSAK (`konkurrent_oppfolging`) |
+| `origin: null` + `type: competitor_article` | Konkurrentsak direkte (`konkurrentsak`) |
+| `origin: null` + `type: market_signal` | Fritt temasøk (`temasok`) |
+| ukjent `origin` | Annet opphav (`annet`) |
 
-**`matchedPattern`** på et signal eller en brief er samme streng som
+**`details.publishedDate` er ikke `detectedAt`.** Frie temasøk hentes uavhengig av
+publiseringstidspunkt, så et signal oppdaget i dag kan være en sak fra 2023.
+Pluginen viser begge og merker avvik over en uke som `GAMMEL SAK`. Feltet er
+valgfritt: mangler det, er svaret «ukjent dato», ikke «fersk».
+
+**Artikkel-`status`** er **fritekst**, ikke et enum: feltet speiler kundens CMS.
+Labrador og Sanity bruker `P`/`D`, HubSpot mappes til `P`/`D`, mens WordPress
+sender sine egne verdier (`draft`, `pending`, `private`) rett gjennom. En verdi som
+ikke finnes gir en tom liste, ikke en feil. Det samme gjelder `cms` — lista over
+kjente verdier vokser med nye integrasjoner, så verktøyet validerer dem ikke
+lokalt.
+
+**`body` er lagret slik CMS-et leverte den:** HTML fra Labrador, ren tekst fra
+Sanity, WordPress og HubSpot. `excerpt` og `wordCount` er alltid regnet på ren
+tekst, så de er sammenlignbare på tvers. Verktøyet stripper HTML for lesbarhet;
+`--json` gir feltet urørt.
+
+**`matchedPattern`** på et signal er samme streng som
 `criteria.patterns[].name` i profilen. Det er koblingen mellom «hvorfor ble dette
 plukket opp» og «hva fungerer for disse leserne».
 
@@ -67,7 +103,12 @@ Interne pipeline-felt er utelatt serverside (`threadId`, `insightId`,
 `radarSignalId`, `criteriaId`, `articleId`, `fullContent`, `researchPlan`,
 `relevanceScore`, `organizationId`, `sourceId`, `searchId`, `bucketId`), og
 profilen eksponerer ikke integrasjonskonfigurasjon, feature-flagg, modellvalg
-eller `personas`.
+eller `personas`. På artikler er `organizationId`, `siteId`, `imageId` og
+`createdBy` utelatt — `bylines` er den redaksjonelle visningsstrengen.
+
+**Ingen tekstsøk, ingen semantisk søk, ingen «relaterte saker».** Alt som ser ut
+som relevansvurdering i denne pluginen er gjort lokalt, og sier at det er gjort
+lokalt.
 
 `details` og `sources` på et signal er derimot **åpne** JSON-objekter satt sammen
 av `metadata` + `agentContext`. Hva som havner der bestemmes av pipelinen. Derfor

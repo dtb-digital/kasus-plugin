@@ -157,6 +157,29 @@ else
   printf 'OK       %s = %s\n' "$DIR_NAME" "$DIR_VALUE"
 fi
 
+# --- Kvitteringsfila (valgfri, defaulter) ----------------------------------
+# Her ligger «siden sist». Stien SIES, fordi en kvittering ingen finner igjen er
+# umulig å nullstille — og fordi en relativ sti tolkes fra der du står, ikke fra
+# pluginmappa.
+STATE_ROW="$(get_var KASUS_STATE_FILE)"
+STATE_NAME="$(name_of "$STATE_ROW")"
+STATE_VALUE="$(value_of "$STATE_ROW")"
+if [ -z "$STATE_NAME" ]; then
+  STATE_PATH="$PWD/.claude/kasus-state.json"
+  printf 'OK       %s = (usatt) → default .claude/kasus-state.json\n' "$(tried_names KASUS_STATE_FILE)"
+else
+  case "$STATE_VALUE" in
+    /*) STATE_PATH="$STATE_VALUE" ;;
+    *) STATE_PATH="$PWD/$STATE_VALUE" ;;
+  esac
+  printf 'OK       %s = %s\n' "$STATE_NAME" "$STATE_VALUE"
+fi
+if [ -f "$STATE_PATH" ]; then
+  printf 'OK       kvittering finnes: %s\n' "$STATE_PATH"
+else
+  printf 'OK       kvittering ikke opprettet ennå: %s (første /kasus:runde viser siste 24 t)\n' "$STATE_PATH"
+fi
+
 # --- Mål-oppløsning --------------------------------------------------------
 if [ "$RESOLVE" -eq 1 ]; then
   printf '\nMÅL-OPPLØSNING\n'

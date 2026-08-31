@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "kasus",
-  "version": "0.1.0",
-  "description": "Redaksjonell arbeidsflyt på Kasus-dataene dine: hent radarsignaler, story-briefs og redaksjonell profil fra det offentlige API-et, research en sak videre med søk og skraping, og skriv den ut som en markdown-artikkel. `/kasus:signals` og `/kasus:briefs` leser `GET /api/v1/signals` og `/api/v1/story-briefs` med paginering, klientside-filter på `origin` (som API-et ikke tilbyr) og lesbar output framfor rå JSON. `/kasus:profile` leser `GET /api/v1/profile` — redaksjonsprofilen, de utledede redaksjonelle mønstrene og radarens mandat — og er det som gjør at researchen og artikkelen treffer redaksjonens egne premisser framfor generisk nyhetsspråk. `/kasus:research` tar en brief eller et signal, henter profilen først, og fanner ut kilde-for-kilde: primærkilder framfor omtaler, hva kildene IKKE svarer på, og et eksplisitt skille mellom bekreftet, motstridende og ubekreftet — rapporten er verifiserbar fordi hvert faktum bærer URL-en sin. `/kasus:article` skriver utkastet som en markdown-fil med kilde-frontmatter og en KILDER-seksjon, i redaksjonens tone, med hull markert `[TRENGER VERIFISERING]` framfor fylt med plausibel tekst. API-laget er read-only — API-et har ingen skrivende ruter, og verktøyet har ingen kodesti for annet enn GET. Verktøyet følger med pluginen (avhengighetsfri ESM, Node 18+), maskerer hemmelig-navngitte nøkler i dybden, og ekkoer aldri API-nøkkelen — den rapporteres som `(satt)` med variabelnavnet. `/kasus:env` sjekker oppsettet og svarer med `--resolve` hvilken installasjon et kall faktisk treffer og hvilken variabel hver verdi kom fra; `/kasus:test` selvtester syntaks, manifest-kontrakten, enhetstestene og at mål-presedensen er den samme i shell og JS. Krever `KASUS_API_KEY` (Innstillinger → API-nøkler). `KASUS_BASE_URL` er valgfri og defaulter til app.kasus.io.",
+  "version": "0.3.0",
+  "description": "Én kommando, én arbeidsflyt: vaktrunden for en journalist. `/kasus:runde` henter radarsignalene som har kommet inn SIDEN FORRIGE RUNDE — målt mot en kvittering på disk, ikke mot et vilkårlig timesvindu — og merker hvert signal med hva det faktisk er: oppfølging av redaksjonens EGEN sak, oppfølging av et sakskompleks en konkurrent har tatt (konkurrentens domener utelatt, så kildene er andre enn deres), konkurrentens egen sak fra en overvåket forside, eller et fritt temasøk hentet uavhengig av publiseringstidspunkt. De fire krever ulike tiltak og er ikke til å skille fra hverandre i rå API-felt, fordi `origin` og `type` må leses samtidig. Ferskhet vises som to tall: oppdaget og publisert, med `GAMMEL SAK` når de er mer enn en uke fra hverandre — et temasøk kan levere en artikkel fra 2023 som «oppdaget for 45 min siden». Journalisten velger sak med AskUserQuestion; runden velger ikke selv. For hver valgte sak sjekkes den mot redaksjonens EGNE artikler (`/api/v1/articles`) for å svare på om saken er skrevet før, om det finnes en egen sak å bygge videre på, og hvilken tone redaksjonen har på temaet — artikkel-API-et har ingen tekstsøk, så matchingen er idf-vektet ordoverlapp mot et vindu av de nyeste artiklene, og både vindusstørrelsen, ordene som traff og forbeholdet står i svaret: «ingen treff» betyr «ikke blant disse», aldri «ikke dekket». Deretter et bredt søk med én `kasus-researcher`-agent per spørsmål, parallelt: primærkilden framfor omtalen, alt datert, og et eksplisitt skille mellom bekreftet, motstridende og ubekreftet — pluss hva kildene IKKE svarer på. Til slutt et saksforslag på disk med vinkling, egne saker, funn med URL-er, hull og et utkast i redaksjonens tone fra `/api/v1/profile`, med `[TRENGER VERIFISERING]` framfor plausibel tekst. Kvitteringen er eksplisitt: uthenting leser, bare kvittering skriver, så en avbrutt runde mister ingenting; `--ids-only` kvitterer for sakene som faktisk ble behandlet uten å svelge resten. Prosessen er laget for å gjentas rett etter hverandre. API-laget er read-only i to lag: API-et har ingen skrivende ruter, og verktøyet har ingen kodesti for annet enn GET (enhetstestet), mens `/kasus:test --live` verifiserer at SERVEREN avviser POST. Nøkkelen ekkoes aldri — den rapporteres som `(satt)` med variabelnavnet, og header-linja sier ved hver kjøring hvilken installasjon svaret kom fra, fordi API-et er org-scopet av nøkkelen. Krever `KASUS_API_KEY` fra Innstillinger → API-nøkler; `KASUS_BASE_URL` er valgfri og defaulter til app.kasus.io.",
   "author": {
     "name": "Glitch",
     "email": "andreas@glitch.as"
@@ -12,11 +12,12 @@
     "kasus",
     "redaksjon",
     "journalistikk",
+    "vaktrunde",
     "radar",
     "signals",
-    "story-briefs",
-    "research",
     "artikler",
+    "research",
+    "saksforslag",
     "markdown",
     "read-only"
   ]

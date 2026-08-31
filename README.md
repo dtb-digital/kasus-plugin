@@ -16,17 +16,27 @@ claude plugin install kasus@kasus
 Start sesjonen på nytt etterpå — kommandoer, agenter og `env`-innslag plukkes opp
 ved oppstart.
 
-## Kommandoer
+## Kommandoen
 
-| Kommando | Gjør |
-|---|---|
-| `/kasus:signals` | Lister radarsignaler. Filtrer på `--status`, `--type`, `--origin`, `--pattern`, `--hours`, `--limit`. |
-| `/kasus:briefs` | Lister story-briefs, eller åpner én med en id som argument. |
-| `/kasus:profile` | Redaksjonell profil: profilteksten, de utledede mønstrene og radarens mandat. |
-| `/kasus:research` | Researcher en brief eller et signal videre — én subagent per spørsmål, primærkilder, notat på disk. |
-| `/kasus:article` | Skriver artikkelutkast som markdown, fra brief + researchnotat, i redaksjonens tone. |
-| `/kasus:env` | Sjekker oppsettet. `--resolve` sier hvilken installasjon et kall treffer. |
-| `/kasus:test` | Selvtester pluginen. `--live` også tilkoblingen og at serveren avviser skriv. |
+`/kasus:runde` — vaktrunden, og det eneste pluginen gjør:
+
+1. **Nye radarsignaler siden forrige runde** — ikke «de 20 nyeste». Målt mot en
+   kvittering på disk.
+2. **Prioritering, du velger.** Hvert signal merket med hva det er: oppfølging av
+   **deres egen** sak, oppfølging av et sakskompleks en **konkurrent** har tatt,
+   konkurrentens **egen sak** fra en overvåket forside, eller et **fritt temasøk**
+   som kan være år gammelt. De fire krever ulike tiltak og er ikke til å skille
+   fra hverandre i rå API-felt.
+3. **Sjekk mot egne artikler.** Er saken skrevet før? Finnes det en egen sak å
+   bygge videre på? Hvilken tone har redaksjonen på temaet?
+4. **Bredt søk** — én agent per spørsmål, primærkilden framfor omtalen, alt datert.
+5. **Saksforslag på disk** i redaksjonens tone, med hull markert framfor utfylt.
+6. **Kvittering**, og videre til neste sak.
+
+Laget for å gjentas: kjør runden, ta én sak, kvitter, kjør igjen.
+
+I tillegg finnes `/kasus:env` (sjekker oppsettet) og `/kasus:test` (selvtest) som
+diagnostikk.
 
 Full dokumentasjon: [`plugins/kasus/README.md`](plugins/kasus/README.md).
 

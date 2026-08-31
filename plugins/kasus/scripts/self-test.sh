@@ -127,6 +127,24 @@ else
   fail "versjonsdrift: plugin.json=«${PLUGIN_VERSION}», kasus.mjs=«${TOOL_VERSION}»"
 fi
 
+# Marketplace-oppføringen har sin EGEN versjon og beskrivelse, og de driftet fra
+# plugin.json første gang de ble endret hver for seg. Fila følger ikke med en
+# installert plugin, så sjekken hopper over når den ikke finnes — da kjører vi
+# fra en installasjon, ikke fra repoet.
+MARKET="$(cd "$ROOT/../.." 2>/dev/null && pwd)/.claude-plugin/marketplace.json"
+if [ -f "$MARKET" ]; then
+  MARKET_VERSION="$(MARKET_FILE="$MARKET" python3 -c '
+import json, os
+m = json.load(open(os.environ["MARKET_FILE"]))
+print(next((p["version"] for p in m["plugins"] if p["name"] == "kasus"), ""))
+' 2>/dev/null || printf '')"
+  if [ "$MARKET_VERSION" = "$PLUGIN_VERSION" ]; then
+    pass "versjon er den samme i marketplace.json ($MARKET_VERSION)"
+  else
+    fail "versjonsdrift: plugin.json=«${PLUGIN_VERSION}», marketplace.json=«${MARKET_VERSION}»"
+  fi
+fi
+
 # Agentens `name:` må matche filnavnet, ellers lastes den ikke.
 for f in $(find "$ROOT/agents" -name '*.md' | sort); do
   base="$(basename "$f" .md)"
@@ -236,6 +254,19 @@ if [ "$LIVE" -eq 1 ]; then
     pass "signals-endepunktet svarer"
   else
     fail "signals-endepunktet feilet:"
+    sed 's/^/      /' "$ERR"
+  fi
+
+  # Artiklene er halve runden — «har vi dekket dette før?» er ikke mulig å svare
+  # på uten dem, og et manglende endepunkt ville ellers dukket opp midt i en runde.
+  if node "$ROOT/scripts/kasus/kasus.mjs" articles $ENV_FLAG --limit 1 >"$OUT" 2>"$ERR"; then
+    if grep -q "Ingen egne artikler" "$OUT"; then
+      pass "articles-endepunktet svarer — men organisasjonen har ingen artikler synkronisert"
+    else
+      pass "articles-endepunktet svarer"
+    fi
+  else
+    fail "articles-endepunktet feilet:"
     sed 's/^/      /' "$ERR"
   fi
 

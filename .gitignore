@@ -2,3 +2,4 @@
 node_modules/
 .claude/settings.local.json
 artikler/
+.claude/kasus-state.json
