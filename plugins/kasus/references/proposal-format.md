@@ -1,8 +1,10 @@
 # Saksforslaget — formatet på det som legges på disk
 
-Lastes av `/kasus:start`. **Én fil per signal**, og den er hele leveransen fra
-runden: hva signalet er, hva redaksjonen alt har skrevet om det, hva et bredt søk
-fant, hva som fortsatt mangler, og et utkast som kan skrives videre på.
+Lastes av begge arbeidsflytene — `dybdeartikkel` (som starter på et radarsignal)
+og `oppfolgersak` (som starter på en av redaksjonens egne artikler). **Én fil per
+sak**, og den er hele leveransen: hva utgangspunktet er, hva redaksjonen alt har
+skrevet om det, hva et bredt søk fant, hva som fortsatt mangler, og et utkast som
+kan skrives videre på.
 
 Grunnen til at det er ÉN fil og ikke et researchnotat pluss en artikkel: et utkast
 som ligger for seg selv mister sporet tilbake til kildene, og en redaktør som skal
@@ -42,6 +44,39 @@ generertAv: claude-code/kasus-plugin
 ---
 ```
 
+**Opphavet er påkrevd.** Feltene over er sporet tilbake til hvorfor saken ble tatt
+opp, og en fil uten dem er et notat uten opphav. Hvilke felt det er, avhenger av
+hvilken arbeidsflyt som skrev filen — og **ett av de to settene skal alltid være
+utfylt:**
+
+| Utgangspunkt | Påkrevde felt | Skrevet av |
+|---|---|---|
+| Et radarsignal | `kasusSignalId`, `signalUrl` | `dybdeartikkel` |
+| En egen artikkel | `kasusArtikkelId`, `opprinneligUrl`, `opprinneligPublisert` | `oppfolgersak` |
+
+Oppfølger-varianten bytter `signal`-feltene for `artikkel`-feltene og setter
+`kategori: egen_oppfolging`. Ble det ALT brukt et signal i en oppfølger — radaren
+hadde nye kilder på saken — står begge sett, og det er den beste varianten: to
+spor er bedre enn ett.
+
+```yaml
+kategori: egen_oppfolging
+kasusArtikkelId: <artikkel-id-en oppfølgeren bygger på>
+opprinneligUrl: <URL til den egne saken>
+opprinneligPublisert: <ÅÅÅÅ-MM-DD>
+nyhetenErAv: nytt tall | ny handling | konsekvensen | løftet
+```
+
+`nyhetenErAv` er påkrevd i oppfølger-varianten. Det er feltet som svarer på hva
+som gjør dette til en sak framfor en gjentakelse, og et forslag som ikke kan fylle
+det, skal ikke skrives.
+
+Finnes ikke opphavet, skrives ikke filen — arbeidsflyten stopper i stedet og sier
+hvilket vindu som ble lest. En **lånt** id fra et signal eller en artikkel som
+«nesten» handler om det samme er verre enn å stoppe: sporet peker da på en kilde
+som ikke er grunnlaget, og feilen er usynlig i filen. `monster` er det ene feltet
+som kan være `null` — et signal kan være funnet uten mønstertreff.
+
 `status: forslag` og `generertAv` skal ALLTID stå. Filen er maskinskrevet, og den
 skal være merkbar som det for enhver som åpner den senere — også når teksten leser
 godt. `apenePunkter: 0` betyr komplett på kilder; alt over 0 betyr at den ikke er
@@ -58,14 +93,28 @@ klar, og tallet skal stemme med antallet markører i teksten.
 
 ## Signalet
 
-<Hva radaren fant, hvilken kategori det er, og hva kategorien betyr for hva
-saken kan bli. Er signalet en konkurrentsak direkte, står det her — og at
+<I signal-varianten: hva radaren fant, hvilken kategori det er, og hva kategorien
+betyr for hva saken kan bli. I en oppfølger utgår seksjonen når det ikke fantes et
+signal — sto det ett, hører det her, og da er kildene DERES, ikke redaksjonens
+egne, fordi oppfølgingssøket utelater egne domener. Er signalet en konkurrentsak direkte, står det her — og at
 kildelista derfor ikke kan bestå av konkurrenten.>
+
+## Den forrige saken
+
+<BARE i oppfølger-varianten, og da PÅKREVD. Hva den egne artikkelen slo fast, med
+dato og lenke — og ORDRETT sitat der det er et løfte eller en prognose som
+etterprøves her. Deretter én linje: hva som er nytt siden, og hvilket av de fire
+slagene det er (nytt tall, ny handling, konsekvensen, løftet).
+
+Dette er seksjonen som lar en redaktør se forskjellen mellom en oppfølger og en
+gjentakelse på tretti sekunder. Utelates den, er det ingen som kan.>
 
 ## Egne saker
 
 <Det artikkel-sjekken fant, med artikkel-id, URL og dato, og dommen den fikk:
-SAMME SAK, OPPFØLGING, FUNDAMENT eller SAMME TEMA.>
+SAMME SAK, OPPFØLGING, FUNDAMENT eller SAMME TEMA. I en oppfølger står den
+opprinnelige saken her også, med `bygger videre på` — og et `OPPFØLGING`-treff som
+er NYERE enn den betyr at oppfølgeren alt er gjort.>
 
 **Fant ingen treff?** Da står det slik — med forbeholdet:
 
@@ -131,7 +180,9 @@ med én oppdiktet kilde er ikke.
 
 - **Tonen** kommer fra `editorial.editorialProfile` og `whatWorks` på det
   matchende mønsteret. Har artikkel-sjekken funnet en egen sak på temaet, er den
-  det beste tonebeviset som finnes — les den.
+  det beste tonebeviset som finnes — les den. I en **oppfølger** er dette ikke et
+  tips: den opprinnelige artikkelen ER redaksjonens stemme på nettopp dette
+  temaet, og den slår enhver generell formulering av profilen.
 - **Nivået** kommer fra `editorial.targetAudience`. Forklar ikke det leserne kan
   fra før; det er den vanligste måten et utkast avslører seg som maskinskrevet.
 - **`whatToAvoid` er et forbud**, ikke et råd. Står «nasjonale snitt uten lokal

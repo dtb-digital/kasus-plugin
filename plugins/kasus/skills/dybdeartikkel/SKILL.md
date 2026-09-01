@@ -1,7 +1,6 @@
 ---
-description: Fra radarsignal til saksforslag — nye signaler, du velger sak, sjekk mot egne artikler, bredt søk, og et saksforslag på disk
-argument-hint: [--hours 24] [--limit 40] [--all]
-allowed-tools: ["Bash", "AskUserQuestion", "Agent", "Task", "Read", "Write", "Glob", "WebSearch", "WebFetch"]
+name: dybdeartikkel
+description: Prosessen for å lage en dybdeartikkel i denne redaksjonen — fra nytt radarsignal til et saksforslag på disk, i seks steg: nye signaler siden forrige runde pluss profilen og ukas egen produksjon, en prioritering journalisten velger fra, sjekk mot redaksjonens EGNE artikler, bredt søk med én agent per spørsmål, saksforslag i redaksjonens tone, og en kvittering. Skal brukes når noen vil JOBBE med en sak framfor bare å se hva som ligger der: «jeg skal skrive en dybdeartikkel», «finn meg en sak å skrive», «jeg trenger noe å jobbe med i dag», «lag et saksforslag», «kjør runden», «start en ny runde», «ta en sak fra radaren», «kan du researche denne og skrive et forslag?», «følg opp signal <id>». Også når bestillingen er et TEMA framfor et signal («skriv en dybdeartikkel om strømpriser», «kan vi gjøre noe på boligmarkedet i Bodø?»): temaet matches da semantisk mot radarens vindu, fordi API-et ikke har tekstsøk — men runden KREVER et signal, og stopper med en begrunnelse hvis radaren ikke har noe på temaet. Skal IKKE brukes på spørsmål om hva radaren har funnet («er det noe nytt?», «er det noe om strømpriser?») — det svarer kasus-lookout på uten å kvittere — eller på spørsmål om egen dekning alene, som er kasus-archivist. Er utgangspunktet en av redaksjonens EGNE publiserte artikler («følg opp saken vår om X»), er det ferdigheten `oppfolgersak`.
 ---
 
 Gå fra radarsignal til saksforslag. Dette er **det eneste pluginen gjør**, og den
@@ -18,12 +17,123 @@ gjør det i seks steg:
 Steg 3–6 gjentas per valgt sak, og hele runden kan kjøres på nytt rett etterpå.
 Du hopper ikke over et steg, og du velger ikke saken for journalisten.
 
+## Før du starter: er dette runden?
+
+Runden koster tid og **flytter kvitteringen**. To spørsmål ser like ut og skal
+ikke hit:
+
+- **«Er det noe nytt?», «er det noe om strømpriser?», «hva kom inn denne uka?»** —
+  det er et spørsmål om hva som ligger der, ikke en beslutning om å jobbe.
+  `kasus-lookout` svarer på det, og kvitterer aldri. `/kasus:signals` gir samme
+  blikk som en status.
+- **«Har vi skrevet om X?», «hva har vi publisert i dag?»** — `kasus-archivist`
+  alene. Ingen runde.
+- **«Følg opp saken vår om X», «hva har skjedd siden vi skrev om dette?»** —
+  utgangspunktet er en EGEN artikkel og ikke radaren. Det er ferdigheten
+  `oppfolgersak`, som har vinklingen ferdig og bare trenger det nye.
+
+Er det uklart om noen vil se eller jobbe, er det ett spørsmål verdt å stille før
+steg 1 — men et signal-id, «skriv», «research», «forslag» eller «runden» i
+bestillingen er svaret allerede gitt.
+
+Og uansett hvem som spør: **runden krever et signal.** Finner radaren ingenting på
+temaet, stopper den — se «Signalet er inngangsvilkåret».
+
+## Vinduet: hvilke flagg runden kjøres med
+
+Uten noe sagt kjøres runden på kvitteringen — «siden forrige runde». Ble det bedt
+om noe annet, sett det på `nytt` i steg 1:
+
+| Bestillingen | Flagget |
+|---|---|
+| «de siste tre døgnene», «litt bredere» | `--hours 72` |
+| «bare siste døgn» | `--hours 24` |
+| «ta med det som er forkastet» | `--all` |
+| «vis flere» | `--limit 40` |
+
+Ble ett bestemt signal nevnt (en id, eller en sak journalisten alt vet at hun vil
+ha), hopp over steg 2 og 3 for valget — hent signalet med `signal <id> --json` og
+gå rett til 4a. Steg 1 skal likevel kjøres: profilen og ukas produksjon er
+premissene for både dekningssjekken og skrivinga.
+
+Kom bestillingen som et **tema** framfor et signal, se neste avsnitt.
+
+## Et tema uten signal
+
+«Skriv en dybdeartikkel om strømpriser» er ikke rundens normaltilfelle, og du skal
+ikke late som det er det: prioriteringen i steg 2 svarer på «hva har kommet inn»,
+ikke på «hva har vi om strømpriser». **Match temaet mot radaren først.** Har den
+alt funnet kilder på det, er de kildene gratis og ferske — og et signal gir saken
+et sporbart utgangspunkt: `kasusSignalId` i forslaget, og noe å kvittere for.
+
+**Kvitteringen er feil vindu for et tema.** Den svarer på hva DU har sett, mens
+spørsmålet er hva radaren har på strømpriser — også det som ble vist og lagt til
+side for tre dager siden. Kjør derfor dette i tillegg til de tre kallene i steg 1:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs signals --kort --hours 168 --limit 100 --json
+```
+
+`--kort` fordi vinduet skal leses her: tittel, kategori, begge datoer, mønster og
+lenke, ikke researchkonteksten. Den henter du med `signal <id> --json` for den
+saken som faktisk velges.
+
+**Temaet er ikke et filter.** `/api/v1/signals` har ingen tekstsøk, og `--pattern`
+matcher mønsternavn i profilen — ikke temaer. Match derfor selv, semantisk, mot
+tittel og sammendrag: «strømstøtte», «nettleie» og «kraftpris» er samme tema som
+«strømpriser», og har ikke ett ord til felles. Det er samme spørsmål
+`kasus-lookout` besvarer, og et RENT spørsmål hører fortsatt der; forskjellen er
+hva svaret skal brukes til. Her skal det velges fra, så lenkene må stå i samtalen.
+
+**Fant du treff:** rangér etter steg 2 og legg dem fram med kategori, begge
+datoer, mønster og klikkbar lenke — og si for hvert av dem **om det er nytt siden
+sist eller alt sett**. Et signal fra i forgårs er ingen nyhet, og journalisten kan
+ha lagt det til side selv. Gå så til steg 3 som normalt.
+
+**Fant du ingen:** si det rett ut, og si hva det ikke betyr. «Radaren har
+ingenting på dette i de siste sju døgnene» er ikke «det finnes ingen sak» —
+radaren søker på redaksjonens egne mønstre, så et tema utenfor dem er usynlig for
+den uansett hvor stor saken er. Men **runden stopper her**, og det er ikke
+forhandlingsbart. Se under.
+
+Legg fram to veier med AskUserQuestion framfor å velge selv:
+
+| Alternativ | Hva det er |
+|---|---|
+| Bredere vindu | `signals --kort --hours 720 --limit 100` — radaren kan ha hatt noe for en måned siden. Finner du et signal der, fortsetter runden normalt. |
+| Egen dekning først | `kasus-archivist` på temaet. Svarer på om redaksjonen alt har skrevet om det, og hva som i så fall ville vært en oppfølging. Det er en opplysning, ikke en inngang: uten et signal finnes det ingen nye kilder, og da er neste skritt en telefon framfor en runde. |
+
+## Signalet er inngangsvilkåret
+
+**Ingen runde uten et signal, og ingen fil på disk uten `kasusSignalId`.** Det
+gjelder også når journalisten ber om det, og også når temaet er åpenbart en god
+sak. Tre grunner, og de er ikke formaliteter:
+
+1. **Sporet.** Saksforslaget er bygd rundt `kasusSignalId` og `signalUrl` — linja
+   tilbake til hvorfor saken ble tatt opp. Uten den er filen et notat uten
+   opphav, og en redaktør som spør «hvor kom dette fra?» får «noen nevnte det».
+2. **Grunnlaget.** Et signal ER kilder: noe radaren har funnet, datert, og knyttet
+   til et mønster i profilen. Uten det finnes ingen nye kilder å bygge på, bare et
+   nettsøk hvem som helst kunne gjort — og et saksforslag i redaksjonens format
+   ville sett ut som noe det ikke er.
+3. **Kvitteringen.** Den gjelder signaler. En sak uten signal kan ikke kvitteres,
+   så neste runde vet ikke at arbeidet er gjort, og saken kommer igjen.
+
+Lån derfor **aldri** id-en til et signal som «nesten» handler om det samme for å
+komme videre. Det er verre enn å stoppe: sporet peker da på en kilde som ikke er
+grunnlaget, og feilen er usynlig i filen.
+
+Si i stedet hva som mangler og hva som finnes: hvilket vindu som ble lest, at
+radaren ikke har noe på temaet, og hva du KAN gjøre uten runden — et
+`kasus-researcher`-søk på ett konkret spørsmål, eller dekningssjekken over. Det er
+research i samtalen, ikke et saksforslag: ingen fil, ingen kvittering, og si det.
+
 ## 1. Hent runden og premissene
 
 Kjør alle tre i **samme melding**, så de går parallelt:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs nytt $ARGUMENTS --json
+node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs nytt --json
 node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs profile --json
 node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs articles --kort --hours 168 --limit 40 --json
 ```
@@ -218,7 +328,8 @@ andre ord, og det er nettopp de tilfellene som koster en dublett.
 
 Agenten henter artiklene selv. Gi den:
 
-- **spørsmålet**: «har vi skrevet om dette før?»
+- **spørsmålet**: «har vi skrevet om dette før?» — ordrett også når det er et tema
+  og ikke et signal du spør på vegne av
 - **plugin-roten**, som absolutt sti: `${CLAUDE_PLUGIN_ROOT}` — skriv ut den
   faktiske verdien i prompten, ikke variabelnavnet
 - **`--env <navn>`** hvis runden kjører mot et annet miljø
@@ -293,19 +404,23 @@ to kilder er uenige, si hvilken som er nærmest primærkilden og hvorfor.
 
 ### 4c. Skriv saksforslaget
 
-Format: @${CLAUDE_PLUGIN_ROOT}/references/proposal-format.md — én fil per sak, med
-frontmatter, egne saker, funn med URL-er, hull, utkast og kildetabell.
+Formatet står i `${CLAUDE_PLUGIN_ROOT}/references/proposal-format.md` — **les fila
+før du skriver**. Én fil per sak, med frontmatter, egne saker, funn med URL-er,
+hull, utkast og kildetabell.
 
-De fire reglene som avgjør om filen er brukbar:
+De fem reglene som avgjør om filen er brukbar:
 
-1. **Hvert faktum i utkastet står i FUNN, med kilde.** Er det ikke der, står det
+1. **`kasusSignalId` og `signalUrl` er utfylt.** Er de ikke det, skriver du ikke
+   filen — se «Signalet er inngangsvilkåret». En `null` der er ikke et tomt felt,
+   det er et forslag uten opphav.
+2. **Hvert faktum i utkastet står i FUNN, med kilde.** Er det ikke der, står det
    som `[TRENGER VERIFISERING: …]`. Aldri fyll et hull med en plausibel setning —
    det er den ene feilen som gjør et forslag farlig framfor ufullstendig.
-2. **Sitater er ordrette fra en kilde du har lest**, med URL. Ellers
+3. **Sitater er ordrette fra en kilde du har lest**, med URL. Ellers
    `[SITAT MANGLER: <hvem> må kontaktes om <hva>]`.
-3. **Tonen fra `editorialProfile` og `whatWorks`, nivået fra `targetAudience`.**
+4. **Tonen fra `editorialProfile` og `whatWorks`, nivået fra `targetAudience`.**
    Er det funnet en egen sak på temaet, er den det beste tonebeviset som finnes.
-4. **`whatToAvoid` er et forbud**, ikke et råd.
+5. **`whatToAvoid` er et forbud**, ikke et råd.
 
 Si til slutt, i én setning: **er det nok her til å skrive saken?** Er svaret nei,
 si hva som mangler og hvem som må ringes. Det er et ærligere svar enn et utkast
@@ -341,7 +456,7 @@ behandlet:
 ordrett — ikke lag et tidspunkt selv.
 
 **Runden kan kjøres på nytt umiddelbart.** Kom det inn noe mens dere jobbet, viser
-`/kasus:start` det nå; ellers sier den at det ikke er noe nytt. Det er den normale
+en ny runde det nå; ellers sier den at det ikke er noe nytt. Det er den normale
 rytmen: kjør runden, ta én sak, kvitter, kjør igjen.
 
 ## 6. Rapporter

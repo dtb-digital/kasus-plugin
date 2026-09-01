@@ -8,6 +8,39 @@ rundt et API. En kommando som «også kunne vært nyttig» konkurrerer med runde
 oppmerksomheten, og en journalist som må velge verktøy før hun velger sak har fått
 ett problem ekstra.
 
+Runden bor i **én** fil: ferdigheten `skills/dybdeartikkel/SKILL.md`. Den er en
+ferdighet og ikke en kommando fordi den da trigges av bestillingen selv («jeg
+skal skrive en dybdeartikkel»), så journalisten slipper å vite navnet på et
+verktøy før hun vet hva hun vil skrive — og fordi en ferdighet også kan velges
+med vilje, som `/kasus:dybdeartikkel`.
+
+Det fantes en `/kasus:start` som pekte hit. Den er borte: to innganger til én
+arbeidsflyt er nettopp det dette avsnittet handler om, og en kommando som bare
+videresender er et hopp som kan gå feil uten å gi noe tilbake.
+
+Prisen for fritekst-inngangen er at runden kan starte uten at noen skrev en
+skråstrek, og runden både skriver til disk og flytter kvitteringen. Derfor står
+grensa i ferdighetens egen beskrivelse og i steget før steg 1: et spørsmål om hva
+som ligger der («er det noe nytt?») er `kasus-lookout`, ikke en runde.
+
+### To opphav, ett format
+
+`oppfolgersak` er den andre ferdigheten, og den ser ut som et brudd på avsnittet
+over. Den er det ikke: den gjør ikke noe annet, den **starter et annet sted**. En
+oppfølger på redaksjonens egen sak har vinklingen ferdig og trenger bare det nye,
+mens runden må finne begge — det er to ulike jobber, og en arbeidsflyt som skulle
+gjort begge ville spurt «har du et signal eller en artikkel?» som første steg.
+
+Grensa som holder det til én ting: begge skriver **samme format**
+(`references/proposal-format.md`), bruker **samme agenter** og **samme premisser**
+fra profilen. Det som er felles bor ett sted. Ville en tredje ferdighet delt
+mindre enn det, er den et nytt produkt og ikke et nytt opphav.
+
+Radaren hadde forøvrig den egne artikkelen som førsteklasses utgangspunkt før
+pluginen hadde det: `origin: own_followup` ER et oppfølgingssøk på en egen sak.
+Ferdigheten gir journalisten den samme inngangen manuelt, for de sakene radaren
+ikke søkte på.
+
 `/kasus:signals` er unntaket som viser regelen: den er rent LESENDE — kvitterer
 ikke, skriver ingenting, gjør ingen research. Den kan bare svare på «er det noe
 her?», og en kommando som ikke kan utføre arbeid kan ikke bli et alternativt sted

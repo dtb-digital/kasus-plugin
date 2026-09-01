@@ -2,6 +2,8 @@
 # /kasus:test — selvtest av pluginen.
 #
 # Tørt (default): syntaks på alle skript, at komponentmappene ikke er tomme, at
+# ferdighetene har navn som matcher mappa, at runden bare kvitteres fra ett sted
+# og krever et signal, at
 # manifestene er gyldig JSON, at verktøyets --list-kontrakt holder, at
 # kommandoene bare refererer til modi som FINNES, at enhetstestene er grønne, og
 # at mål-presedensen er den samme i shell og JS.
@@ -100,9 +102,11 @@ for path in sys.stdin.buffer.read().split(b"\0"):
 fi
 
 # --- 2. Komponentmapper ----------------------------------------------------
-# Kommandoer og agenter registreres ikke noe sted — de oppdages fra mappa. En
-# tom mappe er derfor en plugin uten kommandoer, ikke en feilmelding.
-for dir in commands agents references; do
+# Kommandoer, agenter og ferdigheter registreres ikke noe sted — de oppdages fra
+# mappa. En tom mappe er derfor en plugin uten kommandoer, ikke en feilmelding.
+# `skills/` er den viktigste av dem: RUNDEN bor der, og den har ingen kommando —
+# er mappa tom, finnes ikke arbeidsflyten.
+for dir in commands agents skills references; do
   count="$(find "$ROOT/$dir" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')"
   if [ "$count" -gt 0 ]; then
     pass "$dir/ har $count fil(er)"
@@ -156,6 +160,40 @@ for f in $(find "$ROOT/agents" -name '*.md' | sort); do
   fi
 done
 
+# En ferdighets `name:` må matche MAPPENAVNET (ikke filnavnet — fila heter alltid
+# SKILL.md), ellers lastes den ikke.
+for f in $(find "$ROOT/skills" -name 'SKILL.md' 2>/dev/null | sort); do
+  dirname_="$(basename "$(dirname "$f")")"
+  declared="$(sed -n 's/^name:[[:space:]]*//p' "$f" | head -1)"
+  if [ "$dirname_" = "$declared" ]; then
+    pass "ferdighet-navn matcher mappenavn: $dirname_"
+  else
+    fail "ferdigheten $dirname_ har name: «${declared}» — må matche mappenavnet"
+  fi
+  if ! sed -n '2,20p' "$f" | grep -q '^description:'; then
+    fail "ferdigheten $dirname_ mangler description: — uten den trigges den aldri i fritekst"
+  fi
+done
+
+# Runden er selve pluginen, og den har ingen kommando som ville feilet i stedet:
+# får ferdigheten nytt navn eller forsvinner, er arbeidsflyten borte uten at noe
+# annet sier fra. Derfor er den navngitt her.
+ROUND_SKILL="$ROOT/skills/dybdeartikkel/SKILL.md"
+if [ -f "$ROUND_SKILL" ]; then
+  pass "runden finnes som ferdighet: skills/dybdeartikkel/SKILL.md"
+else
+  fail "skills/dybdeartikkel/SKILL.md mangler — pluginen har ingen arbeidsflyt"
+fi
+
+# Ingen kommando skal starte runden. Én arbeidsflyt, én inngang: en kommando som
+# bare videresender til ferdigheten er et hopp som kan gå feil uten å gi noe
+# tilbake, og to innganger konkurrerer om oppmerksomheten (prinsipp 0).
+if [ -f "$ROOT/commands/start.md" ]; then
+  fail "commands/start.md finnes igjen — runden er en ferdighet, ikke en kommando"
+else
+  pass "runden har ingen kommando-dublett (commands/start.md finnes ikke)"
+fi
+
 # --- 4. Verktøy-kontrakten -------------------------------------------------
 LIST_JSON="$(node "$ROOT/scripts/kasus/kasus.mjs" --list --json 2>/dev/null || printf '')"
 if [ -z "$LIST_JSON" ]; then
@@ -181,10 +219,10 @@ for mode in m["modes"]:
   fi
 fi
 
-# Kommandoene kaller verktøyet med modus-navn. En modus som fjernes eller får
+# Kommandoene, agentene og ferdighetene kaller verktøyet med modus-navn. En modus som fjernes eller får
 # nytt navn skal bli en rød test her, ikke en kommando som feiler hos brukeren.
 MODES="$(printf '%s' "$LIST_JSON" | python3 -c 'import json,sys;print(" ".join(m["name"] for m in json.load(sys.stdin)["modes"]))' 2>/dev/null || printf '')"
-USED="$(grep -rhoE 'kasus\.mjs[[:space:]]+[a-z][a-z-]*' "$ROOT/commands" "$ROOT/agents" 2>/dev/null | awk '{print $2}' | sort -u)"
+USED="$(grep -rhoE 'kasus\.mjs[[:space:]]+[a-z][a-z-]*' "$ROOT/commands" "$ROOT/agents" "$ROOT/skills" 2>/dev/null | awk '{print $2}' | sort -u)"
 UNKNOWN=""
 for used in $USED; do
   case " $MODES " in
@@ -198,16 +236,15 @@ else
   fail "kommandoer/agenter kaller ukjente modi:$UNKNOWN (kjente: $MODES)"
 fi
 
-# --- 4b. Bare runden kvitterer -------------------------------------------
-# `/kasus:start` er det ENESTE som får flytte kvitteringen. Statuskommandoen og
-# agentene lover at de aldri gjør det, og et løfte i en prompt er lett å bryte
-# ved en senere redigering — så det håndheves her.
+# --- 4b. Hvem som får kvittere -------------------------------------------
+# Kommandoene og agentene lover at de ALDRI kvitterer, og et løfte i en prompt er
+# lett å bryte ved en senere redigering — så det håndheves her.
 #
 # Agentene er den farlige halvparten: de har Bash, de trigges av naturlig språk,
 # og en kvittering fra en av dem ville tømt runden for signaler UTEN at noen ba
 # om det. En kvittering er heller ikke til å angre — «siden sist» er borte.
 KVITTERERE=""
-for f in "$ROOT/commands/signals.md" $(find "$ROOT/agents" -name '*.md' 2>/dev/null | sort); do
+for f in $(find "$ROOT/commands" "$ROOT/agents" -name '*.md' 2>/dev/null | sort); do
   [ -f "$f" ] || continue
   if grep -qE 'kasus\.mjs[[:space:]]+kvitter' "$f"; then
     KVITTERERE="$KVITTERERE ${f#"$ROOT"/}"
@@ -216,7 +253,77 @@ done
 if [ -n "$KVITTERERE" ]; then
   fail "disse kaller «kvitter», men skal være rent lesende:$KVITTERERE"
 else
-  pass "bare /kasus:start kvitterer (status og agenter er rent lesende)"
+  pass "kommandoer og agenter kvitterer aldri (bare ferdighetene gjør det)"
+fi
+
+# Ferdighetene får kvittere, men bare RUNDEN får flytte tidspunktet. En
+# oppfølgersak behandler ett signal av gangen og skal kvittere for nettopp det
+# (`--ids-only`) — en full kvittering derfra ville svelget en hel dags signaler
+# journalisten aldri fikk se, og det er ikke til å angre (prinsipp 9).
+for f in $(find "$ROOT/skills" -name 'SKILL.md' 2>/dev/null | sort); do
+  [ "$f" = "$ROUND_SKILL" ] && continue
+  rel="${f#"$ROOT"/}"
+  BARE_IDS=1
+  while IFS= read -r linje; do
+    case "$linje" in
+      *--ids-only*) ;;
+      *) BARE_IDS=0 ;;
+    esac
+  done <<KVITT
+$(grep -hE 'kasus\.mjs[[:space:]]+kvitter' "$f" 2>/dev/null)
+KVITT
+  if [ "$BARE_IDS" -eq 1 ]; then
+    pass "$rel kvitterer bare med --ids-only (flytter ikke tidspunktet)"
+  else
+    fail "$rel kvitterer UTEN --ids-only — bare runden får flytte «siden sist»"
+  fi
+done
+
+# ...og runden må FAKTISK kvittere. Et steg som forsvinner i en omskriving gir
+# en runde som viser de samme signalene i morgen, uten at noe feiler.
+if grep -qE 'kasus\.mjs[[:space:]]+kvitter' "$ROUND_SKILL" 2>/dev/null; then
+  pass "runden kvitterer (steg 4d/5 er intakt)"
+else
+  fail "runden kaller ikke «kvitter» — «siden sist» ville stått stille"
+fi
+
+# --- 4c. Signalet er inngangsvilkåret -------------------------------------
+# Runden skriver ikke et saksforslag uten et signal: sporet tilbake til hvorfor
+# saken ble tatt opp (`kasusSignalId`, `signalUrl`) er halve verdien av filen, og
+# et forslag uten opphav ser ut som noe det ikke er. Regelen sto i prosa i to
+# filer og ble myket opp én gang før — så den håndheves her.
+if grep -q 'Signalet er inngangsvilkåret' "$ROUND_SKILL" 2>/dev/null; then
+  pass "runden krever et signal (vilkåret står i SKILL.md)"
+else
+  fail "SKILL.md mangler «Signalet er inngangsvilkåret» — runden kan skrive uten opphav"
+fi
+
+# Oppfølgersaken har sitt eget inngangsvilkår: et NYTT faktum med kilde. Uten det
+# er en oppfølger den samme saken publisert to ganger.
+FOLLOWUP_SKILL="$ROOT/skills/oppfolgersak/SKILL.md"
+if [ -f "$FOLLOWUP_SKILL" ]; then
+  if grep -q 'Vilkåret: noe NYTT' "$FOLLOWUP_SKILL"; then
+    pass "oppfølgersaken krever noe nytt (vilkåret står i SKILL.md)"
+  else
+    fail "oppfolgersak mangler «Vilkåret: noe NYTT» — en gjentakelse ville passert"
+  fi
+fi
+
+# Formatet må dokumentere BEGGE opphav, ellers skriver en av ferdighetene en fil
+# med felt formatet ikke kjenner.
+FORMAT="$ROOT/references/proposal-format.md"
+if grep -q 'kasusArtikkelId' "$FORMAT" && grep -q 'kasusSignalId' "$FORMAT"; then
+  pass "proposal-format dokumenterer begge opphav (signal og egen artikkel)"
+else
+  fail "proposal-format mangler ett av opphavene — kasusSignalId og kasusArtikkelId"
+fi
+
+# En `kasusSignalId: null` noe sted er signalfri-stien som sniker seg inn igjen.
+NULLSIGNAL="$(grep -rl 'kasusSignalId: *null' "$ROOT/skills" "$ROOT/references" 2>/dev/null | sed "s|$ROOT/||" | tr '\n' ' ')"
+if [ -n "$NULLSIGNAL" ]; then
+  fail "disse tillater et saksforslag uten signal: $NULLSIGNAL"
+else
+  pass "ingen «kasusSignalId: null» — forslaget kan ikke skrives uten opphav"
 fi
 
 # --- 5. Enhetstester -------------------------------------------------------

@@ -214,7 +214,7 @@ export function applyLocalFilters(items, filter = {}) {
  * feller artiklene ikke har, og de står her fordi de endrer hva svaret BETYR:
  *
  * - **Kvitteringen er ikke rørt.** Vinduet er et oppslag, ikke en runde. Det som
- *   ble lest her er fortsatt «nytt» i `/kasus:start`, og det skal det være.
+ *   ble lest her er fortsatt «nytt» i runden, og det skal det være.
  * - **De fleste filtrene virker LOKALT.** API-et kan bare `status`, `type` og
  *   `hours`, så resten treffer bare det som alt er hentet. Et lokalt filter på et
  *   avkortet vindu er ikke et søk, og «2 treff» kan bety «2 av de 100 vi så».
@@ -277,7 +277,7 @@ export function signalWindowCaveat({
 
   parts.push(
     `Kvitteringen «siden sist» er IKKE rørt: dette er et oppslag, og alt her er fortsatt ` +
-      `nytt i /kasus:start.`,
+      `nytt i runden — ferdigheten dybdeartikkel.`,
     `oppdaget og publisert er to tall — --hours måler oppdaget, --publisert måler sakens ` +
       `egen alder. Grunnlaget er tittel og sammendrag, ikke hele researchkonteksten: bruk ` +
       `«signal <id>» for den.`,

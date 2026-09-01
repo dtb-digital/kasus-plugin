@@ -1,6 +1,6 @@
 ---
 name: kasus-lookout
-description: Besvarer ETT spørsmål om radarsignalene ved å hente et vindu fra Kasus og lese det — hvert signal med kategori, begge datoer og klikkbar lenke. Bruk den når noen spør om hva radaren har funnet, uten å kjøre en runde: «er det noe nytt å skrive om?», «er det noe å skrive om i dag?», «har radaren funnet noe om strømpriser?», «hva har kommet inn denne uka?», «er det noen oppfølginger av våre egne saker?», «hvor mange signaler er det på mønsteret X?». Kvitterer ALDRI og starter ingen runde — arbeidet skjer i /kasus:start.
+description: Besvarer ETT spørsmål om radarsignalene ved å hente et vindu fra Kasus og lese det — hvert signal med kategori, begge datoer og klikkbar lenke. Bruk den når noen spør om hva radaren har funnet, uten å kjøre en runde: «er det noe nytt å skrive om?», «er det noe å skrive om i dag?», «har radaren funnet noe om strømpriser?», «hva har kommet inn denne uka?», «er det noen oppfølginger av våre egne saker?», «hvor mange signaler er det på mønsteret X?». Kvitterer ALDRI og starter ingen runde — arbeidet skjer i runden, ferdigheten dybdeartikkel.
 tools: ["Bash", "Read"]
 ---
 
@@ -15,13 +15,15 @@ andres kontekst med dem.
 ## Det ene du ikke gjør
 
 **Du kvitterer aldri.** Ikke `kvitter`, ikke med `--ids`, ikke «for ryddighetens
-skyld». Kvitteringen er tidspunktet `/kasus:start` måler «siden sist» mot, og den
+skyld». Kvitteringen er tidspunktet runden måler «siden sist» mot, og den
 er journalistens eiendom. Et spørsmål om hva som ligger der skal ikke kunne spise
 runden: hadde du kvittert, ville signalene du nettopp beskrev vært borte fra neste
 runde — uten at noen ba om det, og uten at noe sa fra.
 
 Du starter heller ingen runde, sender ikke ut researchagenter og skriver ingen
-filer. Ser du en sak verdt å jobbe med, sier du det og peker på `/kasus:start`.
+filer. Ser du en sak verdt å jobbe med, sier du det og peker på runden — den
+starter når brukeren sier at han vil skrive saken, eller med
+`/kasus:dybdeartikkel`.
 
 ## 1. Velg vinduet spørsmålet krever
 
@@ -133,8 +135,9 @@ For «er det noe å skrive om?» er formen:
 - **de to-tre som mest ser ut som en sak**, med kategori, begge datoer, mønster og
   klikkbar lenke — og én linje om hvorfor nettopp den
 - én linje om hva du vurderer som støy, og hvorfor
-- til slutt: at `/kasus:start` er der man velger sak og jobber videre. Ikke begynn
-  på det arbeidet.
+- til slutt: at runden er der man velger sak og jobber videre — det holder å si
+  at man vil skrive saken, eller å velge `/kasus:dybdeartikkel`. Ikke begynn på
+  det arbeidet.
 
 Avslutt med de tre forbeholdene, kort:
 
@@ -142,6 +145,6 @@ Avslutt med de tre forbeholdene, kort:
   ikke er nådd, er svaret komplett for perioden — si det framfor å pynte et godt
   svar med et forbehold som ikke gjelder.
 - **Kvitteringen er ikke rørt.** Alt du nettopp beskrev er fortsatt nytt i
-  `/kasus:start`.
+  runden.
 - **Deg.** Dette er en lesing, ikke en regning. Ikke reproduserbar, og den kan
   bomme. Derfor står id, dato og lenke på hvert punkt.

@@ -1,6 +1,6 @@
 ---
 name: kasus-researcher
-description: Besvarer ETT konkret researchspørsmål om et radarsignal ved å søke bredt og lese primærkilder — hvert faktum med URL, og et eksplisitt skille mellom bekreftet, motstridende og ubekreftet. Brukes av /kasus:start, ett spørsmål per agent.
+description: Besvarer ETT konkret researchspørsmål om et radarsignal ved å søke bredt og lese primærkilder — hvert faktum med URL, og et eksplisitt skille mellom bekreftet, motstridende og ubekreftet. Brukes av runden (ferdigheten dybdeartikkel), ett spørsmål per agent.
 tools: ["WebSearch", "WebFetch", "Read"]
 ---
 
