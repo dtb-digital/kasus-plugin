@@ -12,7 +12,7 @@ det hele tatt.
 **Denne kommandoen kvitterer ALDRI.** Den flytter ikke «siden sist», den merker
 ingenting som sett, og den skriver ingen filer. Det er hele poenget: du skal kunne
 se hva som ligger der uten at det får konsekvenser, og uten å forplikte deg til å
-gjøre noe med det. Arbeidet skjer i `/kasus:start`.
+gjøre noe med det. Arbeidet skjer i runden — ferdigheten `dybdeartikkel`.
 
 ## Hvilken av de tre
 
@@ -109,9 +109,9 @@ Er lista tom, si når det sist ble kvittert og hva som ble holdt utenfor. «Inge
 signaler» er et fullgodt svar — ikke utvid vinduet på eget initiativ for å ha noe å
 vise, men nevn at `--hours 72` finnes.
 
-Er det noe her, avslutt med at `/kasus:start` er der man velger sak og jobber
-videre — research, sjekk mot egne artikler og saksforslag. Ikke begynn på det
-arbeidet her.
+Er det noe her, avslutt med at runden er der man velger sak og jobber videre —
+research, sjekk mot egne artikler og saksforslag. Den startes ved å si at man vil
+skrive saken, eller med `/kasus:dybdeartikkel`. Ikke begynn på det arbeidet her.
 
 ## Merk
 

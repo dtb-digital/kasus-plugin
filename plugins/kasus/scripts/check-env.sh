@@ -177,7 +177,7 @@ fi
 if [ -f "$STATE_PATH" ]; then
   printf 'OK       kvittering finnes: %s\n' "$STATE_PATH"
 else
-  printf 'OK       kvittering ikke opprettet ennå: %s (første /kasus:start viser siste 24 t)\n' "$STATE_PATH"
+  printf 'OK       kvittering ikke opprettet ennå: %s (første runde viser siste 24 t)\n' "$STATE_PATH"
 fi
 
 # --- Mål-oppløsning --------------------------------------------------------

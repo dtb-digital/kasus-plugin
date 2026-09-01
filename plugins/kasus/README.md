@@ -1,7 +1,7 @@
 # kasus
 
 Fra radarsignal til saksforslag, for en journalist i Claude Code. **Én
-arbeidsflyt** — `/kasus:start` — og den gjør seks ting i rekkefølge:
+arbeidsflyt** — ferdigheten `dybdeartikkel` — og den gjør seks ting i rekkefølge:
 
 1. Henter radarsignalene som har kommet inn **siden forrige runde**, pluss
    premissene: profilen og **ukas egen produksjon**
@@ -15,6 +15,35 @@ arbeidsflyt** — `/kasus:start` — og den gjør seks ting i rekkefølge:
 Prosessen er laget for å gjentas rett etter hverandre: kjør runden, ta én sak,
 kvitter, kjør igjen.
 
+**Det finnes ingen kommando for å starte den, og det er med vilje.** Runden er en
+ferdighet, så den trigges på fritekst — «jeg skal skrive en dybdeartikkel», «finn
+meg en sak å skrive», «jeg trenger noe å jobbe med i dag», «kjør runden», «lag et
+saksforslag på dette signalet». Vil du starte den med vilje, er
+`/kasus:dybdeartikkel` den samme ferdigheten valgt fra menyen. Stegene står ett
+sted: [`skills/dybdeartikkel/SKILL.md`](./skills/dybdeartikkel/SKILL.md).
+
+**Kommer bestillingen som et tema** — «skriv en dybdeartikkel om strømpriser» —
+matches temaet først mot radarens vindu, semantisk, fordi signal-API-et ikke har
+tekstsøk og et tema derfor ikke er et filter. Vinduet er da ikke «siden sist»:
+kvitteringen svarer på hva DU har sett, mens spørsmålet er hva radaren har på
+temaet, så runden leser sju døgn og sier for hvert treff om det er nytt eller alt
+sett. Finner radaren ingenting, sies det — og det betyr ikke at det ikke finnes en
+sak, bare at temaet ligger utenfor mønstrene radaren søker på.
+
+**Men da stopper runden: signalet er inngangsvilkåret.** Ingen runde uten et
+signal, og ingen fil på disk uten `kasusSignalId` — heller ikke når temaet
+åpenbart er en god sak. Sporet tilbake til hvorfor saken ble tatt opp er halve
+verdien av forslaget; et signal ER kilder, mens et tema bare er et nettsøk hvem
+som helst kunne gjort; og kvitteringen gjelder signaler, så en sak uten ett kan
+ikke kvitteres og kommer igjen. Tilbudet er derfor et bredere vindu, eller en
+dekningssjekk som sier om det finnes en egen sak å ringe videre på — ikke et
+saksforslag på tynt grunnlag.
+
+Grensa mot agentene er **hvem som vil jobbe**. «Er det noe nytt?» er et spørsmål
+om hva som ligger der — det svarer `kasus-lookout` på, uten å kvittere. Runden
+researcher, skriver til disk og flytter kvitteringen, og skal derfor ikke starte
+fordi noen lurte på om det var noe.
+
 API-laget er **read-only**. Det pluginen skriver, skriver den i prosjektet:
 saksforslagene i `./artikler`, kvitteringen «siden sist» i
 `.claude/kasus-state.json`. Begge stiene er relative til der du står, så to
@@ -26,8 +55,17 @@ Pluginen hører til **prosjektet** — redaksjonens eget repo, der artiklene,
 saksforslagene og kvitteringen ligger. Da følger den med repoet, og hvilken
 versjon som gjelder står i git framfor i en maskin.
 
-1. Legg marketplacet og pluginen i prosjektets `.claude/settings.json`, og sjekk
-   fila inn:
+1. Installer med **prosjekt-scope**, i prosjektmappa. `--scope project` er
+   poenget: uten det havner oppføringen i din egen `~/.claude/settings.json`, og
+   da har du pluginen mens redaksjonen ikke har den.
+
+   ```bash
+   claude plugin marketplace add dtb-digital/kasus-plugin --scope project
+   claude plugin install kasus@kasus --scope project
+   ```
+
+   Begge skriver til prosjektets `.claude/settings.json` — **sjekk fila inn.**
+   Dette er hva de skriver, hvis du heller vil sette det selv:
 
    ```json
    {
@@ -40,9 +78,11 @@ versjon som gjelder står i git framfor i en maskin.
    }
    ```
 
-   Trenger du den heller for deg selv, på tvers av prosjekter, gjør CLI-en det
-   samme brukerglobalt: `claude plugin marketplace add dtb-digital/kasus-plugin`
-   og `claude plugin install kasus@kasus`.
+   De tre scopene: `project` er fila over, som deles; `local` er
+   `.claude/settings.local.json`, som er prosjektet men bare deg — dit hører
+   nøkkelen i steg 3; `user` er `~/.claude/settings.json`, deg på tvers av
+   prosjekter, riktig bare hvis du bruker Kasus i repoer som ikke skal dele
+   oppsett.
 
 2. Lag en API-nøkkel i Kasus: **Innstillinger → API-nøkler → Ny nøkkel**. Den
    vises kun én gang.
@@ -62,23 +102,68 @@ versjon som gjelder står i git framfor i en maskin.
 4. Start sesjonen på nytt i prosjektmappa — marketplacet hentes, pluginen
    installeres, og `env`-innslag og komponenter plukkes opp ved oppstart.
 5. Verifiser: `/kasus:env --resolve`
-6. Kjør runden: `/kasus:start`
+6. Kjør runden: si hva du skal gjøre — «jeg skal skrive en dybdeartikkel» — eller
+   velg `/kasus:dybdeartikkel`
 
 Neste person som kloner repoet trenger bare sin egen nøkkel — resten står i
 `.claude/settings.json`.
 
-## Kommandoer
+## Inngangene
 
-| Kommando | Gjør |
+| Inngang | Gjør |
 |---|---|
-| `/kasus:start` | **Hele arbeidsflyten.** Alt over. Tar `--hours 72` for et bredere vindu og `--all` for å ta med forkastede signaler. |
+| **fritekst** — «jeg skal skrive en dybdeartikkel», «finn meg en sak å skrive» | **Hele arbeidsflyten.** Ferdigheten `dybdeartikkel` trigges av bestillingen selv, uten at noen må huske et kommandonavn. |
+| `/kasus:dybdeartikkel` | Samme ferdighet, startet med vilje fra menyen. Tar `--hours 72` for et bredere vindu og `--all` for å ta med forkastede signaler. |
+| **fritekst** — «skriv en oppfølger på saken om X», «hva har skjedd siden vi skrev om dette?» | **Oppfølger på en egen sak.** Ferdigheten `oppfolgersak` — se under. |
+| `/kasus:oppfolgersak` | Samme ferdighet, startet fra menyen. |
 | `/kasus:signals` | **Status:** hva har skjedd siden sist? Fordeling over mønstre, kategorier, gamle saker. Med et spørsmål framfor flagg (`/kasus:signals er det noe om strømpriser?`) går det til `kasus-lookout`. Kvitterer aldri, skriver ingenting. |
 | `/kasus:env` | Sjekker oppsettet. `--resolve` sier hvilken installasjon et kall treffer og hvilken variabel hver verdi kom fra. |
 | `/kasus:test` | Selvtester pluginen. `--live` også tilkoblingen og at serveren avviser skriv. |
 
-Arbeidet skjer i `/kasus:start`. `/kasus:signals` er blikket man tar først — det
-kan ikke gjøre noe, bare vise, og konkurrerer derfor ikke med runden. De to siste
-er diagnostikk.
+Arbeidet skjer i runden. `/kasus:signals` er blikket man tar først — det kan ikke
+gjøre noe, bare vise, og konkurrerer derfor ikke med runden. De to siste er
+diagnostikk.
+
+## Oppfølger på en egen sak
+
+`oppfolgersak` starter der runden slutter: på en artikkel redaksjonen alt har
+publisert. Vinklingen finnes, leserne kjenner saken, og det som mangler er **det
+nye**. Det er ofte den billigste gode saken redaksjonen kan gjøre — og den
+farligste å gjøre dårlig, for en oppfølger uten noe nytt er den samme saken
+publisert to ganger.
+
+Derfor har den sitt eget inngangsvilkår, like hardt som signalet er i runden:
+**ingen oppfølger uten et nytt faktum med kilde og dato.** «Saken er fortsatt
+viktig» og «det har gått en måned» er ikke noe nytt. Finner den ingenting,
+stopper den og sier hva som ville gjort det til en sak — hvilket tall som kommer,
+når, eller hvem som må ha bestemt seg.
+
+Den leser artikkelen i full tekst (`article <id>` gir alltid brødteksten), henter
+premissene fra profilen, og spør så tre ting:
+
+1. **Har radaren funnet noe?** `signals --kategori egen_oppfolging` er
+   oppfølgingssøkene: kilder på redaksjonens egne saker, med egne domener
+   utelatt — altså andre kilder enn artikkelen selv. Hele vinduet leses også,
+   fordi et fritt temasøk kan gjelde saken uten at radaren visste det.
+2. **Har vi alt fulgt den opp?** `kasus-archivist` med spørsmålet «har vi alt
+   fulgt opp denne saken?». Agenten får beskjed om å se bort fra artikkelen selv
+   — den ligger i vinduet og er det sterkeste `SAMME SAK`-treffet som finnes.
+3. **Hva er det nye?** Fire slag, og de er ikke like sterke: et **nytt tall**
+   (samme måling, ny periode), en **ny handling** (vedtak, klage, granskning),
+   **konsekvensen** (det saken varslet om — skjedde det?) eller **løftet** (det en
+   aktør lovet i saken — er det holdt?). Det siste er den sterkeste oppfølgeren
+   som finnes, og den ingen andre kan gjøre: den forutsetter at man har den
+   forrige saken, og sitatet står i brødteksten.
+
+Researchen har **datogolv**: artikkelens egen publiseringsdato. Uten det kommer
+agentene tilbake med kildene den forrige saken var bygget på, og seks rapporter
+som bekrefter det du visste er verre enn ingen — de ser ut som funn.
+
+Forslaget skrives i samme format som runden, med `kategori: egen_oppfolging`,
+`kasusArtikkelId` framfor `kasusSignalId`, og en påkrevd seksjon **«Den forrige
+saken»**: hva den slo fast, sitatet som etterprøves, og hva som er nytt. Det er
+den seksjonen som lar en redaktør se forskjellen mellom en oppfølger og en
+gjentakelse på tretti sekunder.
 
 ## De fire kategoriene
 
@@ -284,8 +369,10 @@ bash plugins/kasus/scripts/self-test.sh --live   # + ekte kall mot API-et
 node --test plugins/kasus/scripts/kasus/         # bare enhetstestene
 ```
 
-Nye kommandoer og agenter registreres ikke noe sted — de oppdages fra mappa, og
-krever omstart av sesjonen. Endrer du verktøyets modi, oppdater `MODES` i
+Nye kommandoer, ferdigheter og agenter registreres ikke noe sted — de oppdages
+fra mappa, og krever omstart av sesjonen. En ferdighets `name:` må matche
+MAPPENAVNET (`skills/dybdeartikkel/SKILL.md` → `name: dybdeartikkel`), ellers
+lastes den ikke; selvtesten sjekker det. Endrer du verktøyets modi, oppdater `MODES` i
 `scripts/kasus/kasus.mjs`; selvtesten sjekker at kommandoene ikke refererer til en
 modus som ikke finnes, og at versjonen i `plugin.json`, `marketplace.json` og
 verktøyet er den samme.
