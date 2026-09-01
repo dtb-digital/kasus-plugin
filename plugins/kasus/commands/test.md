@@ -20,11 +20,15 @@ Tørt dekker den:
 - at `plugin.json` er gyldig JSON, og at versjonen der er den samme som i verktøyet
 - at hver agents `name:` matcher filnavnet og hver ferdighets `name:` matcher
   MAPPENAVNET, ellers lastes de ikke
-- at bare runden flytter kvitteringen, og at ingen kommando eller agent kvitterer
+- at bare saksløpet flytter kvitteringen, og at ingen kommando eller agent kvitterer
   i det hele tatt — et løfte i en prompt er lett å bryte i en senere redigering
-- at statusen henter **begge** vinduene sine (`nytt` + `articles`) — faller
-  artikkelkallet ut i en forenkling, ser statusen like komplett ut med ett kall
-  som med to, mens koblingen til ukas egen produksjon er borte
+- at `/kasus:start` henter **begge** vinduene sine (`nytt` + `articles`) — faller
+  artikkelkallet ut i en forenkling, ser inngangen like komplett ut med ett kall
+  som med to
+- at **ingen kommando sender ut researchagenter**. Researchen er saksløpets steg
+  4; en kommando som gjorde den ville hatt egne steg som kan drifte fra
+  ferdighetens. (Sjekken leter etter agentnavnet, så dette avsnittet omtaler den
+  uten å nevne det.), mens koblingen til ukas egen produksjon er borte
 - at **hjelpen nevner hver kommando, agent og ferdighet som finnes**. Komponentene
   oppdages fra mappa, så en ny inngang sier ikke fra noe sted — den blir bare
   usynlig i `kasus:hjelp`, og journalisten konkluderer med at den ikke finnes

@@ -2,7 +2,7 @@
 # /kasus:test — selvtest av pluginen.
 #
 # Tørt (default): syntaks på alle skript, at komponentmappene ikke er tomme, at
-# ferdighetene har navn som matcher mappa, at runden bare kvitteres fra ett sted
+# ferdighetene har navn som matcher mappa, at saksløpet bare kvitteres fra ett sted
 # og krever et signal, at statusen henter begge vinduene sine, at hjelpen nevner
 # alle inngangene som finnes, at
 # manifestene er gyldig JSON, at verktøyets --list-kontrakt holder, at
@@ -105,7 +105,7 @@ fi
 # --- 2. Komponentmapper ----------------------------------------------------
 # Kommandoer, agenter og ferdigheter registreres ikke noe sted — de oppdages fra
 # mappa. En tom mappe er derfor en plugin uten kommandoer, ikke en feilmelding.
-# `skills/` er den viktigste av dem: RUNDEN bor der, og den har ingen kommando —
+# `skills/` er den viktigste av dem: SAKSLØPET bor der, og den har ingen kommando —
 # er mappa tom, finnes ikke arbeidsflyten.
 for dir in commands agents skills references; do
   count="$(find "$ROOT/$dir" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')"
@@ -176,23 +176,31 @@ for f in $(find "$ROOT/skills" -name 'SKILL.md' 2>/dev/null | sort); do
   fi
 done
 
-# Runden er selve pluginen, og den har ingen kommando som ville feilet i stedet:
+# Saksløpet er selve pluginen, og den har ingen kommando som ville feilet i stedet:
 # får ferdigheten nytt navn eller forsvinner, er arbeidsflyten borte uten at noe
 # annet sier fra. Derfor er den navngitt her.
 ROUND_SKILL="$ROOT/skills/dybdeartikkel/SKILL.md"
 if [ -f "$ROUND_SKILL" ]; then
-  pass "runden finnes som ferdighet: skills/dybdeartikkel/SKILL.md"
+  pass "saksløpet finnes som ferdighet: skills/dybdeartikkel/SKILL.md"
 else
   fail "skills/dybdeartikkel/SKILL.md mangler — pluginen har ingen arbeidsflyt"
 fi
 
-# Ingen kommando skal starte runden. Én arbeidsflyt, én inngang: en kommando som
-# bare videresender til ferdigheten er et hopp som kan gå feil uten å gi noe
-# tilbake, og to innganger konkurrerer om oppmerksomheten (prinsipp 0).
-if [ -f "$ROOT/commands/start.md" ]; then
-  fail "commands/start.md finnes igjen — runden er en ferdighet, ikke en kommando"
+# `/kasus:start` henter dataene og spør hva journalisten vil gjøre. Den skal ikke
+# GJØRE det: researchen er saksløpets steg 4, og en kommando som sender ut
+# researchagenter har sluttet å være en inngang og blitt en halv arbeidsflyt med
+# egne steg som kan drifte fra ferdighetens. `kvitter`-forbudet over dekker
+# skrivingen; dette dekker arbeidet før den.
+RESEARCHERE=""
+for f in $(find "$ROOT/commands" -name '*.md' 2>/dev/null | sort); do
+  if grep -q 'kasus-researcher' "$f"; then
+    RESEARCHERE="$RESEARCHERE ${f#"$ROOT"/}"
+  fi
+done
+if [ -n "$RESEARCHERE" ]; then
+  fail "disse kommandoene sender ut researchagenter:$RESEARCHERE — arbeidet skjer i ferdighetene"
 else
-  pass "runden har ingen kommando-dublett (commands/start.md finnes ikke)"
+  pass "ingen kommando gjør researchen (den hører i saksløpet)"
 fi
 
 # --- 4. Verktøy-kontrakten -------------------------------------------------
@@ -242,7 +250,7 @@ fi
 # lett å bryte ved en senere redigering — så det håndheves her.
 #
 # Agentene er den farlige halvparten: de har Bash, de trigges av naturlig språk,
-# og en kvittering fra en av dem ville tømt runden for signaler UTEN at noen ba
+# og en kvittering fra en av dem ville tømt saksløpet for signaler UTEN at noen ba
 # om det. En kvittering er heller ikke til å angre — «siden sist» er borte.
 KVITTERERE=""
 for f in $(find "$ROOT/commands" "$ROOT/agents" -name '*.md' 2>/dev/null | sort); do
@@ -257,7 +265,7 @@ else
   pass "kommandoer og agenter kvitterer aldri (bare ferdighetene gjør det)"
 fi
 
-# Ferdighetene får kvittere, men bare RUNDEN får flytte tidspunktet. En
+# Ferdighetene får kvittere, men bare SAKSLØPET får flytte tidspunktet. En
 # oppfølgersak behandler ett signal av gangen og skal kvittere for nettopp det
 # (`--ids-only`) — en full kvittering derfra ville svelget en hel dags signaler
 # journalisten aldri fikk se, og det er ikke til å angre (prinsipp 9).
@@ -281,27 +289,27 @@ KVITT
   if [ "$BARE_IDS" -eq 1 ]; then
     pass "$rel kvitterer bare med --ids-only (flytter ikke tidspunktet)"
   else
-    fail "$rel kvitterer UTEN --ids-only — bare runden får flytte «siden sist»"
+    fail "$rel kvitterer UTEN --ids-only — bare saksløpet får flytte «siden sist»"
   fi
 done
 
-# ...og runden må FAKTISK kvittere. Et steg som forsvinner i en omskriving gir
-# en runde som viser de samme signalene i morgen, uten at noe feiler.
+# ...og saksløpet må FAKTISK kvittere. Et steg som forsvinner i en omskriving gir
+# et saksløp som viser de samme signalene i morgen, uten at noe feiler.
 if grep -qE 'kasus\.mjs[[:space:]]+kvitter' "$ROUND_SKILL" 2>/dev/null; then
-  pass "runden kvitterer (steg 4d/5 er intakt)"
+  pass "saksløpet kvitterer (steg 4d/5 er intakt)"
 else
-  fail "runden kaller ikke «kvitter» — «siden sist» ville stått stille"
+  fail "saksløpet kaller ikke «kvitter» — «siden sist» ville stått stille"
 fi
 
 # --- 4c. Signalet er inngangsvilkåret -------------------------------------
-# Runden skriver ikke et saksforslag uten et signal: sporet tilbake til hvorfor
+# Saksløpet skriver ikke et saksforslag uten et signal: sporet tilbake til hvorfor
 # saken ble tatt opp (`kasusSignalId`, `signalUrl`) er halve verdien av filen, og
 # et forslag uten opphav ser ut som noe det ikke er. Regelen sto i prosa i to
 # filer og ble myket opp én gang før — så den håndheves her.
 if grep -q 'Signalet er inngangsvilkåret' "$ROUND_SKILL" 2>/dev/null; then
-  pass "runden krever et signal (vilkåret står i SKILL.md)"
+  pass "saksløpet krever et signal (vilkåret står i SKILL.md)"
 else
-  fail "SKILL.md mangler «Signalet er inngangsvilkåret» — runden kan skrive uten opphav"
+  fail "SKILL.md mangler «Signalet er inngangsvilkåret» — saksløpet kan skrive uten opphav"
 fi
 
 # Oppfølgersaken har sitt eget inngangsvilkår: et NYTT faktum med kilde. Uten det
@@ -332,17 +340,17 @@ else
   pass "ingen «kasusSignalId: null» — forslaget kan ikke skrives uten opphav"
 fi
 
-# --- 4c-bis. Statusen holder signalene mot ukas egen produksjon -----------
-# Statusen er to kall, ikke ett. Artikkelvinduet er det som skiller «her er sju
+# --- 4c-bis. Inngangen holder signalene mot ukas egen produksjon ----------
+# `/kasus:start` er to kall, ikke ett. Artikkelvinduet er det som skiller «her er sju
 # signaler» fra «to av dem henger sammen med noe dere publiserte denne uka», og
 # de koblingene kjenner radaren ikke. Faller kallet ut i en forenkling, blir
 # statusen stille dårligere — den ser like komplett ut med ett kall som med to.
-STATUS_CMD="$ROOT/commands/signals.md"
+STATUS_CMD="$ROOT/commands/start.md"
 if [ -f "$STATUS_CMD" ]; then
   if grep -qE 'kasus\.mjs[[:space:]]+nytt' "$STATUS_CMD" && grep -qE 'kasus\.mjs[[:space:]]+articles' "$STATUS_CMD"; then
     pass "statusen henter både nye signaler og ukas egen produksjon"
   else
-    fail "commands/signals.md mangler ett av de to kallene (nytt + articles)"
+    fail "commands/start.md mangler ett av de to kallene (nytt + articles)"
   fi
 fi
 
@@ -377,7 +385,7 @@ else
 
   # Hjelpen orienterer, den arbeider ikke. Et API-kall herfra ville gjort den til
   # et alternativt sted å gjøre jobben (prinsipp 0) — og et hjelpesvar som henter
-  # signaler er en runde som startet fordi noen spurte hvordan man starter en.
+  # signaler er et saksløp som startet fordi noen spurte hvordan man starter en.
   if grep -qE 'kasus\.mjs[[:space:]]+[a-z]' "$HELP_SKILL"; then
     fail "hjelpen kaller en modus i verktøyet — den skal bare orientere (--list er unntaket)"
   else
@@ -444,8 +452,8 @@ if [ "$LIVE" -eq 1 ]; then
     sed 's/^/      /' "$ERR"
   fi
 
-  # Artiklene er halve runden — «har vi dekket dette før?» er ikke mulig å svare
-  # på uten dem, og et manglende endepunkt ville ellers dukket opp midt i en runde.
+  # Artiklene er halve saksløpet — «har vi dekket dette før?» er ikke mulig å svare
+  # på uten dem, og et manglende endepunkt ville ellers dukket opp midt i et saksløp.
   if node "$ROOT/scripts/kasus/kasus.mjs" articles $ENV_FLAG --limit 1 >"$OUT" 2>"$ERR"; then
     if grep -q "Ingen egne artikler" "$OUT"; then
       pass "articles-endepunktet svarer — men organisasjonen har ingen artikler synkronisert"

@@ -4,31 +4,38 @@
 
 Pluginen gjør én ting: nye radarsignaler → journalisten velger → sjekk mot egne
 artikler → bredt søk → saksforslag → kvittering. Ikke en samling oppslagsverktøy
-rundt et API. En kommando som «også kunne vært nyttig» konkurrerer med runden om
+rundt et API. En kommando som «også kunne vært nyttig» konkurrerer med saksløpet om
 oppmerksomheten, og en journalist som må velge verktøy før hun velger sak har fått
 ett problem ekstra.
 
-Runden bor i **én** fil: ferdigheten `skills/dybdeartikkel/SKILL.md`. Den er en
+Saksløpet bor i **én** fil: ferdigheten `skills/dybdeartikkel/SKILL.md`. Den er en
 ferdighet og ikke en kommando fordi den da trigges av bestillingen selv («jeg
 skal skrive en dybdeartikkel»), så journalisten slipper å vite navnet på et
 verktøy før hun vet hva hun vil skrive — og fordi en ferdighet også kan velges
 med vilje, som `/kasus:dybdeartikkel`.
 
-Det fantes en `/kasus:start` som pekte hit. Den er borte: to innganger til én
-arbeidsflyt er nettopp det dette avsnittet handler om, og en kommando som bare
-videresender er et hopp som kan gå feil uten å gi noe tilbake.
+Det fantes en `/kasus:start` som bare pekte hit, og den var borte en periode: en
+kommando som videresender er et hopp som kan gå feil uten å gi noe tilbake. Den
+finnes igjen, og gjør noe annet enn å peke — den **henter dataene valget tas på**,
+og spør hvilken ferdighet som skal ta over. Det er forskjellen på et hopp og en
+inngang: den gir noe tilbake selv om ingen svarer på spørsmålet.
 
-Prisen for fritekst-inngangen er at runden kan starte uten at noen skrev en
-skråstrek, og runden både skriver til disk og flytter kvitteringen. Derfor står
+Grensa håndheves framfor å være et løfte: ingen kommando kaller `kvitter`, og
+ingen kommando sender ut `kasus-researcher`. En kommando som gjorde researchen
+ville hatt egne steg som kan drifte fra ferdighetens, og da er det to
+arbeidsflyter.
+
+Prisen for fritekst-inngangen er at saksløpet kan starte uten at noen skrev en
+skråstrek, og saksløpet både skriver til disk og flytter kvitteringen. Derfor står
 grensa i ferdighetens egen beskrivelse og i steget før steg 1: et spørsmål om hva
-som ligger der («er det noe nytt?») er `kasus-lookout`, ikke en runde.
+som ligger der («er det noe nytt?») er `kasus-lookout`, ikke et saksløp.
 
 ### To opphav, ett format
 
 `oppfolgersak` er den andre ferdigheten, og den ser ut som et brudd på avsnittet
 over. Den er det ikke: den gjør ikke noe annet, den **starter et annet sted**. En
 oppfølger på redaksjonens egen sak har vinklingen ferdig og trenger bare det nye,
-mens runden må finne begge — det er to ulike jobber, og en arbeidsflyt som skulle
+mens saksløpet må finne begge — det er to ulike jobber, og en arbeidsflyt som skulle
 gjort begge ville spurt «har du et signal eller en artikkel?» som første steg.
 
 Grensa som holder det til én ting: begge skriver **samme format**
@@ -43,7 +50,7 @@ lagde noe. Den lager ingenting: den henter ikke fra API-et, skriver ikke til dis
 kvitterer ikke, og gjør ingen research. Den er **kartet over inngangene**, og den
 finnes fordi fritekst-inngangen har en kostnad ingen kommandoliste har — når
 ingenting HETER noe man må huske, er «hvordan bruker jeg denne?» et reelt
-spørsmål, og det spørsmålet skal ikke starte en runde.
+spørsmål, og det spørsmålet skal ikke starte et saksløp.
 
 Grensa som holder den til én ting: hjelpen **svarer og gir slipp**. Den forklarer
 inngangen og tilbyr å starte den; den utfører den ikke. Skulle hjelpen begynne å
@@ -61,22 +68,26 @@ pluginen hadde det: `origin: own_followup` ER et oppfølgingssøk på en egen sa
 Ferdigheten gir journalisten den samme inngangen manuelt, for de sakene radaren
 ikke søkte på.
 
-`/kasus:signals` er unntaket som viser regelen: den er rent LESENDE — kvitterer
-ikke, skriver ingenting, gjør ingen research. En kommando som ikke kan utføre
-arbeid kan ikke bli et alternativt sted å gjøre det.
+`/kasus:start` er rent LESENDE — kvitterer ikke, skriver ingenting, gjør ingen
+research. En kommando som ikke kan utføre arbeid kan ikke bli et alternativt sted
+å gjøre det.
 
-Den **spør** til slutt hva journalisten vil gjøre videre, og det er nærmere en
-starter enn resten av avsnittet. Grensa som holder: spørsmålet gjelder hvilken
-INNGANG, ikke hvilken sak. Valget av sak hører i runden, der et valg fører til
-research, en fil på disk og en kvittering — og svarer journalisten «kjør runden»,
-kjører ferdigheten sitt eget steg 1 framfor å arve statusens data. Det er ikke
-sløsing, det er det som gjør at statusen ikke er en halv runde: mister runden
-tilgang til sitt eget steg 1, har den to ulike start-tilstander å virke i.
+Den **spør** til slutt hva journalisten vil gjøre. Grensa som holder: spørsmålet
+gjelder hvilken INNGANG, ikke hvilken sak. Valget av sak hører i ferdigheten, der
+et valg fører til research, en fil på disk og en kvittering — og velger
+journalisten saksløpet, kjører ferdigheten **sitt eget steg 1** framfor å arve
+dataene fra kommandoen. Det koster ett kall, og alternativet er at saksløpet har
+to ulike start-tilstander å virke i.
 
-Det ble spurt om en `/kasus:start` som henter signaler og artikler og spør hva
-videre. Det er dette, og den fikk ikke et nytt navn: den kommandoen ville vært en
-ny inngang ved siden av en som alt gjorde det halve, og to steder å ta morgenens
-blikk er samme feil som to steder å kjøre runden.
+Profilen hentes derfor ikke i kommandoen. Den er premisset for å prioritere og
+skrive, ikke for å velge hva man vil gjøre, og en inngang som hentet den ville
+vært et halvt saksløp.
+
+Det fantes en `/kasus:signals` som gjorde halvparten av dette. Den er borte
+framfor å stå ved siden av: to steder å ta morgenens blikk er samme feil som to
+steder å kjøre saksløpet. Oppslagsformen den hadde — `--pattern`, `--gamle`,
+`--kategori` — var alltid bedre stilt som et spørsmål, og `kasus-lookout` bygger
+de filtrene selv.
 
 Det er derfor `/api/v1/story-briefs` ikke er i bruk: et ferdig vurdert saksforslag
 fra pipelinen er et alternativt utgangspunkt, og to utgangspunkt i samme
@@ -158,7 +169,7 @@ API-et.
 «Nytt siden sist» krever at noe husker når sist var. Det ligger i
 `.claude/kasus-state.json` i brukerens eget repo, og **bare `kvitter` skriver
 det**. `nytt` leser. En oversikt som kvitterte seg selv ville betydd at et
-avbrutt kall — eller en runde som ble avbrutt av noe viktigere — mistet en hel
+avbrutt kall — eller et saksløp som ble avbrutt av noe viktigere — mistet en hel
 dags signaler uten at noe sa fra.
 
 To ting følger av at kvitteringen er et tidspunkt:
@@ -168,7 +179,7 @@ To ting følger av at kvitteringen er et tidspunkt:
   ved id. Overlappen er usynlig, og et sent-ankommet signal blir likevel sett.
 - **En full kvittering svelger det du ikke fikk se.** Derfor finnes
   `--ids-only`: den kvitterer for de sakene som faktisk ble behandlet og lar
-  tidspunktet stå. Det er det riktige svaret på en halvferdig runde, og
+  tidspunktet stå. Det er det riktige svaret på et halvferdig saksløp, og
   outputen sier hvilken av de to som ble gjort.
 
 Nøkkelen havner aldri i fila. Organisasjonene skilles med et forkortet SHA-256 av

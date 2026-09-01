@@ -2,9 +2,9 @@
  * Kvitteringen — hva er SETT, og hva er nytt siden sist.
  *
  * Uten en kvittering finnes ikke spørsmålet «hva er nytt?». `--hours 24` er ikke
- * det samme: kjører du runden kl. 08 og igjen kl. 11, viser et døgnvindu de
+ * det samme: kjører du saksløpet kl. 08 og igjen kl. 11, viser et døgnvindu de
  * samme signalene tre ganger, og et treTIMES-vindu skjuler det som kom kl. 07.
- * Derfor lagres tidspunktet runden ble gjort, per organisasjon, på disk i
+ * Derfor lagres tidspunktet saksløpet ble gjort, per organisasjon, på disk i
  * brukerens eget repo.
  *
  * To ting gjør kvitteringen etterprøvbar framfor magisk:
@@ -35,7 +35,7 @@ export const DEFAULT_STATE_FILE = ".claude/kasus-state.json";
 export const STATE_VERSION = 1;
 
 /**
- * Hvor mange id-er som huskes per organisasjon. Nok til flere runder tilbake,
+ * Hvor mange id-er som huskes per organisasjon. Nok til flere saksløp tilbake,
  * så etterslep-vinduet aldri viser det samme signalet to ganger, og lite nok
  * til at fila forblir noen kilobyte.
  */
@@ -64,7 +64,7 @@ export const STREAMS = ["signals"];
  * Hvor kvitteringen ligger, og hvorfor der.
  *
  * `KASUS_STATE_FILE` kan peke et annet sted — f.eks. utenfor repoet, hvis flere
- * prosjekter deler én runde. Relativ sti tolkes fra cwd, ikke fra pluginmappa:
+ * prosjekter deler én saksløp. Relativ sti tolkes fra cwd, ikke fra pluginmappa:
  * pluginen bor i en cache-mappe brukeren ikke ser, og en kvittering der ville
  * vært umulig å finne igjen.
  *
@@ -112,7 +112,7 @@ const emptyState = () => ({ version: STATE_VERSION, targets: {} });
 /**
  * Leser kvitteringsfila.
  *
- * En fil som ikke finnes er ikke en feil — det er første runde. En fil som
+ * En fil som ikke finnes er ikke en feil — det er første saksløp. En fil som
  * finnes men er ØDELAGT er en feil: en stille nullstilling ville svart
  * «ingenting nytt siden sist» om en hel dags signaler. `kvitter --reset` er veien
  * videre, og den tolererer en ødelagt fil (`onCorrupt: "empty"`).
@@ -190,14 +190,14 @@ export function entryFor(state, key) {
  * vindu som rundes ned mister signaler i kanten.
  *
  * @param {{ checkpoint: string|null, now?: number, override?: number|null }} opts
- * @returns {{ from: number, hours: number, basis: "kvittering"|"første runde"|"overstyrt" }}
+ * @returns {{ from: number, hours: number, basis: "kvittering"|"første saksløp"|"overstyrt" }}
  */
 export function windowFor({ checkpoint, now = Date.now(), override = null }) {
   if (override) {
     return { from: now - override * 3600_000, hours: override, basis: "overstyrt" };
   }
   if (!checkpoint) {
-    return { from: now - FIRST_RUN_HOURS * 3600_000, hours: FIRST_RUN_HOURS, basis: "første runde" };
+    return { from: now - FIRST_RUN_HOURS * 3600_000, hours: FIRST_RUN_HOURS, basis: "første saksløp" };
   }
   const from = Date.parse(checkpoint) - LAG_HOURS * 3600_000;
   const hours = Math.max(1, Math.ceil((now - from) / 3600_000));
@@ -233,8 +233,8 @@ export function classify(item, timestamp, { from, seenIds }) {
  *
  * `at: null` betyr «behold tidspunktet». Det er ikke det samme som å kvittere
  * for nå: da regnes bare de oppgitte id-ene som sett, og alt annet som kom inn i
- * mellomtiden er fortsatt nytt neste runde. Det er den trygge kvitteringen når
- * runden bare rakk noen av sakene.
+ * mellomtiden er fortsatt nytt neste saksløp. Det er den trygge kvitteringen når
+ * saksløpet bare rakk noen av sakene.
  *
  * @param {object} state
  * @param {{ key: string, host: string, env: string|null, at: string|null, ids?: string[] }} opts
@@ -283,7 +283,7 @@ export function clearTarget(state, key) {
 /**
  * Skriver kvitteringen atomisk: til en temp-fil i samme mappe, og deretter
  * `rename`. Et avbrutt skriv skal ikke etterlate en halv JSON-fil — den ville
- * stoppet neste runde med «ikke gyldig JSON».
+ * stoppet neste saksløp med «ikke gyldig JSON».
  *
  * @param {string} path
  * @param {object} state
@@ -316,7 +316,7 @@ export function writeState(path, state) {
  *
  * En kvittering fram i tid er avvist framfor godtatt: den ville gjort at ALT er
  * «sett» til klokka tar den igjen, og en tastefeil i årstallet ville dermed
- * slått av runden i stillhet.
+ * slått av saksløpet i stillhet.
  *
  * @param {string} raw
  * @param {number} [now]

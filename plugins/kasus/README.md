@@ -3,7 +3,7 @@
 Fra radarsignal til saksforslag, for en journalist i Claude Code. **Én
 arbeidsflyt** — ferdigheten `dybdeartikkel` — og den gjør seks ting i rekkefølge:
 
-1. Henter radarsignalene som har kommet inn **siden forrige runde**, pluss
+1. Henter radarsignalene som har kommet inn **siden forrige saksløp**, pluss
    premissene: profilen og **ukas egen produksjon**
 2. Legger fram en prioritering — **du velger saken**, og kan be om hele lista
    framfor bare de fire øverste
@@ -12,12 +12,12 @@ arbeidsflyt** — ferdigheten `dybdeartikkel` — og den gjør seks ting i rekke
 5. Skriver et **saksforslag** på disk, i redaksjonens tone
 6. Kvitterer, og går til neste sak
 
-Prosessen er laget for å gjentas rett etter hverandre: kjør runden, ta én sak,
+Prosessen er laget for å gjentas rett etter hverandre: kjør saksløpet, ta én sak,
 kvitter, kjør igjen.
 
-**Det finnes ingen kommando for å starte den, og det er med vilje.** Runden er en
+**Det finnes ingen kommando for å starte den, og det er med vilje.** Saksløpet er en
 ferdighet, så den trigges på fritekst — «jeg skal skrive en dybdeartikkel», «finn
-meg en sak å skrive», «jeg trenger noe å jobbe med i dag», «kjør runden», «lag et
+meg en sak å skrive», «jeg trenger noe å jobbe med i dag», «kjør saksløpet», «lag et
 saksforslag på dette signalet». Vil du starte den med vilje, er
 `/kasus:dybdeartikkel` den samme ferdigheten valgt fra menyen. Stegene står ett
 sted: [`skills/dybdeartikkel/SKILL.md`](./skills/dybdeartikkel/SKILL.md).
@@ -26,11 +26,11 @@ sted: [`skills/dybdeartikkel/SKILL.md`](./skills/dybdeartikkel/SKILL.md).
 matches temaet først mot radarens vindu, semantisk, fordi signal-API-et ikke har
 tekstsøk og et tema derfor ikke er et filter. Vinduet er da ikke «siden sist»:
 kvitteringen svarer på hva DU har sett, mens spørsmålet er hva radaren har på
-temaet, så runden leser sju døgn og sier for hvert treff om det er nytt eller alt
+temaet, så saksløpet leser sju døgn og sier for hvert treff om det er nytt eller alt
 sett. Finner radaren ingenting, sies det — og det betyr ikke at det ikke finnes en
 sak, bare at temaet ligger utenfor mønstrene radaren søker på.
 
-**Men da stopper runden: signalet er inngangsvilkåret.** Ingen runde uten et
+**Men da stopper saksløpet: signalet er inngangsvilkåret.** Ingen saksløp uten et
 signal, og ingen fil på disk uten `kasusSignalId` — heller ikke når temaet
 åpenbart er en god sak. Sporet tilbake til hvorfor saken ble tatt opp er halve
 verdien av forslaget; et signal ER kilder, mens et tema bare er et nettsøk hvem
@@ -40,14 +40,14 @@ dekningssjekk som sier om det finnes en egen sak å ringe videre på — ikke et
 saksforslag på tynt grunnlag.
 
 Grensa mot agentene er **hvem som vil jobbe**. «Er det noe nytt?» er et spørsmål
-om hva som ligger der — det svarer `kasus-lookout` på, uten å kvittere. Runden
+om hva som ligger der — det svarer `kasus-lookout` på, uten å kvittere. Saksløpet
 researcher, skriver til disk og flytter kvitteringen, og skal derfor ikke starte
 fordi noen lurte på om det var noe.
 
 API-laget er **read-only**. Det pluginen skriver, skriver den i prosjektet:
 saksforslagene i `./artikler`, kvitteringen «siden sist» i
 `.claude/kasus-state.json`. Begge stiene er relative til der du står, så to
-prosjekter teller sine egne runder.
+prosjekter teller sine egne saksløp.
 
 ## Kom i gang
 
@@ -102,8 +102,9 @@ versjon som gjelder står i git framfor i en maskin.
 4. Start sesjonen på nytt i prosjektmappa — marketplacet hentes, pluginen
    installeres, og `env`-innslag og komponenter plukkes opp ved oppstart.
 5. Verifiser: `/kasus:env --resolve`
-6. Kjør runden: si hva du skal gjøre — «jeg skal skrive en dybdeartikkel» — eller
-   velg `/kasus:dybdeartikkel`
+6. Kom i gang: `/kasus:start` henter det du trenger for å bestemme deg og spør
+   hva du vil gjøre. Vet du det alt, si det i stedet — «jeg skal skrive en
+   dybdeartikkel»
 
 Neste person som kloner repoet trenger bare sin egen nøkkel — resten står i
 `.claude/settings.json`.
@@ -117,21 +118,26 @@ Neste person som kloner repoet trenger bare sin egen nøkkel — resten står i
 | **fritekst** — «skriv en oppfølger på saken om X», «hva har skjedd siden vi skrev om dette?» | **Oppfølger på en egen sak.** Ferdigheten `oppfolgersak` — se under. |
 | `/kasus:oppfolgersak` | Samme ferdighet, startet fra menyen. |
 | **fritekst** — «hvordan bruker jeg denne?», «hva kan kasus?», «hjelp» | **Forklaring, ikke arbeid.** Ferdigheten `hjelp` — hvilken inngang som hører til hvilken jobb, hva ordene i outputen betyr, og hva som er galt når noe ikke virker. Også `/kasus:hjelp`. |
-| `/kasus:signals` | **Status:** hva har skjedd siden sist? Nye signaler OG ukas egen produksjon, fordeling over mønstre og kategorier, gamle saker — og til slutt **ett spørsmål om hva du vil gjøre videre**. Med et spørsmål framfor flagg (`/kasus:signals er det noe om strømpriser?`) går det til `kasus-lookout`. Kvitterer aldri, skriver ingenting. |
+| `/kasus:start` | **Kom i gang.** Henter nye signaler OG ukas egen produksjon, sier hva som henger sammen — og **spør hva du vil gjøre**: en ny sak, en oppfølger, eller et spørsmål. Svaret sender deg videre i riktig ferdighet. Kvitterer aldri, skriver ingenting, gjør ingen research. |
 | `/kasus:env` | Sjekker oppsettet. `--resolve` sier hvilken installasjon et kall treffer og hvilken variabel hver verdi kom fra. |
 | `/kasus:test` | Selvtester pluginen. `--live` også tilkoblingen og at serveren avviser skriv. |
 
-Arbeidet skjer i runden. `/kasus:signals` er blikket man tar først — det henter
-signalene og ukas egen produksjon, sier hva som henger sammen, og **spør hva du
-vil gjøre videre**. Det er der grensa går: statusen kan spørre, men ikke utføre.
-Svarer du «kjør runden», er det ferdigheten som gjør jobben, og den kjører sitt
-eget steg 1 — statusen prøver ikke å gi den dataene sine. De to siste er
+Arbeidet skjer i ferdighetene. `/kasus:start` er inngangen for den som ikke har
+bestemt seg: den henter dataene valget tas på, og spør. Der går grensa — den kan
+spørre, men ikke utføre. Velger du saksløpet, kjører **ferdigheten** sitt eget
+steg 1; kommandoen prøver ikke å gi den dataene sine, og profilen hentes ikke der,
+fordi en inngang som hentet premissene ville vært et halvt saksløp. De to siste er
 diagnostikk.
+
+Et **spørsmål** trenger heller ingen kommando: «er det noe om strømpriser?», «hvor
+mange signaler er det på mønsteret X?» går rett til `kasus-lookout`, som bygger
+filtrene selv. Det var oppslagsformen den gamle `/kasus:signals` hadde, og den er
+bedre stilt som et spørsmål.
 
 `hjelp` er den samme regelen en gang til: den forklarer inngangene og gjør ingen
 av jobbene. Prisen for at ingenting har et kommandonavn man MÅ huske, er at
 «hvordan bruker jeg denne?» er et reelt spørsmål — og det er et spørsmål **om**
-pluginen framfor en bestilling **til** den, så det skal ikke starte en runde. Den
+pluginen framfor en bestilling **til** den, så det skal ikke starte et saksløp. Den
 henter ingenting fra API-et, kvitterer aldri, og tilbyr å starte riktig inngang
 framfor å gjøre arbeidet selv. At den nevner hver kommando, agent og ferdighet
 som faktisk finnes, er en test i `/kasus:test`: komponentene oppdages fra mappa,
@@ -139,13 +145,13 @@ så en ny inngang blir ellers bare usynlig i kartet.
 
 ## Oppfølger på en egen sak
 
-`oppfolgersak` starter der runden slutter: på en artikkel redaksjonen alt har
+`oppfolgersak` starter der saksløpet slutter: på en artikkel redaksjonen alt har
 publisert. Vinklingen finnes, leserne kjenner saken, og det som mangler er **det
 nye**. Det er ofte den billigste gode saken redaksjonen kan gjøre — og den
 farligste å gjøre dårlig, for en oppfølger uten noe nytt er den samme saken
 publisert to ganger.
 
-Derfor har den sitt eget inngangsvilkår, like hardt som signalet er i runden:
+Derfor har den sitt eget inngangsvilkår, like hardt som signalet er i saksløpet:
 **ingen oppfølger uten et nytt faktum med kilde og dato.** «Saken er fortsatt
 viktig» og «det har gått en måned» er ikke noe nytt. Finner den ingenting,
 stopper den og sier hva som ville gjort det til en sak — hvilket tall som kommer,
@@ -172,7 +178,7 @@ Researchen har **datogolv**: artikkelens egen publiseringsdato. Uten det kommer
 agentene tilbake med kildene den forrige saken var bygget på, og seks rapporter
 som bekrefter det du visste er verre enn ingen — de ser ut som funn.
 
-Forslaget skrives i samme format som runden, med `kategori: egen_oppfolging`,
+Forslaget skrives i samme format som saksløpet, med `kategori: egen_oppfolging`,
 `kasusArtikkelId` framfor `kasusSignalId`, og en påkrevd seksjon **«Den forrige
 saken»**: hva den slo fast, sitatet som etterprøves, og hva som er nytt. Det er
 den seksjonen som lar en redaktør se forskjellen mellom en oppfølger og en
@@ -193,12 +199,12 @@ oppfølgingssøkene lagrer funnene som `market_signal`:
 
 **Ferskhet er to tall.** `oppdaget` er når radaren fant signalet, `publisert` er
 hvor gammel saken er. Et temasøk kan levere en artikkel fra 2023 som «oppdaget for
-45 min siden», så runden viser begge og merker `GAMMEL SAK` når de er mer enn en
+45 min siden», så saksløpet viser begge og merker `GAMMEL SAK` når de er mer enn en
 uke fra hverandre. Mangler datoen, står det «ukjent dato» — ikke «fersk».
 
 ## Ukas produksjon, før du velger
 
-Både runden og `/kasus:signals` henter de 40 nyeste publiserte sakene fra siste
+Både saksløpet og `/kasus:start` henter de 40 nyeste publiserte sakene fra siste
 uke i samme melding som signalene. Profilen sier hva som fungerer for disse leserne i
 prinsippet; dette sier hva redaksjonen faktisk holder på med nå — og det er den
 andre en journalist kjenner igjen.
@@ -265,20 +271,20 @@ Tre forbehold følger hvert svar, og de er ikke det samme:
 
 ## «Siden sist»
 
-Runden måler mot en **kvittering**: tidspunktet forrige runde ble gjort, lagret i
+Saksløpet måler mot en **kvittering**: tidspunktet forrige saksløp ble gjort, lagret i
 `.claude/kasus-state.json`. Det er derfor den kan svare «tre nye signaler» framfor
 «de 20 nyeste», og derfor den samme saken ikke kommer igjen tre ganger på en dag.
 
-- **Bare kvitteringssteget skriver.** Å hente runden flytter ingenting, så en
-  runde som blir avbrutt mister ikke signalene sine.
-- **Etterslep er tatt høyde for.** Neste runde ser to timer bakover forbi
+- **Bare kvitteringssteget skriver.** Å hente saksløpet flytter ingenting, så en
+  saksløp som blir avbrutt mister ikke signalene sine.
+- **Etterslep er tatt høyde for.** Neste saksløp ser to timer bakover forbi
   kvitteringen for å fange det som ble indeksert i etterkant, og undertrykker det
   du alt har sett.
 - **Rakk du bare noen av sakene**, kvitteres de alene — resten er fortsatt nytt
-  neste gang. Runden sier hvilken av de to som ble gjort.
+  neste gang. Saksløpet sier hvilken av de to som ble gjort.
 - Fila inneholder verter, tidspunkter og id-er. **Ingen nøkkel.** Organisasjoner
   skilles med et forkortet SHA-256 av nøkkelen, som ikke kan autentisere noe.
-  Legg den i `.gitignore`: kvitteringen er DIN runde, ikke redaksjonens, og en
+  Legg den i `.gitignore`: kvitteringen er DITT saksløp, ikke redaksjonens, og en
   delt kvittering ville sagt at du har sett noe du ikke har sett.
 
 ## Agenter
@@ -294,7 +300,7 @@ Begge trigges på naturlig språk. Du trenger ingen kommando for å spørre.
 skrive om?», «er det noe om strømpriser?», «hva kom inn denne uka?», «hvor mange
 oppfølginger av egne saker ligger der?». Den svarer med kategori, begge datoer,
 mønster og klikkbar lenke per signal — og **kvitterer aldri**. Et spørsmål om hva
-som ligger der skal ikke kunne spise runden, så forbudet er håndhevet i
+som ligger der skal ikke kunne spise saksløpet, så forbudet er håndhevet i
 `/kasus:test` framfor å være et løfte i en prompt.
 
 Den bygger sitt eget filter, og **bare tre av filtrene finnes serverside**
@@ -321,9 +327,9 @@ var i bruk — et lokalt filter på et avkortet vindu er ikke et søk.
 `kasus-archivist` besvarer **ett spørsmål om redaksjonens egne artikler**. Den
 velger vinduet spørsmålet krever, henter det selv, og svarer med artikkel-id, dato
 og url på hvert punkt — pluss forbeholdet om hva vinduet dekket. De 200 artiklene
-blir liggende i agentens kontekst, ikke i rundens.
+blir liggende i agentens kontekst, ikke i saksløpets.
 
-Runden bruker den til «har vi skrevet om dette før?», som er den formen som har en
+Saksløpet bruker den til «har vi skrevet om dette før?», som er den formen som har en
 fast dom per kandidat. Men spørsmålet er ikke begrenset til det: spør du «hva har
 vi skrevet om i dag?», «hvem hos oss dekker samferdsel?» eller «hvilken tone har
 vi hatt på strømpriser?», er det samme agent — og for et spørsmål med tidsgrense
@@ -332,7 +338,7 @@ perioden.
 
 `kasus-researcher` besvarer **ett** researchspørsmål: søker bredt, leser smalt,
 går til primærkilden framfor omtalen, daterer alt, og skiller mellom bekreftet,
-motstridende og ubekreftet. Runden sender ut én per spørsmål, parallelt, maks
+motstridende og ubekreftet. Saksløpet sender ut én per spørsmål, parallelt, maks
 seks. Redaksjonens egne og konkurrentens domener er aldri et svar i seg selv.
 
 ## Variabler

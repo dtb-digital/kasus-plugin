@@ -61,7 +61,7 @@ export function renderSignal(signal, { full = false } = {}) {
 /**
  * De fire kategoriene et radarsignal kan komme fra, i den rekkefølgen de vises.
  *
- * Dette er den viktigste distinksjonen i hele runden, og den er ikke lesbar fra
+ * Dette er den viktigste distinksjonen i hele saksløpet, og den er ikke lesbar fra
  * API-feltene alene: `origin` og `type` må holdes i hodet SAMTIDIG, og begge
  * oppfølgingssøkene lagrer funnene som `market_signal`. Uten kategorien er et
  * søketreff på et to år gammelt blogginnlegg ikke til å skille fra konkurrentens
@@ -70,7 +70,7 @@ export function renderSignal(signal, { full = false } = {}) {
  * Rekkefølgen er et redaksjonelt valg, ikke alfabetisk: nærmest redaksjonens
  * eget arbeid først, mest varierende relevans sist. Frie temasøk er nyttige, men
  * de er også der støyen bor — de skal ikke stå øverst og spise oppmerksomheten
- * på en runde som skal gå fort.
+ * på et saksløp som skal gå fort.
  */
 export const SIGNAL_BUCKETS = [
   {
@@ -180,7 +180,7 @@ function renderSignalLine(signal) {
       : "uten mønstertreff",
     signal.sourceLabel,
     // At det finnes flere lenker bak signalet må SIES her. Ellers ser
-    // runden ut som én kilde per signal, og de andre blir aldri åpnet.
+    // saksløpet ut som én kilde per signal, og de andre blir aldri åpnet.
     kilder > 1 ? `+${kilder - 1} kilder til (se «signal ${signal.id}»)` : null,
   ].filter(Boolean);
 
@@ -382,10 +382,10 @@ export function renderArticle(article, { full = false } = {}) {
 }
 
 /**
- * Runden: hva som har kommet inn siden forrige kvittering.
+ * Saksløpet: hva som har kommet inn siden forrige kvittering.
  *
  * Signalene er gruppert på opphav, og hver gruppe bærer forklaringen sin. Det er
- * distinksjonen hele runden hviler på: «vi kan utvide vår egen sak i dag» og «her
+ * distinksjonen hele saksløpet hviler på: «vi kan utvide vår egen sak i dag» og «her
  * er en to år gammel bloggpost om temaet» ser identiske ut i rå API-felt.
  */
 export function renderDigest(digest) {
@@ -454,7 +454,7 @@ export function renderDigest(digest) {
       buckets.get(key).push(signal);
     }
 
-    // Forklaringen står i HVER runde, ikke bare i dokumentasjonen. De fire
+    // Forklaringen står i HVERT saksløp, ikke bare i dokumentasjonen. De fire
     // kategoriene krever ulike tiltak — egen oppfølging kan skrives i dag, en
     // konkurrentsak må researches fra grunnen — og en overskrift alene sier
     // ikke hvilket tiltak det er.
@@ -472,7 +472,7 @@ export function renderDigest(digest) {
   } else {
     parts.push(
       `  Denne uthentingen leser IKKE noe som sett — bare «kvitter» skriver.`,
-      `  Når runden er gjort:`,
+      `  Når saksløpet er gjort:`,
       `    kasus.mjs kvitter --at ${digest.ack.at} --ids ${digest.ack.ids.join(",")}`,
       `  Rakk du bare noen av signalene:`,
       `    kasus.mjs kvitter --ids <de du behandlet> --ids-only`,
@@ -505,7 +505,7 @@ export function renderAck(ack) {
   if (ack.keptTime) {
     parts.push(
       "  Bare de oppgitte id-ene er kvittert for. Tidspunktet står urørt, så alt",
-      "  annet som kom inn er fortsatt nytt neste runde — ingenting ble svelget.",
+      "  annet som kom inn er fortsatt nytt neste saksløp — ingenting ble svelget.",
     );
   } else {
     parts.push(

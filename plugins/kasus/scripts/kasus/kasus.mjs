@@ -5,7 +5,7 @@
  * Avhengighetsfri ESM, Node 18+ (bruker innebygd `fetch`). Pluginen kjører fra
  * en cache-mappe i konsumentens repo og kan ikke anta at noe er installert.
  *
- * Verktøyet betjener ÉN arbeidsflyt: runden, ferdigheten `dybdeartikkel`. Modiene er
+ * Verktøyet betjener ÉN arbeidsflyt: saksløpet, ferdigheten `dybdeartikkel`. Modiene er
  * stegene i den — radarsignaler inn, egne artikler til sammenligning, profilen
  * som premiss, og en kvittering til slutt.
  *
@@ -87,11 +87,11 @@ import {
   writeState,
 } from "./state.mjs";
 
-const VERSION = "0.13.0";
+const VERSION = "0.14.0";
 const DEFAULT_LIMIT = 20;
 
 /**
- * Runden henter mer enn en vanlig liste, fordi den skal være HELE bildet
+ * Saksløpet henter mer enn en vanlig liste, fordi den skal være HELE bildet
  * siden sist — ikke de 20 nyeste. Taket sies når det nås.
  */
 const DIGEST_LIMIT = 40;
@@ -106,7 +106,7 @@ const SIGNAL_TYPES = ["competitor_article", "market_signal"];
  * Artikkel-API-et har ingen tekstsøk, så spørsmålet besvares ved å hente de N
  * nyeste artiklene og legge dem fram for vurdering. 200 er to sider paginering —
  * nok til å dekke flere måneders produksjon for en normal redaksjon, og lite nok
- * til at kallet går fort nok for en interaktiv runde. Tallet SIES i svaret, fordi
+ * til at kallet går fort nok for et interaktivt saksløp. Tallet SIES i svaret, fordi
  * en tom treffliste ellers leses som «ikke dekket».
  */
 const ARTICLE_WINDOW = 200;
@@ -131,13 +131,13 @@ const COMMON_FLAGS = ["env", "json"];
 const MODES = {
   nytt: {
     summary:
-      "Runden: radarsignaler som har kommet inn siden forrige kvittering, gruppert på opphav. Skriver ingenting.",
+      "Saksløpet: radarsignaler som har kommet inn siden forrige kvittering, gruppert på opphav. Skriver ingenting.",
     flags: [...COMMON_FLAGS, "hours", "limit", "all"],
     run: runNytt,
   },
   kvitter: {
     summary:
-      "Kvitterer for runden: alt eldre enn tidspunktet regnes som sett. Det ENESTE som skriver kvitteringen.",
+      "Kvitterer for saksløpet: alt eldre enn tidspunktet regnes som sett. Det ENESTE som skriver kvitteringen.",
     flags: [...COMMON_FLAGS, "at", "ids", "ids-only", "reset"],
     run: runKvitter,
   },
@@ -194,12 +194,12 @@ const MODES = {
 // ---------------------------------------------------------------------------
 
 /**
- * Runden. Henter signalene for vinduet siden sist, og deler i «nytt»,
+ * Saksløpet. Henter signalene for vinduet siden sist, og deler i «nytt»,
  * «alt kvittert for» og «utenfor vinduet».
  *
  * Modusen er LESENDE. Den flytter ikke kvitteringen, og det er ikke en
  * bekvemmelighet: en oversikt som kvitterte seg selv ville betydd at et avbrutt
- * kall — eller en runde som ble avbrutt av noe viktigere — mistet signalene sine
+ * kall — eller et saksløp som ble avbrutt av noe viktigere — mistet signalene sine
  * uten at noe sa fra. `kvitter` er et eget, eksplisitt steg.
  */
 async function runNytt(target, flags) {
@@ -226,7 +226,7 @@ async function runNytt(target, flags) {
   const fresh = [];
   for (const signal of page.items) {
     // Forkastet er ikke «nytt å vurdere» — noen har alt vurdert det. Antallet
-    // sies likevel, så en tom runde ikke forveksles med en stille utelatelse.
+    // sies likevel, så et tomt saksløp ikke forveksles med en stille utelatelse.
     if (!includeAll && signal.status === "dismissed") {
       skipped.dismissed++;
       continue;
@@ -249,7 +249,7 @@ async function runNytt(target, flags) {
     truncated: page.truncated,
     fordeling: fordelingPåMønster(fresh),
     gamleSaker: gamleSaker(fresh),
-    // Kvitteringen som SKAL brukes hvis runden fullføres: tidspunktet
+    // Kvitteringen som SKAL brukes hvis saksløpet fullføres: tidspunktet
     // uthentingen ble gjort, og id-ene som faktisk ble vist. Tidspunktet alene
     // ville vært nok for tiden, men id-ene gjør at etterslep-vinduet kan
     // overlappe uten å vise det samme to ganger.
@@ -287,7 +287,7 @@ async function runNytt(target, flags) {
 }
 
 /**
- * Kvitterer for runden. Det ENESTE stedet kvitteringen skrives.
+ * Kvitterer for saksløpet. Det ENESTE stedet kvitteringen skrives.
  *
  * Uten `--at` er tidspunktet NÅ, og det betyr at alt eldre regnes som sett —
  * også det brukeren ikke fikk se. Det sies i outputen framfor å være en
@@ -331,7 +331,7 @@ async function runKvitter(target, flags) {
   const { state } = readState(statePath);
   const before = entryFor(state, key);
   // `null` = behold tidspunktet. Bare de oppgitte id-ene regnes som sett, så en
-  // halvferdig runde ikke svelger det den ikke rakk å se på.
+  // halvferdig saksløp ikke svelger det den ikke rakk å se på.
   const at = idsOnly ? null : atFlag ? normalizeAt(atFlag) : new Date().toISOString();
   const ids = idsFlag ? idsFlag.split(",").map((id) => id.trim()).filter(Boolean) : [];
 
@@ -369,7 +369,7 @@ async function runKvitter(target, flags) {
  *
  * Modusen KVITTERER IKKE, i noen form. Den er et oppslag, og ignorerer
  * kvitteringen fullstendig i begge retninger: den leser den ikke, og den flytter
- * den ikke. Et spørsmål om hva som ligger der skal ikke kunne spise runden.
+ * den ikke. Et spørsmål om hva som ligger der skal ikke kunne spise saksløpet.
  */
 async function runSignals(target, flags) {
   const kort = boolFlag(flags, "kort");
@@ -426,7 +426,7 @@ async function runSignals(target, flags) {
       lokaleFiltre: lokale,
       utenPubliseringsdato: utenDato,
       felter: SIGNAL_WINDOW_FIELDS,
-      kvittering: "ikke rørt — dette er et oppslag, ikke en runde",
+      kvittering: "ikke rørt — dette er et oppslag, ikke et saksløp",
       forbehold: signalWindowCaveat({
         vindu: vindu.length,
         hentet: items.length,
@@ -474,7 +474,7 @@ async function runSignal(target, flags, positional) {
 /**
  * Redaksjonens egne artikler — og med `--match`: har vi dekket dette før?
  *
- * Spørsmålet er steg to i runden, rett etter at journalisten har valgt et signal.
+ * Spørsmålet er steg to i saksløpet, rett etter at journalisten har valgt et signal.
  * Det avgjør tre ting på én gang: om saken er skrevet før (ikke gjenta),
  * om det finnes en egen sak å bygge videre på (billigere og bedre), og hvilken
  * tone redaksjonen faktisk har på temaet.
@@ -585,7 +585,7 @@ async function runProfile(target) {
 /**
  * Signalene gruppert på de fire kategoriene, med forklaringen som følger dem.
  *
- * Tomme kategorier utelates — en runde skal ikke fylles med nuller.
+ * Tomme kategorier utelates — et saksløp skal ikke fylles med nuller.
  */
 function grupperSignaler(signals) {
   return SIGNAL_BUCKETS.map(({ key, explain }) => {

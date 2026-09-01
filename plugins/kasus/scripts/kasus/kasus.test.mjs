@@ -416,7 +416,7 @@ test("fingerprint: enveis, kort, og inneholder ikke nøkkelen", () => {
   assert.equal(fingerprint(KEY), fp);
 });
 
-test("readState: fil som ikke finnes er første runde, ikke en feil", () => {
+test("readState: fil som ikke finnes er første saksløp, ikke en feil", () => {
   const { state, existed } = readState(tmpStatePath("mangler"));
   assert.equal(existed, false);
   assert.deepEqual(state, { version: STATE_VERSION, targets: {} });
@@ -454,7 +454,7 @@ test("windowFor: uten kvittering er vinduet 24 t og basisen SIES", () => {
   const now = Date.parse("2026-08-31T12:00:00Z");
   const w = windowFor({ checkpoint: null, now });
   assert.equal(w.hours, FIRST_RUN_HOURS);
-  assert.equal(w.basis, "første runde");
+  assert.equal(w.basis, "første saksløp");
   assert.equal(new Date(w.from).toISOString(), "2026-08-30T12:00:00.000Z");
 });
 
@@ -504,7 +504,7 @@ test("ack: setter kvitteringen, slår sammen id-er og fjerner duplikater", () =>
   assert.equal(entryFor(second, key).checkpoints.signals, senere);
 });
 
-test("ack: at=null beholder tidspunktet — en halvferdig runde svelger ingenting", () => {
+test("ack: at=null beholder tidspunktet — et halvferdig saksløp svelger ingenting", () => {
   const key = targetKey(TARGET);
   const at = "2026-08-31T12:00:00.000Z";
   const first = ack({ version: STATE_VERSION, targets: {} }, {
@@ -651,7 +651,7 @@ test("SIGNAL_BUCKETS: hver kategori har en forklaring, og rekkefølgen er redaks
     SIGNAL_BUCKETS.map((b) => b.key),
     ["egen_oppfolging", "konkurrent_oppfolging", "konkurrentsak", "temasok", "annet"],
   );
-  // Forklaringen vises i HVER runde, så en tom forklaring er en kategori uten
+  // Forklaringen vises i HVERT saksløp, så en tom forklaring er en kategori uten
   // tiltak knyttet til den.
   for (const bucket of SIGNAL_BUCKETS) {
     assert.ok(bucket.title.length > 3, `${bucket.key} mangler tittel`);
@@ -920,7 +920,7 @@ function digestMed(signals) {
     stateSource: "KASUS_STATE_FILE",
     lagHours: 2,
     checkpoint: null,
-    window: { basis: "første runde", hours: 24, from: 0 },
+    window: { basis: "første saksløp", hours: 24, from: 0 },
     skipped: { seen: 0, window: 0, dismissed: 0 },
     signals,
     fetched: signals.length,
@@ -1063,7 +1063,7 @@ test("compactSignal: tomme felt BEHOLDES som null — de betyr noe her", () => {
 });
 
 test("signalWindowCaveat: sier ALLTID at kvitteringen ikke er rørt", () => {
-  // Det er den ene opplysningen som skiller et oppslag fra en runde. Uten den
+  // Det er den ene opplysningen som skiller et oppslag fra et saksløp. Uten den
   // kan en leser tro at signalene nå er «sett».
   for (const filter of [{}, { hours: 24 }, { origin: "own_followup" }]) {
     assert.match(signalWindowCaveat({ vindu: 3, filter }), /Kvitteringen .* IKKE rørt/);

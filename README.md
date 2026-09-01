@@ -57,12 +57,12 @@ at mappa er til å stole på, og kan si «jeg skal skrive en dybdeartikkel».
 
 ## Arbeidsflyten
 
-Runden er en **ferdighet**, `dybdeartikkel`, så den starter av bestillingen selv —
-«jeg skal skrive en dybdeartikkel», «finn meg en sak å skrive», «kjør runden».
+Saksløpet er en **ferdighet**, `dybdeartikkel`, så den starter av bestillingen selv —
+«jeg skal skrive en dybdeartikkel», «finn meg en sak å skrive», «kjør saksløpet».
 Vil du starte den med vilje, er `/kasus:dybdeartikkel` samme ferdighet valgt fra
 menyen. Fra radarsignal til saksforslag, og det eneste pluginen gjør:
 
-1. **Nye radarsignaler siden forrige runde** — ikke «de 20 nyeste». Målt mot en
+1. **Nye radarsignaler siden forrige saksløp** — ikke «de 20 nyeste». Målt mot en
    kvittering på disk.
 2. **Prioritering, du velger.** Hvert signal merket med hva det er: oppfølging av
    **deres egen** sak, oppfølging av et sakskompleks en **konkurrent** har tatt,
@@ -75,7 +75,7 @@ menyen. Fra radarsignal til saksforslag, og det eneste pluginen gjør:
 5. **Saksforslag på disk** i redaksjonens tone, med hull markert framfor utfylt.
 6. **Kvittering**, og videre til neste sak.
 
-Laget for å gjentas: kjør runden, ta én sak, kvitter, kjør igjen.
+Laget for å gjentas: kjør saksløpet, ta én sak, kvitter, kjør igjen.
 
 Ferdigheten `oppfolgersak` starter det andre stedet en sak kan komme fra: **en
 artikkel redaksjonen alt har publisert.** «Skriv en oppfølger på saken om
@@ -89,13 +89,13 @@ Den har sitt eget vilkår: **ingen oppfølger uten et nytt faktum med kilde og
 dato.** «Det har gått en måned» er ikke noe nytt, og en oppfølger uten noe nytt er
 den samme saken publisert to ganger.
 
-`/kasus:signals` gir en **status** uten å starte noe: hva har kommet inn siden
-sist, fordelt på redaksjonelle mønstre og de fire kategoriene, hvor mye av det som
-er gamle saker — og hvilke av signalene som henger sammen med noe redaksjonen
-**selv publiserte denne uka**, som radaren ikke kan vite. Den avsluttes med ett
-spørsmål om hva du vil gjøre videre, og svaret er det eneste som setter noe i
-gang: statusen kvitterer aldri og skriver ingenting. Blikket man tar før man
-setter av tid.
+`/kasus:start` er inngangen for den som ikke har bestemt seg. Den henter to ting —
+nye signaler siden sist, og ukas egen produksjon — sier hva som henger sammen (et
+temasøk som i praksis er en oppfølging av gårsdagens sak, et tema redaksjonen står
+i nå, en åpenbar dublett), og **spør hva du vil gjøre**: en ny sak, en oppfølger,
+eller et spørsmål. Svaret sender deg videre i riktig ferdighet. Kommandoen
+kvitterer aldri, skriver ingenting og gjør ingen research — den kan spørre, ikke
+utføre.
 
 Ferdigheten `hjelp` forklarer resten: «hvordan bruker jeg denne?», «hva kan
 kasus?», «hjelp» — eller `/kasus:hjelp`. Den kobler jobben til inngangen,
@@ -109,7 +109,7 @@ diagnostikk.
 Spørsmål om hva radaren eller arkivet inneholder trenger heller ingen kommando:
 `kasus-lookout` svarer på «er det noe om strømpriser?» og `kasus-archivist` på
 «har vi dekket dette?». Ingen av dem kvitterer, så et spørsmål kan ikke spise
-runden.
+saksløpet.
 
 Full dokumentasjon: [`plugins/kasus/README.md`](plugins/kasus/README.md).
 
@@ -140,7 +140,7 @@ verktøyet — den rapporteres som `(satt)` med variabelnavnet.
 API-laget er **read-only**. Det pluginen skriver, skriver den i prosjektet:
 saksforslagene i `./artikler`, kvitteringen «siden sist» i
 `.claude/kasus-state.json`. Begge er relative til der du står, så to prosjekter
-teller sine egne runder.
+teller sine egne saksløp.
 
 ## Utvikling
 

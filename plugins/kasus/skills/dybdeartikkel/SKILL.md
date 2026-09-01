@@ -1,12 +1,12 @@
 ---
 name: dybdeartikkel
-description: Prosessen for å lage en dybdeartikkel i denne redaksjonen — fra nytt radarsignal til et saksforslag på disk, i seks steg: nye signaler siden forrige runde pluss profilen og ukas egen produksjon, en prioritering journalisten velger fra, sjekk mot redaksjonens EGNE artikler, bredt søk med én agent per spørsmål, saksforslag i redaksjonens tone, og en kvittering. Skal brukes når noen vil JOBBE med en sak framfor bare å se hva som ligger der: «jeg skal skrive en dybdeartikkel», «finn meg en sak å skrive», «jeg trenger noe å jobbe med i dag», «lag et saksforslag», «kjør runden», «start en ny runde», «ta en sak fra radaren», «kan du researche denne og skrive et forslag?», «følg opp signal <id>». Også når bestillingen er et TEMA framfor et signal («skriv en dybdeartikkel om strømpriser», «kan vi gjøre noe på boligmarkedet i Bodø?»): temaet matches da semantisk mot radarens vindu, fordi API-et ikke har tekstsøk — men runden KREVER et signal, og stopper med en begrunnelse hvis radaren ikke har noe på temaet. Skal IKKE brukes på spørsmål om hva radaren har funnet («er det noe nytt?», «er det noe om strømpriser?») — det svarer kasus-lookout på uten å kvittere — eller på spørsmål om egen dekning alene, som er kasus-archivist. Er utgangspunktet en av redaksjonens EGNE publiserte artikler («følg opp saken vår om X»), er det ferdigheten `oppfolgersak`.
+description: Prosessen for å lage en dybdeartikkel i denne redaksjonen — fra nytt radarsignal til et saksforslag på disk, i seks steg: nye signaler siden forrige saksløp pluss profilen og ukas egen produksjon, en prioritering journalisten velger fra, sjekk mot redaksjonens EGNE artikler, bredt søk med én agent per spørsmål, saksforslag i redaksjonens tone, og en kvittering. Skal brukes når noen vil JOBBE med en sak framfor bare å se hva som ligger der: «jeg skal skrive en dybdeartikkel», «finn meg en sak å skrive», «jeg trenger noe å jobbe med i dag», «lag et saksforslag», «kjør saksløpet», «kjør runden», «start et nytt saksløp», «ta en sak fra radaren», «kan du researche denne og skrive et forslag?», «følg opp signal <id>». Også når bestillingen er et TEMA framfor et signal («skriv en dybdeartikkel om strømpriser», «kan vi gjøre noe på boligmarkedet i Bodø?»): temaet matches da semantisk mot radarens vindu, fordi API-et ikke har tekstsøk — men saksløpet KREVER et signal, og stopper med en begrunnelse hvis radaren ikke har noe på temaet. Skal IKKE brukes på spørsmål om hva radaren har funnet («er det noe nytt?», «er det noe om strømpriser?») — det svarer kasus-lookout på uten å kvittere — eller på spørsmål om egen dekning alene, som er kasus-archivist. Er utgangspunktet en av redaksjonens EGNE publiserte artikler («følg opp saken vår om X»), er det ferdigheten `oppfolgersak`.
 ---
 
 Gå fra radarsignal til saksforslag. Dette er **det eneste pluginen gjør**, og den
 gjør det i seks steg:
 
-1. Hent radarsignalene som har kommet inn **siden forrige runde**, og premissene:
+1. Hent radarsignalene som har kommet inn **siden forrige saksløp**, og premissene:
    profilen og **ukas egen produksjon**
 2. Legg fram en prioritering — journalisten velger sak
 3. Sjekk den valgte saken mot **redaksjonens egne artikler**
@@ -14,34 +14,34 @@ gjør det i seks steg:
 5. Skriv et **saksforslag** på disk, på redaksjonens premisser
 6. Kvitter, og gå til neste sak
 
-Steg 3–6 gjentas per valgt sak, og hele runden kan kjøres på nytt rett etterpå.
+Steg 3–6 gjentas per valgt sak, og hele saksløpet kan kjøres på nytt rett etterpå.
 Du hopper ikke over et steg, og du velger ikke saken for journalisten.
 
-## Før du starter: er dette runden?
+## Før du starter: er dette saksløpet?
 
-Runden koster tid og **flytter kvitteringen**. To spørsmål ser like ut og skal
+Saksløpet koster tid og **flytter kvitteringen**. To spørsmål ser like ut og skal
 ikke hit:
 
 - **«Er det noe nytt?», «er det noe om strømpriser?», «hva kom inn denne uka?»** —
   det er et spørsmål om hva som ligger der, ikke en beslutning om å jobbe.
-  `kasus-lookout` svarer på det, og kvitterer aldri. `/kasus:signals` gir samme
+  `kasus-lookout` svarer på det, og kvitterer aldri. `/kasus:start` gir samme
   blikk som en status.
 - **«Har vi skrevet om X?», «hva har vi publisert i dag?»** — `kasus-archivist`
-  alene. Ingen runde.
+  alene. Ingen saksløp.
 - **«Følg opp saken vår om X», «hva har skjedd siden vi skrev om dette?»** —
   utgangspunktet er en EGEN artikkel og ikke radaren. Det er ferdigheten
   `oppfolgersak`, som har vinklingen ferdig og bare trenger det nye.
 
 Er det uklart om noen vil se eller jobbe, er det ett spørsmål verdt å stille før
-steg 1 — men et signal-id, «skriv», «research», «forslag» eller «runden» i
+steg 1 — men et signal-id, «skriv», «research», «forslag» eller «saksløpet» i
 bestillingen er svaret allerede gitt.
 
-Og uansett hvem som spør: **runden krever et signal.** Finner radaren ingenting på
+Og uansett hvem som spør: **saksløpet krever et signal.** Finner radaren ingenting på
 temaet, stopper den — se «Signalet er inngangsvilkåret».
 
-## Vinduet: hvilke flagg runden kjøres med
+## Vinduet: hvilke flagg saksløpet kjøres med
 
-Uten noe sagt kjøres runden på kvitteringen — «siden forrige runde». Ble det bedt
+Uten noe sagt kjøres saksløpet på kvitteringen — «siden forrige saksløp». Ble det bedt
 om noe annet, sett det på `nytt` i steg 1:
 
 | Bestillingen | Flagget |
@@ -60,7 +60,7 @@ Kom bestillingen som et **tema** framfor et signal, se neste avsnitt.
 
 ## Et tema uten signal
 
-«Skriv en dybdeartikkel om strømpriser» er ikke rundens normaltilfelle, og du skal
+«Skriv en dybdeartikkel om strømpriser» er ikke saksløpets normaltilfelle, og du skal
 ikke late som det er det: prioriteringen i steg 2 svarer på «hva har kommet inn»,
 ikke på «hva har vi om strømpriser». **Match temaet mot radaren først.** Har den
 alt funnet kilder på det, er de kildene gratis og ferske — og et signal gir saken
@@ -93,19 +93,19 @@ ha lagt det til side selv. Gå så til steg 3 som normalt.
 **Fant du ingen:** si det rett ut, og si hva det ikke betyr. «Radaren har
 ingenting på dette i de siste sju døgnene» er ikke «det finnes ingen sak» —
 radaren søker på redaksjonens egne mønstre, så et tema utenfor dem er usynlig for
-den uansett hvor stor saken er. Men **runden stopper her**, og det er ikke
+den uansett hvor stor saken er. Men **saksløpet stopper her**, og det er ikke
 forhandlingsbart. Se under.
 
 Legg fram to veier med AskUserQuestion framfor å velge selv:
 
 | Alternativ | Hva det er |
 |---|---|
-| Bredere vindu | `signals --kort --hours 720 --limit 100` — radaren kan ha hatt noe for en måned siden. Finner du et signal der, fortsetter runden normalt. |
-| Egen dekning først | `kasus-archivist` på temaet. Svarer på om redaksjonen alt har skrevet om det, og hva som i så fall ville vært en oppfølging. Det er en opplysning, ikke en inngang: uten et signal finnes det ingen nye kilder, og da er neste skritt en telefon framfor en runde. |
+| Bredere vindu | `signals --kort --hours 720 --limit 100` — radaren kan ha hatt noe for en måned siden. Finner du et signal der, fortsetter saksløpet normalt. |
+| Egen dekning først | `kasus-archivist` på temaet. Svarer på om redaksjonen alt har skrevet om det, og hva som i så fall ville vært en oppfølging. Det er en opplysning, ikke en inngang: uten et signal finnes det ingen nye kilder, og da er neste skritt en telefon framfor et saksløp. |
 
 ## Signalet er inngangsvilkåret
 
-**Ingen runde uten et signal, og ingen fil på disk uten `kasusSignalId`.** Det
+**Ingen saksløp uten et signal, og ingen fil på disk uten `kasusSignalId`.** Det
 gjelder også når journalisten ber om det, og også når temaet er åpenbart en god
 sak. Tre grunner, og de er ikke formaliteter:
 
@@ -117,18 +117,18 @@ sak. Tre grunner, og de er ikke formaliteter:
    nettsøk hvem som helst kunne gjort — og et saksforslag i redaksjonens format
    ville sett ut som noe det ikke er.
 3. **Kvitteringen.** Den gjelder signaler. En sak uten signal kan ikke kvitteres,
-   så neste runde vet ikke at arbeidet er gjort, og saken kommer igjen.
+   så neste saksløp vet ikke at arbeidet er gjort, og saken kommer igjen.
 
 Lån derfor **aldri** id-en til et signal som «nesten» handler om det samme for å
 komme videre. Det er verre enn å stoppe: sporet peker da på en kilde som ikke er
 grunnlaget, og feilen er usynlig i filen.
 
 Si i stedet hva som mangler og hva som finnes: hvilket vindu som ble lest, at
-radaren ikke har noe på temaet, og hva du KAN gjøre uten runden — et
+radaren ikke har noe på temaet, og hva du KAN gjøre uten saksløpet — et
 `kasus-researcher`-søk på ett konkret spørsmål, eller dekningssjekken over. Det er
 research i samtalen, ikke et saksforslag: ingen fil, ingen kvittering, og si det.
 
-## 1. Hent runden og premissene
+## 1. Hent saksløpet og premissene
 
 Kjør alle tre i **samme melding**, så de går parallelt:
 
@@ -138,7 +138,7 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs profile --json
 node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs articles --kort --hours 168 --limit 40 --json
 ```
 
-`nytt` måler mot **kvitteringen** — tidspunktet forrige runde ble gjort, lagret i
+`nytt` måler mot **kvitteringen** — tidspunktet forrige saksløp ble gjort, lagret i
 `.claude/kasus-state.json`. Den skriver ingenting.
 
 Profilen er ikke et vedlegg. Den er grunnlaget for både prioriteringen i steg 2 og
@@ -160,9 +160,9 @@ Tre svar krever noe annet enn å gå videre:
   `/kasus:env`, og stopp.
 - **`nye: 0`** — ingenting nytt. Si når det sist ble kvittert, og hva som ble
   holdt utenfor (`holdtUtenfor`). Tilby et bredere vindu (`--hours 72`) eller
-  `--all` for de forkastede. Ikke fyll runden med gamle signaler for å ha noe å
+  `--all` for de forkastede. Ikke fyll saksløpet med gamle signaler for å ha noe å
   vise.
-- **`kvittering: null`** — første runde. Si at vinduet er siste 24 timer, og at en
+- **`kvittering: null`** — første saksløp. Si at vinduet er siste 24 timer, og at en
   kvittering til slutt gjør «siden sist» presist neste gang.
 
 ## 2. Prioriter — si hva hvert signal ER, og begrunn i profilen
@@ -182,7 +182,7 @@ ikke utled kategorien selv.
 
 **Gjør prioriteringen selv, her i samtalen.** `kasus-lookout` besvarer spørsmål om
 signalene og er den rette agenten når noen bare vil vite hva som ligger der — men
-den hører ikke i runden. To grunner: den henter sitt eget vindu framfor rundens
+den hører ikke i saksløpet. To grunner: den henter sitt eget vindu framfor saksløpets
 «siden sist», og den svarer med en oppsummering, mens journalisten skal ha den
 prioriterte lista med **klikkbare lenker foran seg før han velger**. En
 oppsummering av en oppsummering er ikke noe man klikker på.
@@ -283,9 +283,9 @@ signaler avhenger av hvor mange som finnes:
 
 Navngi perioden i det alternativet, og hent den fra `meta.vindu`. Er vinduet rundt
 et døgn, er «for siste døgn» riktig. Er kvitteringen fire dager gammel, holder
-runden fire dager, og da skal alternativet si det framfor å love et døgn. Er
+saksløpet fire dager, og da skal alternativet si det framfor å love et døgn. Er
 vinduet mye bredere enn et døgn og lista lang, tilby i samme åndedrag at
-`--hours 24` gir en runde på bare siste døgn.
+`--hours 24` gir et saksløp på bare siste døgn.
 
 **Blir alternativet valgt**, legg fram HELE lista — hvert signal i prioritert
 rekkefølge, med kategori, begge datoer, mønster, eventuell kobling til ukas
@@ -332,7 +332,7 @@ Agenten henter artiklene selv. Gi den:
   og ikke et signal du spør på vegne av
 - **plugin-roten**, som absolutt sti: `${CLAUDE_PLUGIN_ROOT}` — skriv ut den
   faktiske verdien i prompten, ikke variabelnavnet
-- **`--env <navn>`** hvis runden kjører mot et annet miljø
+- **`--env <navn>`** hvis saksløpet kjører mot et annet miljø
 - **signalet**: tittel, sammendrag, og de av `details` som sier hva saken er —
   `publishedDate`, `actors`, `keyFigures`, `matchedPattern`
 
@@ -435,29 +435,29 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs kvitter --ids <signal-id> --i
 ```
 
 `--ids-only` flytter ikke kvitteringstidspunktet. Det betyr at saken er behandlet,
-mens alt annet fortsatt er nytt neste runde — så en runde som blir avbrutt her
+mens alt annet fortsatt er nytt neste saksløp — så et saksløp som blir avbrutt her
 verken mister eller gjentar arbeid.
 
 Er det flere valgte saker igjen, spør med **AskUserQuestion**: «Fortsett med neste
 sak?» — *Ja, neste* / *Stopp her og kvitter resten* / *Stopp, ikke kvitter mer*.
 Er det ingen igjen, gå til steg 5.
 
-## 5. Avslutt runden
+## 5. Avslutt saksløpet
 
 Spør med **AskUserQuestion** hva som skal skje med signalene som IKKE ble
 behandlet:
 
 | Alternativ | Kommando | Betyr |
 |---|---|---|
-| Kvitter hele runden | `kvitter --at <meta.kvitter.at> --ids <alle viste id-er>` | Alt som ble vist er sett. Neste runde starter her. |
-| La resten stå | — | De ubehandlede kommer igjen neste runde. |
+| Kvitter hele saksløpet | `kvitter --at <meta.kvitter.at> --ids <alle viste id-er>` | Alt som ble vist er sett. Neste saksløp starter her. |
+| La resten stå | — | De ubehandlede kommer igjen neste saksløp. |
 
 `meta.kvitter` i JSON-svaret fra steg 1 har tidspunktet og id-ene ferdig. Bruk dem
 ordrett — ikke lag et tidspunkt selv.
 
-**Runden kan kjøres på nytt umiddelbart.** Kom det inn noe mens dere jobbet, viser
-en ny runde det nå; ellers sier den at det ikke er noe nytt. Det er den normale
-rytmen: kjør runden, ta én sak, kvitter, kjør igjen.
+**Saksløpet kan kjøres på nytt umiddelbart.** Kom det inn noe mens dere jobbet, viser
+et nytt saksløp det nå; ellers sier den at det ikke er noe nytt. Det er den normale
+rytmen: kjør saksløpet, ta én sak, kvitter, kjør igjen.
 
 ## 6. Rapporter
 
@@ -467,7 +467,7 @@ Kort:
 - for hver sak: stien til saksforslaget, og om egne artikler dekket temaet
 - **hvert hull**: `[TRENGER VERIFISERING]`, `[SITAT MANGLER]`, og hvem som må
   kontaktes
-- hva kvitteringen nå står på, og hva som dermed kommer igjen neste runde
+- hva kvitteringen nå står på, og hva som dermed kommer igjen neste saksløp
 
-Runden publiserer ingenting. Pluginen skriver til disk i dette repoet, og API-et
+Saksløpet publiserer ingenting. Pluginen skriver til disk i dette repoet, og API-et
 er read-only.

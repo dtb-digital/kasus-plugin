@@ -1,6 +1,6 @@
 ---
 name: hjelp
-description: Forklarer hvordan kasus-pluginen brukes — hva den gjør, hvilken inngang som hører til hvilken jobb, hva ordene i outputen betyr, og hva som er galt når noe ikke virker. Skal brukes på spørsmål OM pluginen framfor bestillinger TIL den: «hvordan bruker jeg denne?», «hva kan kasus?», «hjelp», «hvor begynner jeg?», «hva er forskjellen på en runde og en oppfølger?», «hvorfor får jeg ingen signaler?», «hvor legger den saksforslagene?», «hva betyr GAMMEL SAK / kvitteringen / SAMME SAK?», «kan den skrive noe tilbake til Kasus?», «hvordan setter jeg opp API-nøkkelen?». Skal IKKE brukes når bestillingen er selve arbeidet: «finn meg en sak å skrive» er ferdigheten dybdeartikkel, «er det noe nytt?» er kasus-lookout, «har vi skrevet om X?» er kasus-archivist. Svarer på spørsmålet som ble stilt og tilbyr å starte riktig inngang — henter aldri signaler eller artikler, skriver ingenting og kvitterer aldri.
+description: Forklarer hvordan kasus-pluginen brukes — hva den gjør, hvilken inngang som hører til hvilken jobb, hva ordene i outputen betyr, og hva som er galt når noe ikke virker. Skal brukes på spørsmål OM pluginen framfor bestillinger TIL den: «hvordan bruker jeg denne?», «hva kan kasus?», «hjelp», «hvor begynner jeg?», «hva er forskjellen på et saksløp og en oppfølger?», «hvorfor får jeg ingen signaler?», «hvor legger den saksforslagene?», «hva betyr GAMMEL SAK / kvitteringen / SAMME SAK?», «kan den skrive noe tilbake til Kasus?», «hvordan setter jeg opp API-nøkkelen?». Skal IKKE brukes når bestillingen er selve arbeidet: «finn meg en sak å skrive» er ferdigheten dybdeartikkel, «er det noe nytt?» er kasus-lookout, «har vi skrevet om X?» er kasus-archivist. Svarer på spørsmålet som ble stilt og tilbyr å starte riktig inngang — henter aldri signaler eller artikler, skriver ingenting og kvitterer aldri.
 ---
 
 Hjelp en journalist bruke pluginen. Den gjør **én ting**: går fra et radarsignal
@@ -19,9 +19,9 @@ diagnostikk.
    som fire–fem linjer om hva journalisten kan si, ikke som en kommandoliste.
 3. **Snakk om jobben, ikke om verktøyet.** Journalisten skal vite hva som må sies
    for å få gjort noe. Kommandonavn er en snarvei, ikke inngangen.
-4. **Tilby å starte, og la journalisten bestemme.** «Vil du at jeg kjører runden
+4. **Tilby å starte, og la journalisten bestemme.** «Vil du at jeg kjører saksløpet
    nå?» er riktig avslutning på et hjelpesvar. Å starte den uoppfordret er det
-   ikke: runden koster tid og **flytter kvitteringen**.
+   ikke: saksløpet koster tid og **flytter kvitteringen**.
 5. **Du gjør ikke arbeidet herfra.** Ingen signaler, ingen artikler, ingen
    research, ingen fil på disk, aldri en kvittering. Blir spørsmålet underveis en
    bestilling — «ok, finn meg en sak da» — går du over i riktig ferdighet
@@ -46,13 +46,13 @@ i seg selv er inngangen — det finnes ikke noe kommandonavn man må huske førs
 
 | Vil du… | Si noe sånt som | Hva som skjer |
 |---|---|---|
-| **finne en sak å skrive** | «jeg skal skrive en dybdeartikkel», «finn meg en sak», «jeg trenger noe å jobbe med i dag», «kjør runden» | Hele runden — ferdigheten `dybdeartikkel`. Seks steg, du velger saken, den skriver et **saksforslag på disk** og kvitterer. |
-| **jobbe med ett bestemt signal** | «følg opp signal 1234», «lag et forslag på denne» | Samme runde, men den hopper over prioriteringen. |
-| **jobbe med et tema** | «kan vi gjøre noe på boligmarkedet i Bodø?» | Samme runde. Temaet matches mot radarens vindu først — **finner den ingen signaler, stopper den**, for et forslag uten opphav er bare et nettsøk. |
+| **finne en sak å skrive** | «jeg skal skrive en dybdeartikkel», «finn meg en sak», «jeg trenger noe å jobbe med i dag», «kjør saksløpet» (eller «kjør runden» — det gamle ordet virker fortsatt) | Hele saksløpet — ferdigheten `dybdeartikkel`. Seks steg, du velger saken, den skriver et **saksforslag på disk** og kvitterer. |
+| **jobbe med ett bestemt signal** | «følg opp signal 1234», «lag et forslag på denne» | Samme saksløp, men den hopper over prioriteringen. |
+| **jobbe med et tema** | «kan vi gjøre noe på boligmarkedet i Bodø?» | Samme saksløp. Temaet matches mot radarens vindu først — **finner den ingen signaler, stopper den**, for et forslag uten opphav er bare et nettsøk. |
 | **følge opp en av deres EGNE saker** | «hva har skjedd siden vi skrev om strømstøtte?», «kan vi følge opp denne?» | Ferdigheten `oppfolgersak`. Vinklingen finnes alt — den leter etter **det nye**, og stopper hvis det ikke finnes noe. |
 | **bare se hva som ligger der** | «er det noe nytt å skrive om?», «er det noe om strømpriser?», «hva kom inn denne uka?» | `kasus-lookout` leser signalene og svarer. **Kvitterer aldri, skriver ingenting.** |
 | **vite hva dere selv har dekket** | «har vi skrevet om dette?», «hva publiserte vi i dag?», «hvem hos oss dekker samferdsel?» | `kasus-archivist` leser deres egne artikler og svarer med id, dato og lenke. |
-| **ta statusen før du bestemmer deg** | `/kasus:signals` | Nye signaler + ukas egen produksjon: hvor mye som kom inn, på hvilke mønstre og kategorier, hvor mye som er gamle saker, og hva som henger sammen med noe dere selv publiserte. Ender med å spørre hva du vil gjøre — men kan ikke gjøre det selv. |
+| **komme i gang, uten å ha bestemt deg** | `/kasus:start` | Henter nye signaler + ukas egen produksjon, sier hva som henger sammen, og **spør hva du vil gjøre** — en ny sak, en oppfølger, eller et spørsmål. Utfører ingenting selv: svaret ditt sender deg videre i riktig ferdighet. |
 | **sjekke oppsettet** | `/kasus:env`, eller `--resolve` for å se hvilken installasjon et kall treffer | Diagnostikk. |
 | **sjekke at pluginen er hel** | `/kasus:test` | Diagnostikk. `--live` tester også tilkoblingen. |
 
@@ -61,19 +61,19 @@ Vil du velge en arbeidsflyt med vilje framfor å beskrive jobben, er
 menyen. `/kasus:hjelp` er denne.
 
 Den tredje agenten, `kasus-researcher`, står ikke i tabellen med vilje: den søker
-og leser primærkilder, og runden sender ut én per researchspørsmål. Den er ikke
+og leser primærkilder, og saksløpet sender ut én per researchspørsmål. Den er ikke
 noe journalisten henvender seg til direkte.
 
 ## De tre grensene som forvirrer mest
 
 **Se eller jobbe.** «Er det noe nytt?» og «finn meg en sak» ser like ut og er det
 ikke. Det første er et spørsmål om hva som ligger der, og det svarer en agent på
-uten å røre noe. Det andre setter i gang en runde som researcher, skriver til
+uten å røre noe. Det andre setter i gang et saksløp som researcher, skriver til
 disk og **flytter kvitteringen**. Er du i tvil om hva du vil, spør først — det
-koster ingenting, og spørsmålet kan ikke spise runden din.
+koster ingenting, og spørsmålet kan ikke spise saksløpet din.
 
-**Signal eller egen artikkel.** Runden starter på noe radaren fant. Oppfølgeren
-starter på noe redaksjonen alt har publisert. Det er to jobber: runden må finne
+**Signal eller egen artikkel.** Saksløpet starter på noe radaren fant. Oppfølgeren
+starter på noe redaksjonen alt har publisert. Det er to jobber: saksløpet må finne
 både vinkling og nyhet, oppfølgeren har vinklingen ferdig og trenger bare det nye.
 
 **Lookout eller archivist.** `kasus-lookout` vet hva radaren har funnet ute i
@@ -103,8 +103,8 @@ hvilken variabel hver verdi kom fra. Detaljene, inkludert de tre scopene, står 
 | Det du ser | Som regel fordi | Gjør dette |
 |---|---|---|
 | `MANGLER: KASUS_API_KEY` | Nøkkelen står i en `.env`, eller sesjonen er ikke startet på nytt | Flytt den til `env` i `.claude/settings.local.json`, og start sesjonen på nytt |
-| «Ingen signaler» | Vinduet er tomt for **denne organisasjonen** — nøkkelen avgjør hvilken | Prøv et bredere vindu (`--hours 168`). `/kasus:env --resolve` sier hvilken installasjon du treffer, `/kasus:test --live` hvilken organisasjon nøkkelen tilhører |
-| Runden sier «ingenting nytt», men du vet det ligger signaler der | Kvitteringen er flyttet — de er sett før | Be om et bredere vindu, eller «ta med det som er forkastet» |
+| «Ingen signaler» | Vinduet er tomt for **denne organisasjonen** — nøkkelen avgjør hvilken | Prøv et bredere vindu (`/kasus:start --hours 168`). `/kasus:env --resolve` sier hvilken installasjon du treffer, `/kasus:test --live` hvilken organisasjon nøkkelen tilhører |
+| Saksløpet sier «ingenting nytt», men du vet det ligger signaler der | Kvitteringen er flyttet — de er sett før | Be om et bredere vindu, eller «ta med det som er forkastet» |
 | `404` på et signal eller en artikkel | Finnes ikke, **eller** tilhører en annen organisasjon | Sjekk id-en, og hvilken nøkkel som er i bruk |
 | Ferdigheten trigges ikke, eller `/kasus:…` finnes ikke | Sesjonen er ikke startet på nytt, eller pluginen er ikke slått på i dette prosjektet | Start på nytt i prosjektmappa, og sjekk `enabledPlugins` i `.claude/settings.json` |
 | Saksforslagene dukker ikke opp der du venter | `./artikler` og `.claude/kasus-state.json` er **relative til der du står** | Sjekk at sesjonen kjører fra prosjektmappa |
@@ -115,7 +115,7 @@ hvilken variabel hver verdi kom fra. Detaljene, inkludert de tre scopene, står 
 | Ordet | Betyr |
 |---|---|
 | **signal** | Noe radaren har funnet. Alltid med en lenke, og det er inngangsvilkåret for et saksforslag |
-| **kvitteringen / «siden sist»** | Tidspunktet forrige runde ble gjort, lagret i ditt eget repo. Derfor kan runden si «tre nye» framfor «de 20 nyeste» — og derfor kommer ikke den samme saken tre ganger på en dag |
+| **kvitteringen / «siden sist»** | Tidspunktet forrige saksløp ble gjort, lagret i ditt eget repo. Derfor kan saksløpet si «tre nye» framfor «de 20 nyeste» — og derfor kommer ikke den samme saken tre ganger på en dag |
 | **oppdaget vs. publisert** | Når radaren fant signalet, kontra hvor gammel saken er. **To ulike tall** |
 | **GAMMEL SAK** | De to datoene ligger mer enn en uke fra hverandre. Et fritt temasøk kan levere en sak fra 2023 «oppdaget for 45 min siden» |
 | **ukjent dato** | Publiseringsdatoen mangler. Det er ikke det samme som gammel |

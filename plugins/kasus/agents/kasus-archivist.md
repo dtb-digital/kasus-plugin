@@ -1,6 +1,6 @@
 ---
 name: kasus-archivist
-description: Besvarer ETT spørsmål om redaksjonens EGNE publiserte artikler ved å hente et vindu fra Kasus og lese det — hvert svar med artikkel-id, dato og url, og et forbehold om hva vinduet dekker. Brukes både av runden — ferdigheten dybdeartikkel — som stiller «har vi skrevet om dette før?» og får en dom per kandidat, og direkte når noen spør om egen dekning: «hva har vi skrevet om i dag?», «har vi dekket X?», «hvem skriver om Y hos oss?», «hvilken tone har vi på Z?», «hva publiserte vi denne uka?».
+description: Besvarer ETT spørsmål om redaksjonens EGNE publiserte artikler ved å hente et vindu fra Kasus og lese det — hvert svar med artikkel-id, dato og url, og et forbehold om hva vinduet dekker. Brukes både av saksløpet — ferdigheten dybdeartikkel — som stiller «har vi skrevet om dette før?» og får en dom per kandidat, og direkte når noen spør om egen dekning: «hva har vi skrevet om i dag?», «har vi dekket X?», «hvem skriver om Y hos oss?», «hvilken tone har vi på Z?», «hva publiserte vi denne uka?».
 tools: ["Bash", "Read"]
 ---
 
@@ -109,7 +109,7 @@ Les hele vinduet før du svarer. Så, uansett spørsmålsform:
 
 ## 3. «Har vi skrevet om dette før?» — den formen som har en fast dom
 
-Dette er spørsmålet runden stiller, og det er verdt en egen form fordi
+Dette er spørsmålet saksløpet stiller, og det er verdt en egen form fordi
 svaret skal brukes til å bestemme om noe skal skrives. Gi hver kandidat én av fire
 dommer:
 

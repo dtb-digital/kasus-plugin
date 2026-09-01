@@ -1,6 +1,6 @@
 ---
 name: oppfolgersak
-description: Lager en oppfølgersak på en av redaksjonens EGNE publiserte artikler — artikkelen er utgangspunktet, ikke radaren. Leser saken i full tekst, finner ut hva som har skjedd SIDEN den ble publisert (radarens egen_oppfolging-signaler, nye tall, nye aktører, løfter og prognoser som kan etterprøves), sjekker at redaksjonen ikke alt har fulgt den opp, og skriver et saksforslag på disk i samme format som runden. Skal brukes når utgangspunktet er en egen sak: «skriv en oppfølger på saken om strømstøtte», «kan vi følge opp denne?», «hva har skjedd siden vi skrev om X?», «oppfølger på artikkel <id>», «vi skrev om dette i mars — er det noe nytt der nå?», «er det en oppfølger i denne saken?». Skal IKKE brukes når utgangspunktet er et radarsignal eller et tema uten egen sak — det er ferdigheten `dybdeartikkel` — eller når spørsmålet bare er «har vi skrevet om dette?», som `kasus-archivist` svarer på alene. Krever at det finnes noe NYTT som kan kildebelegges; finnes det ikke, stopper den og sier hva som ville gjort det til en sak.
+description: Lager en oppfølgersak på en av redaksjonens EGNE publiserte artikler — artikkelen er utgangspunktet, ikke radaren. Leser saken i full tekst, finner ut hva som har skjedd SIDEN den ble publisert (radarens egen_oppfolging-signaler, nye tall, nye aktører, løfter og prognoser som kan etterprøves), sjekker at redaksjonen ikke alt har fulgt den opp, og skriver et saksforslag på disk i samme format som saksløpet. Skal brukes når utgangspunktet er en egen sak: «skriv en oppfølger på saken om strømstøtte», «kan vi følge opp denne?», «hva har skjedd siden vi skrev om X?», «oppfølger på artikkel <id>», «vi skrev om dette i mars — er det noe nytt der nå?», «er det en oppfølger i denne saken?». Skal IKKE brukes når utgangspunktet er et radarsignal eller et tema uten egen sak — det er ferdigheten `dybdeartikkel` — eller når spørsmålet bare er «har vi skrevet om dette?», som `kasus-archivist` svarer på alene. Krever at det finnes noe NYTT som kan kildebelegges; finnes det ikke, stopper den og sier hva som ville gjort det til en sak.
 ---
 
 En oppfølger på redaksjonens **egen** sak. Utgangspunktet er artikkelen, ikke
@@ -30,7 +30,7 @@ Har du en id, hent den i full tekst — `article` gir alltid brødteksten:
 node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs article <artikkel-id> --json
 ```
 
-Kjør **i samme melding** premissene, som er de samme som i runden:
+Kjør **i samme melding** premissene, som er de samme som i saksløpet:
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs profile --json
@@ -192,7 +192,7 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs kvitter --ids <signal-id> --i
 ```
 
 `--ids-only` flytter ikke kvitteringstidspunktet, så resten av radaren er
-fortsatt nytt i neste runde. Ble det ikke brukt noe signal, er det **ingenting å
+fortsatt nytt i neste saksløp. Ble det ikke brukt noe signal, er det **ingenting å
 kvittere** — kvitteringen gjelder signaler, ikke artikler. Si det i én linje
 framfor å røre den.
 

@@ -25,7 +25,7 @@ Lastes ved behov. Den autoritative dokumentasjonen bor i kasus-repoet
 | `GET /api/v1/articles/{id}` | — | Alltid med `body`. 404 = finnes ikke eller annen org |
 | `GET /api/v1/profile` | — | Ett objekt per organisasjon |
 
-`/api/v1/story-briefs` finnes i API-et, men **pluginen bruker det ikke**. Runden
+`/api/v1/story-briefs` finnes i API-et, men **pluginen bruker det ikke**. Saksløpet
 går fra rått radarsignal til saksforslag i én prosess, og et ferdig vurdert
 saksforslag fra pipelinen ville vært et konkurrerende utgangspunkt i samme
 arbeidsflyt.
@@ -88,7 +88,7 @@ er de ikke til å skille fra et vanlig temasøk-treff:
 Nye `origin`-verdier er ikke en brytende endring. En ukjent verdi behandles som
 «annet opphav» framfor å avvise signalet.
 
-**Pluginens kategorinavn**, som er de samme i runden og i
+**Pluginens kategorinavn**, som er de samme i saksløpet og i
 `meta.grupper`:
 
 | API-felt | Kategori i pluginen |
