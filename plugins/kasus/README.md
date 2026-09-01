@@ -116,6 +116,7 @@ Neste person som kloner repoet trenger bare sin egen nøkkel — resten står i
 | `/kasus:dybdeartikkel` | Samme ferdighet, startet med vilje fra menyen. Tar `--hours 72` for et bredere vindu og `--all` for å ta med forkastede signaler. |
 | **fritekst** — «skriv en oppfølger på saken om X», «hva har skjedd siden vi skrev om dette?» | **Oppfølger på en egen sak.** Ferdigheten `oppfolgersak` — se under. |
 | `/kasus:oppfolgersak` | Samme ferdighet, startet fra menyen. |
+| **fritekst** — «hvordan bruker jeg denne?», «hva kan kasus?», «hjelp» | **Forklaring, ikke arbeid.** Ferdigheten `hjelp` — hvilken inngang som hører til hvilken jobb, hva ordene i outputen betyr, og hva som er galt når noe ikke virker. Også `/kasus:hjelp`. |
 | `/kasus:signals` | **Status:** hva har skjedd siden sist? Fordeling over mønstre, kategorier, gamle saker. Med et spørsmål framfor flagg (`/kasus:signals er det noe om strømpriser?`) går det til `kasus-lookout`. Kvitterer aldri, skriver ingenting. |
 | `/kasus:env` | Sjekker oppsettet. `--resolve` sier hvilken installasjon et kall treffer og hvilken variabel hver verdi kom fra. |
 | `/kasus:test` | Selvtester pluginen. `--live` også tilkoblingen og at serveren avviser skriv. |
@@ -123,6 +124,15 @@ Neste person som kloner repoet trenger bare sin egen nøkkel — resten står i
 Arbeidet skjer i runden. `/kasus:signals` er blikket man tar først — det kan ikke
 gjøre noe, bare vise, og konkurrerer derfor ikke med runden. De to siste er
 diagnostikk.
+
+`hjelp` er den samme regelen en gang til: den forklarer inngangene og gjør ingen
+av jobbene. Prisen for at ingenting har et kommandonavn man MÅ huske, er at
+«hvordan bruker jeg denne?» er et reelt spørsmål — og det er et spørsmål **om**
+pluginen framfor en bestilling **til** den, så det skal ikke starte en runde. Den
+henter ingenting fra API-et, kvitterer aldri, og tilbyr å starte riktig inngang
+framfor å gjøre arbeidet selv. At den nevner hver kommando, agent og ferdighet
+som faktisk finnes, er en test i `/kasus:test`: komponentene oppdages fra mappa,
+så en ny inngang blir ellers bare usynlig i kartet.
 
 ## Oppfølger på en egen sak
 
@@ -370,7 +380,9 @@ node --test plugins/kasus/scripts/kasus/         # bare enhetstestene
 ```
 
 Nye kommandoer, ferdigheter og agenter registreres ikke noe sted — de oppdages
-fra mappa, og krever omstart av sesjonen. En ferdighets `name:` må matche
+fra mappa, og krever omstart av sesjonen. **Legger du til en, skal den også inn i
+`skills/hjelp/SKILL.md`** — selvtesten sjekker at hjelpen nevner alle inngangene
+som finnes. En ferdighets `name:` må matche
 MAPPENAVNET (`skills/dybdeartikkel/SKILL.md` → `name: dybdeartikkel`), ellers
 lastes den ikke; selvtesten sjekker det. Endrer du verktøyets modi, oppdater `MODES` i
 `scripts/kasus/kasus.mjs`; selvtesten sjekker at kommandoene ikke refererer til en

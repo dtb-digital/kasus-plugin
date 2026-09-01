@@ -3,7 +3,7 @@
 #
 # Tørt (default): syntaks på alle skript, at komponentmappene ikke er tomme, at
 # ferdighetene har navn som matcher mappa, at runden bare kvitteres fra ett sted
-# og krever et signal, at
+# og krever et signal, at hjelpen nevner alle inngangene som finnes, at
 # manifestene er gyldig JSON, at verktøyets --list-kontrakt holder, at
 # kommandoene bare refererer til modi som FINNES, at enhetstestene er grønne, og
 # at mål-presedensen er den samme i shell og JS.
@@ -263,10 +263,15 @@ fi
 for f in $(find "$ROOT/skills" -name 'SKILL.md' 2>/dev/null | sort); do
   [ "$f" = "$ROUND_SKILL" ] && continue
   rel="${f#"$ROOT"/}"
+  ANTALL="$(grep -cE 'kasus\.mjs[[:space:]]+kvitter' "$f" 2>/dev/null | tr -d ' ')"
+  if [ "${ANTALL:-0}" -eq 0 ]; then
+    pass "$rel kvitterer ikke"
+    continue
+  fi
   BARE_IDS=1
   while IFS= read -r linje; do
     case "$linje" in
-      *--ids-only*) ;;
+      ""|*--ids-only*) ;;
       *) BARE_IDS=0 ;;
     esac
   done <<KVITT
@@ -324,6 +329,45 @@ if [ -n "$NULLSIGNAL" ]; then
   fail "disse tillater et saksforslag uten signal: $NULLSIGNAL"
 else
   pass "ingen «kasusSignalId: null» — forslaget kan ikke skrives uten opphav"
+fi
+
+# --- 4d. Hjelpen skal kjenne alle inngangene ------------------------------
+# `hjelp` er kartet journalisten får når hun spør «hva kan denne?». Et kart som
+# mangler en inngang er verre enn ingen: hun konkluderer med at inngangen ikke
+# finnes. Kommandoer, agenter og ferdigheter oppdages fra mappa, så en ny av dem
+# sier ikke fra noe sted — den blir bare usynlig i hjelpen. Derfor sier den fra her.
+HELP_SKILL="$ROOT/skills/hjelp/SKILL.md"
+if [ ! -f "$HELP_SKILL" ]; then
+  fail "skills/hjelp/SKILL.md mangler — pluginen har ingen hjelp"
+else
+  MANGLER=""
+  for f in $(find "$ROOT/commands" -name '*.md' | sort); do
+    base="$(basename "$f" .md)"
+    grep -q "/kasus:$base" "$HELP_SKILL" || MANGLER="$MANGLER /kasus:$base"
+  done
+  for f in $(find "$ROOT/agents" -name '*.md' | sort); do
+    base="$(basename "$f" .md)"
+    grep -q "$base" "$HELP_SKILL" || MANGLER="$MANGLER $base"
+  done
+  for f in $(find "$ROOT/skills" -name 'SKILL.md' | sort); do
+    base="$(basename "$(dirname "$f")")"
+    [ "$base" = "hjelp" ] && continue
+    grep -q "$base" "$HELP_SKILL" || MANGLER="$MANGLER $base"
+  done
+  if [ -z "$MANGLER" ]; then
+    pass "hjelpen nevner alle kommandoer, agenter og ferdigheter"
+  else
+    fail "hjelpen nevner ikke:$MANGLER — inngangen er usynlig for journalisten"
+  fi
+
+  # Hjelpen orienterer, den arbeider ikke. Et API-kall herfra ville gjort den til
+  # et alternativt sted å gjøre jobben (prinsipp 0) — og et hjelpesvar som henter
+  # signaler er en runde som startet fordi noen spurte hvordan man starter en.
+  if grep -qE 'kasus\.mjs[[:space:]]+[a-z]' "$HELP_SKILL"; then
+    fail "hjelpen kaller en modus i verktøyet — den skal bare orientere (--list er unntaket)"
+  else
+    pass "hjelpen henter ingenting fra API-et"
+  fi
 fi
 
 # --- 5. Enhetstester -------------------------------------------------------

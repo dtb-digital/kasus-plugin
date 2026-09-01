@@ -36,6 +36,26 @@ Grensa som holder det til én ting: begge skriver **samme format**
 fra profilen. Det som er felles bor ett sted. Ville en tredje ferdighet delt
 mindre enn det, er den et nytt produkt og ikke et nytt opphav.
 
+### Hjelpen er ikke et tredje opphav
+
+`hjelp` er den tredje ferdigheten, og avsnittet over ville forbudt den hvis den
+lagde noe. Den lager ingenting: den henter ikke fra API-et, skriver ikke til disk,
+kvitterer ikke, og gjør ingen research. Den er **kartet over inngangene**, og den
+finnes fordi fritekst-inngangen har en kostnad ingen kommandoliste har — når
+ingenting HETER noe man må huske, er «hvordan bruker jeg denne?» et reelt
+spørsmål, og det spørsmålet skal ikke starte en runde.
+
+Grensa som holder den til én ting: hjelpen **svarer og gir slipp**. Den forklarer
+inngangen og tilbyr å starte den; den utfører den ikke. Skulle hjelpen begynne å
+hente signaler «bare for å vise hvordan det ser ut», er den blitt det alternative
+stedet å gjøre jobben som dette prinsippet handler om — derfor er et API-kall fra
+`skills/hjelp/SKILL.md` en rød test i `/kasus:test`, ikke en smakssak.
+
+Prisen er at hjelpen kan drifte fra pluginen: en ny kommando eller agent oppdages
+fra mappa og sier ikke fra noe sted, så et kart som mangler en inngang lar
+journalisten konkludere med at inngangen ikke finnes. Det er derfor selvtesten
+krever at hjelpen nevner hver kommando, agent og ferdighet som faktisk finnes.
+
 Radaren hadde forøvrig den egne artikkelen som førsteklasses utgangspunkt før
 pluginen hadde det: `origin: own_followup` ER et oppfølgingssøk på en egen sak.
 Ferdigheten gir journalisten den samme inngangen manuelt, for de sakene radaren

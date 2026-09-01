@@ -94,6 +94,12 @@ sist, fordelt på redaksjonelle mønstre og de fire kategoriene, og hvor mye av 
 som er gamle saker. Den kvitterer aldri og skriver ingenting — blikket man tar før
 man setter av tid.
 
+Ferdigheten `hjelp` forklarer resten: «hvordan bruker jeg denne?», «hva kan
+kasus?», «hjelp» — eller `/kasus:hjelp`. Den kobler jobben til inngangen,
+oversetter ordene i outputen (kvitteringen, de fire kategoriene, `GAMMEL SAK`), og
+sier hva som er galt når noe ikke virker. Den gjør ingen av jobbene: ingen
+signaler, ingen research, ingen kvittering — den tilbyr å starte riktig inngang.
+
 I tillegg finnes `/kasus:env` (sjekker oppsettet) og `/kasus:test` (selvtest) som
 diagnostikk.
 
