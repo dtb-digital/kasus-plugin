@@ -52,7 +52,7 @@ i seg selv er inngangen — det finnes ikke noe kommandonavn man må huske førs
 | **følge opp en av deres EGNE saker** | «hva har skjedd siden vi skrev om strømstøtte?», «kan vi følge opp denne?» | Ferdigheten `oppfolgersak`. Vinklingen finnes alt — den leter etter **det nye**, og stopper hvis det ikke finnes noe. |
 | **bare se hva som ligger der** | «er det noe nytt å skrive om?», «er det noe om strømpriser?», «hva kom inn denne uka?» | `kasus-lookout` leser signalene og svarer. **Kvitterer aldri, skriver ingenting.** |
 | **vite hva dere selv har dekket** | «har vi skrevet om dette?», «hva publiserte vi i dag?», «hvem hos oss dekker samferdsel?» | `kasus-archivist` leser deres egne artikler og svarer med id, dato og lenke. |
-| **ta statusen før du bestemmer deg** | `/kasus:signals` | Fordelingen: hvor mye som kom inn, på hvilke mønstre og kategorier, hvor mye som er gamle saker. Kan ikke gjøre noe — bare vise. |
+| **ta statusen før du bestemmer deg** | `/kasus:signals` | Nye signaler + ukas egen produksjon: hvor mye som kom inn, på hvilke mønstre og kategorier, hvor mye som er gamle saker, og hva som henger sammen med noe dere selv publiserte. Ender med å spørre hva du vil gjøre — men kan ikke gjøre det selv. |
 | **sjekke oppsettet** | `/kasus:env`, eller `--resolve` for å se hvilken installasjon et kall treffer | Diagnostikk. |
 | **sjekke at pluginen er hel** | `/kasus:test` | Diagnostikk. `--live` tester også tilkoblingen. |
 

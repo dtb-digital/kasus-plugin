@@ -117,12 +117,15 @@ Neste person som kloner repoet trenger bare sin egen nøkkel — resten står i
 | **fritekst** — «skriv en oppfølger på saken om X», «hva har skjedd siden vi skrev om dette?» | **Oppfølger på en egen sak.** Ferdigheten `oppfolgersak` — se under. |
 | `/kasus:oppfolgersak` | Samme ferdighet, startet fra menyen. |
 | **fritekst** — «hvordan bruker jeg denne?», «hva kan kasus?», «hjelp» | **Forklaring, ikke arbeid.** Ferdigheten `hjelp` — hvilken inngang som hører til hvilken jobb, hva ordene i outputen betyr, og hva som er galt når noe ikke virker. Også `/kasus:hjelp`. |
-| `/kasus:signals` | **Status:** hva har skjedd siden sist? Fordeling over mønstre, kategorier, gamle saker. Med et spørsmål framfor flagg (`/kasus:signals er det noe om strømpriser?`) går det til `kasus-lookout`. Kvitterer aldri, skriver ingenting. |
+| `/kasus:signals` | **Status:** hva har skjedd siden sist? Nye signaler OG ukas egen produksjon, fordeling over mønstre og kategorier, gamle saker — og til slutt **ett spørsmål om hva du vil gjøre videre**. Med et spørsmål framfor flagg (`/kasus:signals er det noe om strømpriser?`) går det til `kasus-lookout`. Kvitterer aldri, skriver ingenting. |
 | `/kasus:env` | Sjekker oppsettet. `--resolve` sier hvilken installasjon et kall treffer og hvilken variabel hver verdi kom fra. |
 | `/kasus:test` | Selvtester pluginen. `--live` også tilkoblingen og at serveren avviser skriv. |
 
-Arbeidet skjer i runden. `/kasus:signals` er blikket man tar først — det kan ikke
-gjøre noe, bare vise, og konkurrerer derfor ikke med runden. De to siste er
+Arbeidet skjer i runden. `/kasus:signals` er blikket man tar først — det henter
+signalene og ukas egen produksjon, sier hva som henger sammen, og **spør hva du
+vil gjøre videre**. Det er der grensa går: statusen kan spørre, men ikke utføre.
+Svarer du «kjør runden», er det ferdigheten som gjør jobben, og den kjører sitt
+eget steg 1 — statusen prøver ikke å gi den dataene sine. De to siste er
 diagnostikk.
 
 `hjelp` er den samme regelen en gang til: den forklarer inngangene og gjør ingen
@@ -195,8 +198,8 @@ uke fra hverandre. Mangler datoen, står det «ukjent dato» — ikke «fersk».
 
 ## Ukas produksjon, før du velger
 
-Runden henter de 40 nyeste publiserte sakene fra siste uke i samme melding som
-signalene og profilen. Profilen sier hva som fungerer for disse leserne i
+Både runden og `/kasus:signals` henter de 40 nyeste publiserte sakene fra siste
+uke i samme melding som signalene. Profilen sier hva som fungerer for disse leserne i
 prinsippet; dette sier hva redaksjonen faktisk holder på med nå — og det er den
 andre en journalist kjenner igjen.
 

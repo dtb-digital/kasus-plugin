@@ -3,7 +3,8 @@
 #
 # Tørt (default): syntaks på alle skript, at komponentmappene ikke er tomme, at
 # ferdighetene har navn som matcher mappa, at runden bare kvitteres fra ett sted
-# og krever et signal, at hjelpen nevner alle inngangene som finnes, at
+# og krever et signal, at statusen henter begge vinduene sine, at hjelpen nevner
+# alle inngangene som finnes, at
 # manifestene er gyldig JSON, at verktøyets --list-kontrakt holder, at
 # kommandoene bare refererer til modi som FINNES, at enhetstestene er grønne, og
 # at mål-presedensen er den samme i shell og JS.
@@ -329,6 +330,20 @@ if [ -n "$NULLSIGNAL" ]; then
   fail "disse tillater et saksforslag uten signal: $NULLSIGNAL"
 else
   pass "ingen «kasusSignalId: null» — forslaget kan ikke skrives uten opphav"
+fi
+
+# --- 4c-bis. Statusen holder signalene mot ukas egen produksjon -----------
+# Statusen er to kall, ikke ett. Artikkelvinduet er det som skiller «her er sju
+# signaler» fra «to av dem henger sammen med noe dere publiserte denne uka», og
+# de koblingene kjenner radaren ikke. Faller kallet ut i en forenkling, blir
+# statusen stille dårligere — den ser like komplett ut med ett kall som med to.
+STATUS_CMD="$ROOT/commands/signals.md"
+if [ -f "$STATUS_CMD" ]; then
+  if grep -qE 'kasus\.mjs[[:space:]]+nytt' "$STATUS_CMD" && grep -qE 'kasus\.mjs[[:space:]]+articles' "$STATUS_CMD"; then
+    pass "statusen henter både nye signaler og ukas egen produksjon"
+  else
+    fail "commands/signals.md mangler ett av de to kallene (nytt + articles)"
+  fi
 fi
 
 # --- 4d. Hjelpen skal kjenne alle inngangene ------------------------------

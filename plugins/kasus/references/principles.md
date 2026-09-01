@@ -62,9 +62,21 @@ Ferdigheten gir journalisten den samme inngangen manuelt, for de sakene radaren
 ikke søkte på.
 
 `/kasus:signals` er unntaket som viser regelen: den er rent LESENDE — kvitterer
-ikke, skriver ingenting, gjør ingen research. Den kan bare svare på «er det noe
-her?», og en kommando som ikke kan utføre arbeid kan ikke bli et alternativt sted
-å gjøre det.
+ikke, skriver ingenting, gjør ingen research. En kommando som ikke kan utføre
+arbeid kan ikke bli et alternativt sted å gjøre det.
+
+Den **spør** til slutt hva journalisten vil gjøre videre, og det er nærmere en
+starter enn resten av avsnittet. Grensa som holder: spørsmålet gjelder hvilken
+INNGANG, ikke hvilken sak. Valget av sak hører i runden, der et valg fører til
+research, en fil på disk og en kvittering — og svarer journalisten «kjør runden»,
+kjører ferdigheten sitt eget steg 1 framfor å arve statusens data. Det er ikke
+sløsing, det er det som gjør at statusen ikke er en halv runde: mister runden
+tilgang til sitt eget steg 1, har den to ulike start-tilstander å virke i.
+
+Det ble spurt om en `/kasus:start` som henter signaler og artikler og spør hva
+videre. Det er dette, og den fikk ikke et nytt navn: den kommandoen ville vært en
+ny inngang ved siden av en som alt gjorde det halve, og to steder å ta morgenens
+blikk er samme feil som to steder å kjøre runden.
 
 Det er derfor `/api/v1/story-briefs` ikke er i bruk: et ferdig vurdert saksforslag
 fra pipelinen er et alternativt utgangspunkt, og to utgangspunkt i samme

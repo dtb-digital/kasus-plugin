@@ -90,9 +90,12 @@ dato.** «Det har gått en måned» er ikke noe nytt, og en oppfølger uten noe 
 den samme saken publisert to ganger.
 
 `/kasus:signals` gir en **status** uten å starte noe: hva har kommet inn siden
-sist, fordelt på redaksjonelle mønstre og de fire kategoriene, og hvor mye av det
-som er gamle saker. Den kvitterer aldri og skriver ingenting — blikket man tar før
-man setter av tid.
+sist, fordelt på redaksjonelle mønstre og de fire kategoriene, hvor mye av det som
+er gamle saker — og hvilke av signalene som henger sammen med noe redaksjonen
+**selv publiserte denne uka**, som radaren ikke kan vite. Den avsluttes med ett
+spørsmål om hva du vil gjøre videre, og svaret er det eneste som setter noe i
+gang: statusen kvitterer aldri og skriver ingenting. Blikket man tar før man
+setter av tid.
 
 Ferdigheten `hjelp` forklarer resten: «hvordan bruker jeg denne?», «hva kan
 kasus?», «hjelp» — eller `/kasus:hjelp`. Den kobler jobben til inngangen,
