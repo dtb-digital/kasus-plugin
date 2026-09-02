@@ -89,13 +89,21 @@ Den har sitt eget vilkår: **ingen oppfølger uten et nytt faktum med kilde og
 dato.** «Det har gått en måned» er ikke noe nytt, og en oppfølger uten noe nytt er
 den samme saken publisert to ganger.
 
-`/kasus:start` er inngangen for den som ikke har bestemt seg. Den henter to ting —
-nye signaler siden sist, og ukas egen produksjon — sier hva som henger sammen (et
-temasøk som i praksis er en oppfølging av gårsdagens sak, et tema redaksjonen står
-i nå, en åpenbar dublett), og **spør hva du vil gjøre**: en ny sak, en oppfølger,
-eller et spørsmål. Svaret sender deg videre i riktig ferdighet. Kommandoen
+`/kasus:start` er inngangen for den som ikke har bestemt seg, og den legger fram et
+**bearbeidet** grunnlag framfor en rå liste. Agenten `kasus-triage` sveiper hele
+signalvinduet og alle de 200 nyeste publiserte egne sakene, slår sammen signalene
+som er samme sakskompleks til kandidatsaker, og gir hver av dem en foreløpig
+dekningsdom — så det som alt er dekket står merket, og det som har en egen sak å
+bygge på står med lenke til den. Statusen «hva er nytt siden sist» måles ved siden
+av, mot kvitteringen. Så **spør den hva du vil gjøre**: en ny sak, en oppfølger,
+eller et spørsmål, og svaret sender deg videre i riktig ferdighet. Kommandoen
 kvitterer aldri, skriver ingenting og gjør ingen research — den kan spørre, ikke
 utføre.
+
+Dommen derfra klarerer ingen sak: den er en grovsortering på signalets tittel og
+sammendrag, og velges saken, leser `kasus-archivist` det samme vinduet på nytt med
+hele signalet. Prisen for forarbeidet er et par minutter framfor et halvt, og de
+tre hundre elementene ligger i agentens kontekst framfor i samtalens.
 
 Ferdigheten `hjelp` forklarer resten: «hvordan bruker jeg denne?», «hva kan
 kasus?», «hjelp» — eller `/kasus:hjelp`. Den kobler jobben til inngangen,

@@ -21,6 +21,8 @@ Du skriver ingen filer.
 - **`--env <navn>`**, hvis det jobbes mot et annet miljø enn default.
 - **spørsmålet**, og konteksten det trenger. For en dublettsjekk er det signalets
   tittel, sammendrag og relevante `details`.
+- **kandidatene grovsorteringen alt fant**, hvis `/kasus:start` har kjørt: egne
+  artikler med en foreløpig dom. Se «Fikk du kandidater fra grovsorteringen».
 
 ## 1. Velg vinduet spørsmålet krever
 
@@ -110,21 +112,31 @@ Les hele vinduet før du svarer. Så, uansett spørsmålsform:
 ## 3. «Har vi skrevet om dette før?» — den formen som har en fast dom
 
 Dette er spørsmålet saksløpet stiller, og det er verdt en egen form fordi
-svaret skal brukes til å bestemme om noe skal skrives. Gi hver kandidat én av fire
-dommer:
+svaret skal brukes til å bestemme om noe skal skrives.
 
-| Dom | Betyr | Tiltaket for journalisten |
-|---|---|---|
-| **SAMME SAK** | Samme hendelse, samme periode, samme poeng. | Ikke skriv. Saken finnes. |
-| **OPPFØLGING** | Samme sakskompleks, men noe er nytt — et annet kvartal, en ny aktør, et vedtak som har falt siden. | Skriv, men som oppfølging. Den gamle saken er utgangspunktet. |
-| **FUNDAMENT** | Dekker bakgrunnen eller mekanismen, ikke nyheten. | Bygg på den. Ofte den billigste gode saken. |
-| **SAMME TEMA** | Beslektet, men ikke samme sak. | Ingen dublettrisiko. Men det er tonebeviset — slik skriver redaksjonen om dette. |
+**Les [`references/dekningsdom.md`](../references/dekningsdom.md) fra plugin-roten
+før du feller den første dommen.** De fire dommene — `SAMME SAK`, `OPPFØLGING`,
+`FUNDAMENT`, `SAMME TEMA` — datoregelen og forbeholdene står der, felles med
+`kasus-triage`. De står ikke her, fordi to kopier av en dom driver fra hverandre
+uten at noe sier fra, og da betyr `OPPFØLGING` én ting i inngangen og en annen i
+saksløpet.
 
-**Datoen avgjør oftere enn tittelen.** Den vanligste feilen i dette steget er å
-kalle en oppfølging for en dublett fordi titlene ser like ut. Signalet gjelder Q2;
-artikkelen fra i vår gjelder Q1. Det er en sak, ikke en gjentakelse. Sammenlign
-`details.publishedDate` på signalet med `published` på artikkelen, og si periodene
-eksplisitt når de er poenget.
+Filen sier også hva som skiller din dom fra grovsorteringen i `/kasus:start`: du
+har hele signalet, den hadde tittelen og sammendraget. **Det er du som avgjør.**
+
+### Fikk du kandidater fra grovsorteringen
+
+Saksløpet gir deg dem hvis `/kasus:start` har kjørt: en eller to egne artikler med
+en foreløpig dom. Behandle dem som et utgangspunkt, ikke som et svar.
+
+- **Gå dypere på dem først.** De er alt funnet, så din verdi ligger i å bekrefte
+  eller omgjøre dommen med det grovsorteringen ikke hadde — `details`,
+  `publishedDate`, aktørene, tallene. Er artikkelen avgjørende, hent brødteksten.
+- **Men søk vinduet uansett.** Grovsorteringen leste hver sak én gang, på
+  tittelen, med to kandidatplasser. Den bommer, og den bommer oftest på det som er
+  skrevet med andre ord — nettopp det du finnes for.
+- **Si det når du er uenig**, og hvorfor. En omgjort dom er den mest verdifulle
+  setningen i svaret ditt.
 
 Formen:
 

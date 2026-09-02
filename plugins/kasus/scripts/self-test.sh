@@ -340,17 +340,60 @@ else
   pass "ingen «kasusSignalId: null» — forslaget kan ikke skrives uten opphav"
 fi
 
-# --- 4c-bis. Inngangen holder signalene mot ukas egen produksjon ----------
-# `/kasus:start` er to kall, ikke ett. Artikkelvinduet er det som skiller «her er sju
-# signaler» fra «to av dem henger sammen med noe dere publiserte denne uka», og
-# de koblingene kjenner radaren ikke. Faller kallet ut i en forenkling, blir
-# statusen stille dårligere — den ser like komplett ut med ett kall som med to.
+# --- 4c-bis. Inngangen legger fram et BEARBEIDET grunnlag -----------------
+# `/kasus:start` er to ting, ikke én: statusen «hva er nytt siden sist» (`nytt`,
+# som kjenner kvitteringen) OG forarbeidet — hele signalvinduet holdt mot alle
+# publiserte egne saker, konsolidert og luket av `kasus-triage`. Faller den ene ut
+# i en forenkling, blir inngangen stille dårligere: en rå liste ser like komplett
+# ut som en bearbeidet, helt til journalisten sitter og slår sammen signaler i
+# hodet igjen.
 STATUS_CMD="$ROOT/commands/start.md"
+TRIAGE_AGENT="$ROOT/agents/kasus-triage.md"
 if [ -f "$STATUS_CMD" ]; then
-  if grep -qE 'kasus\.mjs[[:space:]]+nytt' "$STATUS_CMD" && grep -qE 'kasus\.mjs[[:space:]]+articles' "$STATUS_CMD"; then
-    pass "statusen henter både nye signaler og ukas egen produksjon"
+  if grep -qE 'kasus\.mjs[[:space:]]+nytt' "$STATUS_CMD" && grep -q 'kasus-triage' "$STATUS_CMD"; then
+    pass "inngangen har både statusen (nytt) og forarbeidet (kasus-triage)"
   else
-    fail "commands/start.md mangler ett av de to kallene (nytt + articles)"
+    fail "commands/start.md mangler statusen (nytt) eller forarbeidet (kasus-triage)"
+  fi
+
+  # Vinduene hører i AGENTEN, ikke i kommandoen: tre hundre elementer i samtalen
+  # er hele grunnen til at agenten finnes. Henter kommandoen dem selv igjen, er
+  # forarbeidet gratis i tid og dyrt i kontekst.
+  if grep -qE 'kasus\.mjs[[:space:]]+(signals|articles)' "$STATUS_CMD"; then
+    fail "commands/start.md henter signal-/artikkelvinduet selv — det hører i kasus-triage"
+  else
+    pass "inngangen henter ikke de store vinduene selv (de ligger i agentens kontekst)"
+  fi
+fi
+
+# ...og agenten må FAKTISK hente begge. Ett vindu er ingen dekningsdom: uten
+# artiklene kan den konsolidere, men ikke si hva som alt er skrevet.
+if [ -f "$TRIAGE_AGENT" ]; then
+  if grep -qE 'kasus\.mjs[[:space:]]+signals' "$TRIAGE_AGENT" && grep -qE 'kasus\.mjs[[:space:]]+articles' "$TRIAGE_AGENT"; then
+    pass "forarbeidet sveiper begge vinduene (signals + articles)"
+  else
+    fail "agents/kasus-triage.md mangler ett av vinduene (signals + articles)"
+  fi
+fi
+
+# --- 4c-ter. Dommen er definert ETT sted ----------------------------------
+# SAMME SAK / OPPFØLGING / FUNDAMENT / SAMME TEMA felles to steder: som
+# grovsortering i inngangen og som dom i saksløpet. Sto tabellen i begge
+# agentene, ville de drevet fra hverandre uten at noe sa fra — og da betyr
+# «OPPFØLGING» én ting i inngangen og en annen i saksløpet.
+VERDICT_REF="$ROOT/references/dekningsdom.md"
+if [ ! -f "$VERDICT_REF" ]; then
+  fail "references/dekningsdom.md mangler — dommen har ingen felles definisjon"
+else
+  UTEN_REF=""
+  for f in "$ROOT/agents/kasus-archivist.md" "$TRIAGE_AGENT"; do
+    [ -f "$f" ] || continue
+    grep -q 'dekningsdom\.md' "$f" || UTEN_REF="$UTEN_REF ${f#"$ROOT"/}"
+  done
+  if [ -z "$UTEN_REF" ]; then
+    pass "begge som feller dommen leser den fra references/dekningsdom.md"
+  else
+    fail "disse feller dommen uten å lese den felles definisjonen:$UTEN_REF"
   fi
 fi
 
