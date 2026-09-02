@@ -180,6 +180,34 @@ ulike tiltak, og i rå API-felt ser de like ut:
 `meta.grupper` har kategoriene ferdig oppdelt med id-er og forklaring. Bruk dem —
 ikke utled kategorien selv.
 
+### Har `/kasus:start` kjørt, er halve steget gjort
+
+Sto det en bearbeidet liste i samtalen før du begynte — kandidatsaker med antall
+signaler og en dekningsdom — kom den fra `kasus-triage`, og den er bygd på et
+bredere signalvindu enn ditt: hele vinduet, ikke bare «siden sist».
+
+**Arv den, ikke utled noe annet av det samme materialet.** To ulike
+konsolideringer av de samme signalene i samme samtale er verre enn én: journalisten
+kan ikke se hvilken som gjelder, og id-ene stemmer ikke overens.
+
+| Fra grovsorteringen | Hva du gjør med det |
+|---|---|
+| **konsolideringen** — hvilke signaler som er samme sak | Behold samlingene. Rangér SAKENE, ikke signalene. Er du uenig, si det og begrunn — ikke stille del opp igjen. |
+| **dekningsdommen** per sak | Ta den med i rangeringen: en `OPPFØLGING` eller et `FUNDAMENT` har en egen sak å bygge på, og det er ofte den billigste gode saken. En `SAMME SAK` rangeres ned og sies. |
+| **«denne uka»-tallet** | Bruk det framfor å telle på nytt i ditt eget 40-vindu. |
+
+Det du gjør som grovsorteringen ikke kunne: **rangeringen mot profilen.** Den
+hadde ikke `criteria.patterns`, og sorterte derfor på dekningsstatus alene. Det er
+her `whatWorks`, `whatToAvoid` og `keywords` kommer inn, og det er hele forskjellen
+mellom en luket liste og en prioritert.
+
+Og et signal som kom inn etter at agenten hentet sitt vindu er nytt for deg —
+`nytt` er ferskere. Legg det inn i lista på vanlig vis.
+
+**Dommen derfra klarerer ingenting.** Steg 4a kjører uansett, for hver valgte sak.
+Grunnen står i `${CLAUDE_PLUGIN_ROOT}/references/dekningsdom.md`, under «To nivåer,
+og bare det ene klarerer».
+
 **Gjør prioriteringen selv, her i samtalen.** `kasus-lookout` besvarer spørsmål om
 signalene og er den rette agenten når noen bare vil vite hva som ligger der — men
 den hører ikke i saksløpet. To grunner: den henter sitt eget vindu framfor saksløpets
@@ -334,7 +362,12 @@ Agenten henter artiklene selv. Gi den:
   faktiske verdien i prompten, ikke variabelnavnet
 - **`--env <navn>`** hvis saksløpet kjører mot et annet miljø
 - **signalet**: tittel, sammendrag, og de av `details` som sier hva saken er —
-  `publishedDate`, `actors`, `keyFigures`, `matchedPattern`
+  `publishedDate`, `actors`, `keyFigures`, `matchedPattern`. Er saken konsolidert
+  av flere signaler, gi den ALLE — det er saken som skal sjekkes, ikke ett av
+  signalene i den
+- **kandidatene grovsorteringen fant**, hvis `/kasus:start` har kjørt: artikkel-id,
+  dato og den foreløpige dommen. Da bruker agenten sin dybde på å bekrefte eller
+  omgjøre dem, framfor å oppdage de samme to en gang til
 
 **Formulér** researchspørsmålene i 4b mens agenten jobber — de er uavhengige, og
 den leser 200 artikler mens du tenker. Men **send ingen `kasus-researcher` før

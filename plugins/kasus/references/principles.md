@@ -16,9 +16,9 @@ med vilje, som `/kasus:dybdeartikkel`.
 
 Det fantes en `/kasus:start` som bare pekte hit, og den var borte en periode: en
 kommando som videresender er et hopp som kan gå feil uten å gi noe tilbake. Den
-finnes igjen, og gjør noe annet enn å peke — den **henter dataene valget tas på**,
-og spør hvilken ferdighet som skal ta over. Det er forskjellen på et hopp og en
-inngang: den gir noe tilbake selv om ingen svarer på spørsmålet.
+finnes igjen, og gjør noe annet enn å peke — den **bearbeider grunnlaget valget
+tas på**, og spør hvilken ferdighet som skal ta over. Det er forskjellen på et
+hopp og en inngang: den gir noe tilbake selv om ingen svarer på spørsmålet.
 
 Grensa håndheves framfor å være et løfte: ingen kommando kaller `kvitter`, og
 ingen kommando sender ut `kasus-researcher`. En kommando som gjorde researchen
@@ -71,6 +71,37 @@ ikke søkte på.
 `/kasus:start` er rent LESENDE — kvitterer ikke, skriver ingenting, gjør ingen
 research. En kommando som ikke kan utføre arbeid kan ikke bli et alternativt sted
 å gjøre det.
+
+### Inngangen bearbeider, ferdigheten prioriterer
+
+Inngangen la lenge fram signalene slik radaren fant dem, og lot journalisten
+konsolidere i hodet: er disse tre den samme SSB-saken? har vi ikke skrevet om det
+der? Det er arbeid, og det er arbeid en maskin kan gjøre først — så nå gjør den
+det. `kasus-triage` sveiper **hele** signalvinduet og **alle** de publiserte egne
+artiklene, slår sammen signalene som er samme sakskompleks, og gir hver kandidat en
+foreløpig dekningsdom. Lista journalisten møter er luket, ikke rå.
+
+Prisen er tid: et par minutter framfor et halvt, fordi tre hundre elementer skal
+leses. Den prisen betales én gang om morgenen, og alternativet var at journalisten
+betalte den selv, hver gang, uten å vite hva han ikke fikk se. Derfor finnes det
+heller ingen rask vei rundt: to statuser ville betydd at man må velge modus før man
+velger sak, og det er dette prinsippet en gang til.
+
+To grenser holder det fra å bli et halvt saksløp:
+
+- **Vinduene ligger i agentens kontekst, ikke i samtalens.** Kommandoen henter
+  ikke `signals` eller `articles` selv — det er en test, ikke et løfte. Hadde den
+  gjort det, hadde forarbeidet vært gratis i tid og dyrt i det eneste som er
+  knapt.
+- **Agenten prioriterer ikke.** Den sorterer på dekningsstatus, ikke på
+  redaksjonell verdi, fordi profilen ikke hentes her. Rangeringen mot
+  `criteria.patterns` er ferdighetens første egne arbeid, og en rangering fra
+  inngangen ville sett lik ut og vært magefølelse med tall på.
+
+Ferdigheten kjører fortsatt sitt eget steg 1, men **arver** konsolideringen og
+dommene fra samtalen framfor å utlede noe annet av det samme materialet: to ulike
+inndelinger av de samme signalene i samme samtale er verre enn én, fordi ingen kan
+se hvilken som gjelder.
 
 Den **spør** til slutt hva journalisten vil gjøre. Grensa som holder: spørsmålet
 gjelder hvilken INNGANG, ikke hvilken sak. Valget av sak hører i ferdigheten, der
@@ -163,6 +194,19 @@ betales med etterprøvbarhet: id, dato og url på hver kandidat, og en begrunnel
 som sier hva som er likt OG hva som skiller. Vindusgrensen er den andre halvparten
 av forbeholdet, og den forsvant ikke med ordmatchen — den er en egenskap ved
 API-et.
+
+Dommen felles to ganger, og bare den ene klarerer. `kasus-triage` feller en
+**grovsortering** i inngangen, på signalets tittel og sammendrag, for alle saker
+på én gang — nok til å luke en åpenbar dublett og finne den egne saken en
+oppfølger kan bygge på. `kasus-archivist` feller **dommen** i steg 4a, for én
+valgt sak, med hele signalet. Steg 4a kjører uansett hva grovsorteringen fant, og
+et `ÅPEN` derfra er et fravær av treff på tittelen — ikke en klarering. Kostnadene
+er asymmetriske, og det er hele grunnen til at det er to nivåer framfor ett.
+
+Begge leser de fire dommene fra `references/dekningsdom.md`. Sto tabellen i begge
+agentene, ville de drevet fra hverandre uten at noe sa fra, og `OPPFØLGING` ville
+betydd én ting i inngangen og en annen i saksløpet. At begge leser den, er en
+test.
 
 ## 9. Kvitteringen er eksplisitt, og bare ett steg skriver den
 

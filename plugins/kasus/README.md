@@ -102,8 +102,8 @@ versjon som gjelder står i git framfor i en maskin.
 4. Start sesjonen på nytt i prosjektmappa — marketplacet hentes, pluginen
    installeres, og `env`-innslag og komponenter plukkes opp ved oppstart.
 5. Verifiser: `/kasus:env --resolve`
-6. Kom i gang: `/kasus:start` henter det du trenger for å bestemme deg og spør
-   hva du vil gjøre. Vet du det alt, si det i stedet — «jeg skal skrive en
+6. Kom i gang: `/kasus:start` går gjennom alt som ligger der, bearbeider det, og
+   spør hva du vil gjøre. Vet du det alt, si det i stedet — «jeg skal skrive en
    dybdeartikkel»
 
 Neste person som kloner repoet trenger bare sin egen nøkkel — resten står i
@@ -118,16 +118,19 @@ Neste person som kloner repoet trenger bare sin egen nøkkel — resten står i
 | **fritekst** — «skriv en oppfølger på saken om X», «hva har skjedd siden vi skrev om dette?» | **Oppfølger på en egen sak.** Ferdigheten `oppfolgersak` — se under. |
 | `/kasus:oppfolgersak` | Samme ferdighet, startet fra menyen. |
 | **fritekst** — «hvordan bruker jeg denne?», «hva kan kasus?», «hjelp» | **Forklaring, ikke arbeid.** Ferdigheten `hjelp` — hvilken inngang som hører til hvilken jobb, hva ordene i outputen betyr, og hva som er galt når noe ikke virker. Også `/kasus:hjelp`. |
-| `/kasus:start` | **Kom i gang.** Henter nye signaler OG ukas egen produksjon, sier hva som henger sammen — og **spør hva du vil gjøre**: en ny sak, en oppfølger, eller et spørsmål. Svaret sender deg videre i riktig ferdighet. Kvitterer aldri, skriver ingenting, gjør ingen research. |
+| `/kasus:start` | **Kom i gang.** Sveiper **alle** signalene og **alle** deres publiserte saker, slår sammen det som er samme sak, merker det som alt er dekket — og **spør hva du vil gjøre**: en ny sak, en oppfølger, eller et spørsmål. Svaret sender deg videre i riktig ferdighet. Kvitterer aldri, skriver ingenting, gjør ingen research. |
 | `/kasus:env` | Sjekker oppsettet. `--resolve` sier hvilken installasjon et kall treffer og hvilken variabel hver verdi kom fra. |
 | `/kasus:test` | Selvtester pluginen. `--live` også tilkoblingen og at serveren avviser skriv. |
 
 Arbeidet skjer i ferdighetene. `/kasus:start` er inngangen for den som ikke har
-bestemt seg: den henter dataene valget tas på, og spør. Der går grensa — den kan
-spørre, men ikke utføre. Velger du saksløpet, kjører **ferdigheten** sitt eget
-steg 1; kommandoen prøver ikke å gi den dataene sine, og profilen hentes ikke der,
-fordi en inngang som hentet premissene ville vært et halvt saksløp. De to siste er
-diagnostikk.
+bestemt seg: den bearbeider grunnlaget valget tas på, og spør. Der går grensa —
+den kan spørre, men ikke utføre. Velger du saksløpet, kjører **ferdigheten** sitt
+eget steg 1; kommandoen prøver ikke å gi den dataene sine, og profilen hentes ikke
+der, fordi en inngang som hentet premissene ville vært et halvt saksløp. De to
+siste er diagnostikk.
+
+**Bearbeidet, ikke rå — det er hele forskjellen på en inngang og en liste.** Se
+[«Lista er luket før du ser den»](#lista-er-luket-før-du-ser-den).
 
 Et **spørsmål** trenger heller ingen kommando: «er det noe om strømpriser?», «hvor
 mange signaler er det på mønsteret X?» går rett til `kasus-lookout`, som bygger
@@ -202,12 +205,48 @@ hvor gammel saken er. Et temasøk kan levere en artikkel fra 2023 som «oppdaget
 45 min siden», så saksløpet viser begge og merker `GAMMEL SAK` når de er mer enn en
 uke fra hverandre. Mangler datoen, står det «ukjent dato» — ikke «fersk».
 
+## Lista er luket før du ser den
+
+`/kasus:start` legger ikke fram signalene slik radaren fant dem. Den gjør først
+forarbeidet du ellers gjorde i hodet, med sju linjer foran deg: *er disse tre
+egentlig den samme SSB-saken? har vi ikke skrevet om det der i vår?*
+
+Agenten `kasus-triage` sveiper **hele signalvinduet** og **alle de 200 nyeste
+publiserte egne sakene**, og leverer tilbake:
+
+- **kandidatsaker framfor signaler.** Signalene som er samme sakskompleks er slått
+  sammen til én linje, med begrunnelsen for hvorfor. Tre kilder på det samme
+  SSB-tallet er én sak med tre kilder, ikke tre halve — og et `temasok` som er
+  siste ledd i en konflikt du fulgte forrige uke, hører til den konflikten.
+- **en dekningsdom per sak.** `SAMME SAK`, `OPPFØLGING`, `FUNDAMENT`, `SAMME TEMA`
+  eller `ÅPEN`, mot deres egne artikler — så det som alt er dekket står merket,
+  og det som har en egen sak å bygge på står med lenke til den.
+- **hva dere står i nå.** «Redaksjonen har publisert fire saker om dette siden
+  mandag» — tallet, ikke tolkningen.
+
+**Det dekkede skjules ikke, det merkes.** En sak du ikke får se kan du ikke
+overprøve, og dommen er en lesing som kan bomme.
+
+**Dommen derfra klarerer ingenting.** Den er en grovsortering på signalets tittel
+og sammendrag: god nok til å luke en åpenbar dublett, ikke god nok til å avgjøre
+at en sak skal skrives. Velger du saken, leser `kasus-archivist` det samme vinduet
+på nytt med hele signalet — se [«Har vi dekket dette før?»](#har-vi-dekket-dette-før).
+
+**Rekkefølgen er ikke en prioritering.** Agenten sorterer på dekningsstatus, fordi
+profilen ikke hentes i inngangen. Rangeringen mot `criteria.patterns` er
+ferdighetens første egne arbeid.
+
+Prisen er tid: et par minutter framfor et halvt, fordi tre hundre elementer skal
+leses. De ligger i **agentens** kontekst, ikke i samtalens — det er derfor det går
+an i det hele tatt, og at kommandoen ikke henter dem selv er en test framfor et
+løfte.
+
 ## Ukas produksjon, før du velger
 
-Både saksløpet og `/kasus:start` henter de 40 nyeste publiserte sakene fra siste
-uke i samme melding som signalene. Profilen sier hva som fungerer for disse leserne i
-prinsippet; dette sier hva redaksjonen faktisk holder på med nå — og det er den
-andre en journalist kjenner igjen.
+Saksløpet henter de 40 nyeste publiserte sakene fra siste uke i samme melding som
+signalene. Profilen sier hva som fungerer for disse leserne i prinsippet; dette
+sier hva redaksjonen faktisk holder på med nå — og det er den andre en journalist
+kjenner igjen.
 
 Tre koblinger endrer prioriteringen, og radaren kjenner ingen av dem:
 
@@ -225,11 +264,26 @@ Vinduet er lite (~2 000 tokens) fordi det skal leses i samtalen og begrunne en
 rangering du skal se. **Det erstatter ikke dekningssjekken:** sju døgn og 40 saker
 kan svare på «hva holder vi på med», ikke på «har vi skrevet om dette før?».
 
+Kom du hit fra `/kasus:start`, er koblingene alt funnet — mot 200 artikler framfor
+40. Da arver saksløpet konsolideringen og dommene framfor å utlede noe annet av
+det samme materialet, og bruker steget på det grovsorteringen ikke kunne:
+rangeringen mot profilen.
+
 ## «Har vi dekket dette før?»
 
 For hver valgte sak vurderes signalet mot redaksjonens egne artikler. Det svarer
 på tre ting samtidig: er saken skrevet før (ikke gjenta), finnes det en egen sak å
 bygge videre på (billigere og bedre), og hvilken tone har redaksjonen på temaet.
+
+**Dette er andre gang spørsmålet stilles, og bare denne gangen klarerer det.**
+Grovsorteringen i `/kasus:start` leste alle sakene på tittel og sammendrag; her
+leses én sak med hele signalet — `details`, aktørene, tallene, datoene. Steg 3
+kjører uansett hva grovsorteringen fant, og et `ÅPEN` derfra er et fravær av treff
+på tittelen, ikke en klarering. Kostnadene er asymmetriske: å vise en artikkel som
+ikke var samme sak koster tretti sekunders lesing, å skjule en publisert sak koster
+en dublett på nett. De fire dommene er definert ett sted, i
+[`references/dekningsdom.md`](./references/dekningsdom.md), så de betyr det samme
+begge steder.
 
 **Artikkel-API-et har ingen tekstsøk.** Spørsmålet kan derfor ikke stilles til
 serveren. Verktøyet henter i stedet et vindu på de 200 nyeste egne artiklene —
@@ -289,12 +343,12 @@ Saksløpet måler mot en **kvittering**: tidspunktet forrige saksløp ble gjort,
 
 ## Agenter
 
-Begge finnes av samme grunn: **API-et har ingen tekstsøk**, verken på signaler
-eller artikler. Et tema er ikke et filter — det må leses. Agentene henter vinduet
-selv, så de hundre eller to hundre elementene blir liggende i deres kontekst
-framfor i samtalens.
+De tre første finnes av samme grunn: **API-et har ingen tekstsøk**, verken på
+signaler eller artikler. Et tema er ikke et filter — det må leses. Agentene henter
+vinduet selv, så de hundre eller to hundre elementene blir liggende i deres
+kontekst framfor i samtalens.
 
-Begge trigges på naturlig språk. Du trenger ingen kommando for å spørre.
+De trigges på naturlig språk. Du trenger ingen kommando for å spørre.
 
 `kasus-lookout` besvarer **ett spørsmål om radarsignalene**: «er det noe nytt å
 skrive om?», «er det noe om strømpriser?», «hva kom inn denne uka?», «hvor mange
@@ -335,6 +389,14 @@ vi skrevet om i dag?», «hvem hos oss dekker samferdsel?» eller «hvilken tone
 vi hatt på strømpriser?», er det samme agent — og for et spørsmål med tidsgrense
 er svaret fullstendig framfor et utsnitt, fordi vinduet da kan dekke hele
 perioden.
+
+`kasus-triage` er den eneste som leser **begge** vinduene samtidig, og den eneste
+som ikke besvarer et spørsmål: den bearbeider. Hele signalvinduet holdt mot alle de
+200 nyeste publiserte egne sakene, signalene som er samme sakskompleks slått
+sammen til kandidatsaker, og en foreløpig dekningsdom på hver. Det er forarbeidet
+i `/kasus:start` — se [«Lista er luket før du ser den»](#lista-er-luket-før-du-ser-den).
+Den prioriterer ikke (profilen hentes ikke der) og **kvitterer aldri**, som ingen
+av de andre.
 
 `kasus-researcher` besvarer **ett** researchspørsmål: søker bredt, leser smalt,
 går til primærkilden framfor omtalen, daterer alt, og skiller mellom bekreftet,
