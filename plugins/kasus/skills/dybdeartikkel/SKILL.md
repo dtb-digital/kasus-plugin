@@ -17,6 +17,12 @@ gjør det i seks steg:
 Steg 3–6 gjentas per valgt sak, og hele saksløpet kan kjøres på nytt rett etterpå.
 Du hopper ikke over et steg, og du velger ikke saken for journalisten.
 
+**Alt som legges fram for journalisten har én form**, og den står i
+[`references/samtaleform.md`](../../references/samtaleform.md): tittel, én til to
+linjer om hva saken er, og en klikkbar lenke. Id-ene, kategorinavnene, feltnavnene
+og flaggene i denne filen er arbeidsmaterialet ditt — du trenger dem i hvert steg,
+og ingen av dem hører i tråden.
+
 ## Før du starter: er dette saksløpet?
 
 Saksløpet koster tid og **flytter kvitteringen**. To spørsmål ser like ut og skal
@@ -87,10 +93,10 @@ tittel og sammendrag: «strømstøtte», «nettleie» og «kraftpris» er samme 
 `kasus-lookout` besvarer, og et RENT spørsmål hører fortsatt der; forskjellen er
 hva svaret skal brukes til. Her skal det velges fra, så lenkene må stå i samtalen.
 
-**Fant du treff:** rangér etter steg 2 og legg dem fram med kategori, begge
-datoer, mønster og klikkbar lenke — og si for hvert av dem **om det er nytt siden
-sist eller alt sett**. Et signal fra i forgårs er ingen nyhet, og journalisten kan
-ha lagt det til side selv. Gå så til steg 3 som normalt.
+**Fant du treff:** rangér etter steg 2 og legg dem fram i samtaleformen — tittel,
+hva saken er, klikkbar lenke — og si for hvert av dem **om det er nytt siden sist
+eller noe som lå der forrige gang også**. Et signal fra i forgårs er ingen nyhet,
+og journalisten kan ha lagt det til side selv. Gå så til steg 3 som normalt.
 
 **Fant du ingen:** si det rett ut, og si hva det ikke betyr. «Radaren har
 ingenting på dette i de siste sju døgnene» er ikke «det finnes ingen sak» —
@@ -184,8 +190,8 @@ Tre svar krever noe annet enn å gå videre:
 
 ## 2. Prioriter — si hva hvert signal ER, og begrunn i profilen
 
-Hvert signal du legger fram skal være merket med **kategori**. De fire krever
-ulike tiltak, og i rå API-felt ser de like ut:
+Hvert signal du legger fram skal si **hva det er** — i klartekst, ikke med
+kategorinavnet. De fire krever ulike tiltak, og i rå API-felt ser de like ut:
 
 | Kategori | Hva du har i hånda | Tiltaket |
 |---|---|---|
@@ -297,7 +303,11 @@ Journalisten skal kunne **åpne kildene og lese seg opp før han velger**. Derfo
 
 - **Hver sak i lista du legger fram har sin lenke, som en markdown-lenke på
   sakens egen linje** — `[SSB: kvadratmeterprisen falt 4,2 %](https://…)` — ikke
-  som en fotnote, ikke som en samlet lenkeliste nederst, og ikke bare som en id.
+  som en fotnote, ikke som en samlet lenkeliste nederst, og aldri bare som en id.
+  Lenka er også det som gjør lista etterprøvbar: id-en kan han ikke åpne.
+- **Nummerér sakene, og hold id-ene selv.** Nummeret er håndtaket journalisten
+  peker med — «3 og 7» — og koblingen fra nummer til signal-id blir liggende hos
+  deg, til `signal <id>` i 4a og `kvitter --ids` i 4d.
 - **Lenkene skal stå i teksten FØR du stiller spørsmålet.** Alternativene i
   AskUserQuestion er korte og ikke noe man klikker på, så en URL som bare står
   der er en URL journalisten ikke får åpnet. Legg fram den prioriterte lista med
@@ -305,11 +315,16 @@ Journalisten skal kunne **åpne kildene og lese seg opp før han velger**. Derfo
 - **Har et signal flere kilder** (`+N kilder til` i outputen), si det og oppgi
   lenkene fra `sources` — for et oppfølgingssøk er det ofte de ANDRE kildene som
   er saken, ikke hovedlenka.
-- **Mangler et signal lenke** (`LENKE: (ingen …)`), si det rett ut. Det er ikke
-  en formalitet: et signal ingen kan åpne må vurderes på tittelen alene, og det
-  er en grunn til å prioritere det ned.
+- **Mangler et signal lenke** (`LENKE: (ingen …)`), si det rett ut, med egne ord:
+  «denne har ingen lenke, så den må vurderes på tittelen». Det er ikke en
+  formalitet — et signal ingen kan åpne er en grunn til å prioritere det ned.
 - Skriv gjerne én linje om hva som er verdt å se etter i lenka, slik at
   klikkingen har en retning: «sjekk om sakspapiret oppgir hvilket kvartal».
+
+**Kategorien, mønsteret og datoene sies som det de betyr**, ikke som feltene de
+er: «ny kilde på saken vår fra mai» framfor `egen_oppfolging`, «den typen sak
+dere har hatt uttelling på» framfor `mønster: boligmarkedet`, «saken er fra i
+fjor, selv om radaren fant den i dag» framfor to tidsstempler.
 
 ## 3. Spør hva som skal jobbes med
 
@@ -317,8 +332,9 @@ Bruk **AskUserQuestion** med begge spørsmål i **samme kall**:
 
 **Spørsmål 1 — «Hvilke signaler skal du jobbe med?»** (`multiSelect: true`)
 
-`label` er en kort tittel (maks 5 ord), `description` er kategori + begrunnelse +
-id, slik at valget er sporbart.
+`label` er en kort tittel (maks 5 ord), `description` er nummeret i lista, hva
+signalet er og hvorfor det er rangert der — ingen id. Nummeret er koblingen
+tilbake til lista over spørsmålet, og til id-en du holder selv.
 
 **Verktøyet tar maks fire alternativer**, og hvor mange av dem som skal være
 signaler avhenger av hvor mange som finnes:
@@ -337,9 +353,9 @@ vinduet mye bredere enn et døgn og lista lang, tilby i samme åndedrag at
 `--hours 24` gir et saksløp på bare siste døgn.
 
 **Blir alternativet valgt**, legg fram HELE lista — hvert signal i prioritert
-rekkefølge, med kategori, begge datoer, mønster, eventuell kobling til ukas
-produksjon, og **klikkbar lenke på sakens egen linje**. Nummerér dem, slik at
-journalisten kan svare «3 og 7». Spør så på nytt med de samme to spørsmålene, men
+rekkefølge, i samtaleformen: tittel, én til to linjer om hva saken er, hvor
+gammel den er, eventuell kobling til ukas produksjon, og **klikkbar lenke på
+sakens egen linje**. Nummerér dem, slik at journalisten kan svare «3 og 7». Spør så på nytt med de samme to spørsmålene, men
 **uten** listealternativet: alt er vist, og en gjentakelse ville vært en løkke.
 
 Lenkene hører i teksten over spørsmålet, ikke i alternativene: journalisten skal
@@ -409,24 +425,31 @@ Dette steget avgjør tre ting samtidig: om saken er skrevet før (ikke gjenta), 
 det finnes en egen sak å bygge videre på (billigere og bedre), og hvilken tone
 redaksjonen faktisk har på temaet.
 
-**Gjenta begge forbeholdene fra agenten**, og hold dem fra hverandre:
+**Gjenta begge forbeholdene fra agenten**, og hold dem fra hverandre — som
+setninger, ikke som feltnavn:
 
 - **Vindusgrensen.** Vurderingen gjelder de 200 nyeste artiklene, fordi API-et
   ikke har tekstsøk. **«Ingen treff» betyr «ikke blant disse artiklene», ikke
-  «ikke dekket»** — en eldre sak om samme tema er usynlig. Den forskjellen er det
-  som skiller en ny sak fra en dublett.
+  «ikke dekket»** — en eldre sak om samme tema er usynlig. Sagt til journalisten:
+  «jeg har sett de 200 nyeste sakene våre, ikke hele arkivet». Den forskjellen er
+  det som skiller en ny sak fra en dublett.
 - **At det er en vurdering.** Den er ikke reproduserbar og kan bomme. Derfor står
-  id, dato og url på hver kandidat: journalisten skal kunne overprøve den.
+  dato og lenke på hver kandidat: journalisten skal kunne åpne saken og overprøve
+  den på tretti sekunder. Artikkel-id-ene fra agenten holder du selv — de skal i
+  `egneSaker` i frontmatteren i 4c.
 
 Har agenten ingen kandidater, si det som det er — og skill de to grunnene:
 temaet er udekket i vinduet, eller organisasjonen har ingen artikler
 synkronisert i det hele tatt. Det andre er ikke et svar på spørsmålet.
 
 Legg fram kandidatene for brukeren **med klikkbar lenke til hver egen sak** — han
-skal kunne åpne den og se hva som alt står der. Dommen fra agenten er
-`SAMME SAK` (ikke skriv), `OPPFØLGING` (skriv, men som oppfølging), `FUNDAMENT`
-(bygg på den) eller `SAMME TEMA` (ingen dublettrisiko, men tonebeviset). Er det
-samme sak, si det og gå videre til neste signal framfor å skrive noe uansett.
+skal kunne åpne den og se hva som alt står der. Og si dommen som **tiltaket**,
+framfor med ordet: `SAMME SAK` er «denne saken har vi — jeg ville ikke skrevet
+den om igjen», `OPPFØLGING` er «vi har den fra mai, så dette blir en oppfølger»,
+`FUNDAMENT` er «bakgrunnen ligger i saken vår fra i vår, bygg på den», og
+`SAMME TEMA` er «beslektet, ingen dublettfare — men det er slik dere skriver om
+dette». Er det samme sak, si det og gå videre til neste signal framfor å skrive
+noe uansett.
 
 ### 4b. Bredt søk — utvid og etterprøv
 
@@ -493,18 +516,18 @@ mens alt annet fortsatt er nytt neste saksløp — så et saksløp som blir avbr
 verken mister eller gjentar arbeid.
 
 Er det flere valgte saker igjen, spør med **AskUserQuestion**: «Fortsett med neste
-sak?» — *Ja, neste* / *Stopp her og kvitter resten* / *Stopp, ikke kvitter mer*.
-Er det ingen igjen, gå til steg 5.
+sak?» — *Ja, neste* / *Stopp her, og regn resten som sett* / *Stopp, og la resten
+ligge til neste gang*. Er det ingen igjen, gå til steg 5.
 
 ## 5. Avslutt saksløpet
 
 Spør med **AskUserQuestion** hva som skal skje med signalene som IKKE ble
 behandlet:
 
-| Alternativ | Kommando | Betyr |
+| Alternativet han ser | Kommandoen du kjører | Betyr |
 |---|---|---|
-| Kvitter hele saksløpet | `kvitter --at <meta.kvitter.at> --ids <alle viste id-er>` | Alt som ble vist er sett. Neste saksløp starter her. |
-| La resten stå | — | De ubehandlede kommer igjen neste saksløp. |
+| «Regn resten som sett» | `kvitter --at <meta.kvitter.at> --ids <alle viste id-er>` | Alt som ble vist er sett. Neste saksløp starter her. |
+| «La resten ligge til neste gang» | — | De ubehandlede kommer igjen neste saksløp. |
 
 `meta.kvitter` i JSON-svaret fra steg 1 har tidspunktet og id-ene ferdig. Bruk dem
 ordrett — ikke lag et tidspunkt selv.
@@ -515,13 +538,14 @@ rytmen: kjør saksløpet, ta én sak, kvitter, kjør igjen.
 
 ## 6. Rapporter
 
-Kort:
+Kort, og i samtaleformen — ingen id-er, ingen flagg:
 
-- hvilke saker som ble behandlet, med kategori, og hva som ble lagt til side
-- for hver sak: stien til saksforslaget, og om egne artikler dekket temaet
+- hvilke saker som ble behandlet, og hva som ble lagt til side
+- for hver sak: **stien til saksforslaget** (den er leveransen, og den skal stå),
+  og om redaksjonen alt hadde skrevet om temaet
 - **hvert hull**: `[TRENGER VERIFISERING]`, `[SITAT MANGLER]`, og hvem som må
   kontaktes
-- hva kvitteringen nå står på, og hva som dermed kommer igjen neste saksløp
+- hva som nå regnes som sett, og hva som dermed kommer igjen neste gang
 
 Saksløpet publiserer ingenting. Pluginen skriver til disk i dette repoet, og API-et
 er read-only.

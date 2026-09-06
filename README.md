@@ -89,27 +89,49 @@ Den har sitt eget vilkår: **ingen oppfølger uten et nytt faktum med kilde og
 dato.** «Det har gått en måned» er ikke noe nytt, og en oppfølger uten noe nytt er
 den samme saken publisert to ganger.
 
-`/kasus:start` er inngangen for den som ikke har bestemt seg, og den legger fram et
-**bearbeidet** grunnlag framfor en rå liste. Agenten `kasus-triage` sveiper hele
-signalvinduet og alle de 200 nyeste publiserte egne sakene, slår sammen signalene
-som er samme sakskompleks til kandidatsaker, og gir hver av dem en foreløpig
-dekningsdom — så det som alt er dekket står merket, og det som har en egen sak å
-bygge på står med lenke til den. Statusen «hva er nytt siden sist» måles ved siden
-av, mot kvitteringen. Så **spør den hva du vil gjøre**: en ny sak, en oppfølger,
-eller et spørsmål, og svaret sender deg videre i riktig ferdighet. Kommandoen
-kvitterer aldri, skriver ingenting og gjør ingen research — den kan spørre, ikke
-utføre.
+`/kasus:start` er inngangen for den som ikke har bestemt seg, og den svarer på
+**hva har vi å jobbe med i dag?** Fire kall i samme melding, og siste døgn av hver
+— eller helt tilbake til forrige kvittering, om det er lenger siden: radarens
+signaler, Kasus' egne story-briefs, redaksjonens egne ferske saker, og statusen
+«hva er nytt siden sist», målt mot kvitteringen. De tre kildene peker mot ulike
+neste steg, og det er hele grunnen til at de står side om side: en egen sak mot en
+**oppfølger**, et signal mot en **ny sak**. Så **spør den hva du vil gjøre**, og
+svaret sender deg videre i riktig ferdighet. Kommandoen kvitterer aldri, skriver
+ingenting og gjør ingen research — den kan spørre, ikke utføre.
+
+**Den legger materialet fram slik det ligger, og bearbeider ingenting.** Er tre av
+signalene den samme SSB-saken, står de som tre; er saken skrevet i fjor, er det
+ikke merket. Begge forbeholdene står i svaret, fordi et fravær ellers leses som en
+klarering. Prisen er at du ser materialet rått, og gevinsten er at et blikk over
+alt koster sekunder.
+
+Vil du ha det luket, er det **ett steg til**: «rydd opp i signalene». Da sveiper
+`kasus-triage` hele signalvinduet og alle de 200 nyeste publiserte egne sakene,
+slår sammen signalene som er samme sakskompleks til kandidatsaker, og gir hver av
+dem en foreløpig dekningsdom — så det som alt er dekket står merket, og det som
+har en egen sak å bygge på står med lenke til den. Det koster et par minutter, og
+de tre hundre elementene ligger i **agentens** kontekst framfor i samtalens. Det er
+derfor det er et eget steg og ikke en del av inngangen: du betaler for
+forarbeidet når du vil ha det, ikke hver gang du bare vil se hva som ligger der.
 
 Dommen derfra klarerer ingen sak: den er en grovsortering på signalets tittel og
 sammendrag, og velges saken, leser `kasus-archivist` det samme vinduet på nytt med
-hele signalet. Prisen for forarbeidet er et par minutter framfor et halvt, og de
-tre hundre elementene ligger i agentens kontekst framfor i samtalens.
+hele signalet.
 
 Ferdigheten `hjelp` forklarer resten: «hvordan bruker jeg denne?», «hva kan
 kasus?», «hjelp» — eller `/kasus:hjelp`. Den kobler jobben til inngangen,
 oversetter ordene i outputen (kvitteringen, de fire kategoriene, `GAMMEL SAK`), og
 sier hva som er galt når noe ikke virker. Den gjør ingen av jobbene: ingen
 signaler, ingen research, ingen kvittering — den tilbyr å starte riktig inngang.
+
+**Alt som legges fram har én form, og den er journalistens:** tittel, én til to
+linjer om hva saken er, og en klikkbar lenke. Ingen id-er, ingen kategorinavn,
+ingen feltnavn og ingen flagg — de er arbeidsmateriale, og en id kan verken åpnes
+eller ringes. Etterprøvbarheten ligger i lenka og datoen, som gjør samme jobb
+bedre. Forbeholdene består, men på norsk: hvilken periode svaret gjelder, at
+ingenting her er et søk i alt, og hvert hull i utkastet. Formen er definert ett
+sted, [`references/samtaleform.md`](plugins/kasus/references/samtaleform.md), og
+håndhevet i `/kasus:test`.
 
 I tillegg finnes `/kasus:env` (sjekker oppsettet) og `/kasus:test` (selvtest) som
 diagnostikk.

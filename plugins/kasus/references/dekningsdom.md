@@ -39,15 +39,21 @@ samme sak selv om den ene sier «Bodø» og den andre «Nordland».
 «Handler om det samme» er ikke en dom — det er spørsmålet gjentatt. En dom uten
 skillet er ubrukelig for den som skal overprøve den.
 
-## Hver kandidat bærer id, dato og url
+## Hver kandidat bærer dato og url
 
 Vurderingen er semantisk, og det er med vilje: samme sak kan være skrevet med helt
 andre ord, og en ordmatch svarte nei på nettopp de tilfellene (prinsipp 8).
 
 Prisen er at dommen ikke er reproduserbar. Den betales med etterprøvbarhet —
-artikkel-id, dato og url på hver kandidat, slik at den som spurte kan åpne saken
-og overprøve deg på tretti sekunder. Du finner ikke opp en id, og du nevner ingen
+**dato og url på hver kandidat**, slik at den som spurte kan åpne saken og
+overprøve deg på tretti sekunder. Du finner ikke opp en url, og du nevner ingen
 artikkel du ikke har sett i `data`.
+
+**Artikkel-id-en hører i rapporten, ikke i tråden.** Ta den med i svaret ditt til
+orkestratoren — den trengs til `article <id>` og til `egneSaker` i saksforslagets
+frontmatter — men det journalisten leser er tittel, dato, lenke og hva som skiller
+saken fra signalet. En id kan hun ikke åpne. Formen står i
+[`samtaleform.md`](./samtaleform.md), og gjelder begge stedene dommen felles.
 
 ## «Ingen treff» er ikke «ikke dekket»
 
@@ -55,9 +61,11 @@ Artikkel-API-et har ingen tekstsøk, så dommen felles mot et VINDU av de nyeste
 egne artiklene. En eldre sak er usynlig, og kladder er utenfor vinduet — så «ingen
 treff» betyr heller ikke «ingen kollega jobber med dette».
 
-Vindusgrensen står i `meta.forbehold` og skal gjentas ordrett. Er `meta.taketNådd`
-sann, mangler svaret data, og det er den ene opplysningen som gjør en dom
-ubrukelig hvis den utelates.
+Vindusgrensen står i `meta.forbehold` og skal gjentas ordrett i rapporten. Er
+`meta.taketNådd` sann, mangler svaret data, og det er den ene opplysningen som gjør
+en dom ubrukelig hvis den utelates. Videre til journalisten sies den samme
+grensen på norsk framfor ordrett: «dette er de nyeste sakene våre, ikke hele
+arkivet» — jf. `samtaleform.md`.
 
 ## To nivåer, og bare det ene klarerer
 

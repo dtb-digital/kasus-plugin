@@ -11,6 +11,11 @@ Derfor er dette ofte den billigste gode saken redaksjonen kan gjøre — og den
 farligste å gjøre dårlig. En oppfølger uten noe nytt er den samme saken publisert
 to ganger, og det er leseren som merker det først.
 
+**Alt som legges fram for journalisten har én form**, og den står i
+[`references/samtaleform.md`](../../references/samtaleform.md): tittel, én til to
+linjer om hva saken er, og en klikkbar lenke. Id-ene, flaggene og feltnavnene i
+denne filen er arbeidsmaterialet ditt.
+
 ## Vilkåret: noe NYTT som kan kildebelegges
 
 **Ingen oppfølger uten et nytt faktum med kilde og dato.** Det er inngangsvilkåret
@@ -40,12 +45,15 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs profile --json
 søk du kan sende til serveren: artikkel-API-et har ingen tekstsøk. To veier:
 
 - **Er saken fersk**, hent vinduet og finn den selv:
-  `articles --kort --hours 720 --limit 100 --json`. Legg fram kandidatene med
-  id, dato og lenke, og la journalisten peke — ikke velg artikkelen for henne.
+  `articles --kort --hours 720 --limit 100 --json`. Legg fram kandidatene
+  **nummerert, med tittel, dato og lenke**, og la journalisten peke — ikke velg
+  artikkelen for henne. Artikkel-id-ene holder du selv; hun kan ikke bruke dem
+  til noe, og du trenger dem til `article <id>`.
 - **Er den eldre eller vinduet stort**, spør `kasus-archivist`: «hvilken sak var
   det vi skrev om <tema>?». Den leser vinduet i sin egen kontekst og svarer med
-  id, dato og url. Vinduet er de 200 nyeste, så en gammel sak kan være usynlig —
-  si det framfor å konkludere at den ikke finnes.
+  tittel, dato og url, og med id-ene samlet til slutt. Vinduet er de 200 nyeste,
+  så en gammel sak kan være usynlig — si det framfor å konkludere at den ikke
+  finnes.
 
 Les så artikkelen ordentlig, og hent ut fire ting du skal bruke senere:
 
@@ -196,14 +204,14 @@ fortsatt nytt i neste saksløp. Ble det ikke brukt noe signal, er det **ingentin
 kvittere** — kvitteringen gjelder signaler, ikke artikler. Si det i én linje
 framfor å røre den.
 
-Rapporter kort:
+Rapporter kort, i samtaleformen — ingen id-er, ingen flagg:
 
 - hvilken artikkel som var utgangspunktet, med dato og lenke
 - **hva det nye er**, og hvilket av de fire slagene det er
-- om redaksjonen alt hadde fulgt opp, og hva dekningssjekken dekket
+- om redaksjonen alt hadde fulgt opp, og hvor langt tilbake sjekken så
 - stien til saksforslaget, og **hvert hull**: `[TRENGER VERIFISERING]`,
   `[SITAT MANGLER]`, og hvem som må kontaktes
-- om et signal ble kvittert, eller om det ikke fantes noe å kvittere
+- om saken nå regnes som behandlet, eller om det ikke var noe å kvittere for
 
 Ingenting publiseres. Forslaget legges på disk i dette prosjektet, og API-et er
 read-only.
