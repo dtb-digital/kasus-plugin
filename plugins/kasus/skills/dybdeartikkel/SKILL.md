@@ -25,7 +25,7 @@ ikke hit:
 - **«Er det noe nytt?», «er det noe om strømpriser?», «hva kom inn denne uka?»** —
   det er et spørsmål om hva som ligger der, ikke en beslutning om å jobbe.
   `kasus-lookout` svarer på det, og kvitterer aldri. `/kasus:start` gir samme
-  blikk som en status.
+  blikk over alt materialet, og kvitterer heller ikke.
 - **«Har vi skrevet om X?», «hva har vi publisert i dag?»** — `kasus-archivist`
   alene. Ingen saksløp.
 - **«Følg opp saken vår om X», «hva har skjedd siden vi skrev om dette?»** —
@@ -68,7 +68,9 @@ et sporbart utgangspunkt: `kasusSignalId` i forslaget, og noe å kvittere for.
 
 **Kvitteringen er feil vindu for et tema.** Den svarer på hva DU har sett, mens
 spørsmålet er hva radaren har på strømpriser — også det som ble vist og lagt til
-side for tre dager siden. Kjør derfor dette i tillegg til de tre kallene i steg 1:
+side for tre dager siden. Her gjelder derfor **ikke** vindusregelen: temasøket har
+sitt eget, faste vindu på sju døgn, fordi et tema ikke blir mindre aktuelt av at
+du kjørte et saksløp i går. Kjør dette i tillegg til kallene i steg 1:
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs signals --kort --hours 168 --limit 100 --json
@@ -130,12 +132,13 @@ research i samtalen, ikke et saksforslag: ingen fil, ingen kvittering, og si det
 
 ## 1. Hent saksløpet og premissene
 
-Kjør alle tre i **samme melding**, så de går parallelt:
+To runder, som i `/kasus:start`, og av samme grunn: **vinduet kommer fra
+kvitteringen**, og den er det bare `nytt` som kjenner. Kjør de to første i samme
+melding:
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs nytt --json
 node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs profile --json
-node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs articles --kort --hours 168 --limit 40 --json
 ```
 
 `nytt` måler mot **kvitteringen** — tidspunktet forrige saksløp ble gjort, lagret i
@@ -144,15 +147,29 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs articles --kort --hours 168 -
 Profilen er ikke et vedlegg. Den er grunnlaget for både prioriteringen i steg 2 og
 tonen i steg 5: uten `criteria.patterns` er en rangering magefølelse med tall på.
 
-Det tredje kallet er **ukas produksjon**: de 40 nyeste publiserte sakene, siste
-sju døgn. Profilen sier hva som fungerer for disse leserne i prinsippet; denne
-sier hva redaksjonen faktisk holder på med akkurat nå. De to er ikke det samme, og
-det er den andre journalisten kjenner igjen — «vi kjørte den saken på tirsdag».
+Regn så ut vinduet `V` etter **vindusregelen** i
+[`references/vindu.md`](../../references/vindu.md) — `max(24, meta.vindu.hours)`,
+eller brukerens `--hours N` om det er oppgitt — og hent produksjonen:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs articles --kort --hours V --limit 40 --json
+```
+
+Det er **redaksjonens produksjon i perioden**: de 40 nyeste publiserte sakene siden
+sist. Profilen sier hva som fungerer for disse leserne i prinsippet; denne sier hva
+redaksjonen faktisk holder på med akkurat nå. De to er ikke det samme, og det er
+den andre journalisten kjenner igjen — «vi kjørte den saken på tirsdag».
+
+`V` er det samme vinduet `/kasus:start` brukte, så det journalisten så i inngangen
+er det du jobber videre på. Kjøres saksløpet daglig, er det et døgn — og da er
+produksjonen en håndfull saker. Det er tynt som grunnlag for «hva står vi i nå»,
+og tiltaket er å SI det framfor å utvide i stillhet: «én sak siden i går» er en
+opplysning, ikke et hull.
 
 Vinduet er lite med vilje. Det skal leses her, i samtalen, fordi det brukes til å
 begrunne en rangering journalisten skal se. Er `taketNådd` sann, publiserte
-redaksjonen mer enn 40 saker på en uke — si det, og behandle vinduet som «de 40
-siste», ikke som uka.
+redaksjonen mer enn 40 saker i perioden — si det, og behandle vinduet som «de 40
+siste».
 
 Tre svar krever noe annet enn å gå videre:
 
@@ -180,11 +197,15 @@ ulike tiltak, og i rå API-felt ser de like ut:
 `meta.grupper` har kategoriene ferdig oppdelt med id-er og forklaring. Bruk dem —
 ikke utled kategorien selv.
 
-### Har `/kasus:start` kjørt, er halve steget gjort
+### Har `kasus-triage` kjørt, er halve steget gjort
 
 Sto det en bearbeidet liste i samtalen før du begynte — kandidatsaker med antall
 signaler og en dekningsdom — kom den fra `kasus-triage`, og den er bygd på et
 bredere signalvindu enn ditt: hele vinduet, ikke bare «siden sist».
+
+Den står der bare hvis noen ba om den. `/kasus:start` henter materialet rått og
+konsoliderer ingenting, så etter en vanlig inngang er det INGEN grovsortering å
+arve — og da er dette avsnittet ikke noe du later som gjelder.
 
 **Arv den, ikke utled noe annet av det samme materialet.** To ulike
 konsolideringer av de samme signalene i samme samtale er verre enn én: journalisten
@@ -365,7 +386,7 @@ Agenten henter artiklene selv. Gi den:
   `publishedDate`, `actors`, `keyFigures`, `matchedPattern`. Er saken konsolidert
   av flere signaler, gi den ALLE — det er saken som skal sjekkes, ikke ett av
   signalene i den
-- **kandidatene grovsorteringen fant**, hvis `/kasus:start` har kjørt: artikkel-id,
+- **kandidatene grovsorteringen fant**, hvis `kasus-triage` har kjørt: artikkel-id,
   dato og den foreløpige dommen. Da bruker agenten sin dybde på å bekrefte eller
   omgjøre dem, framfor å oppdage de samme to en gang til
 

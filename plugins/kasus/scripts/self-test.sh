@@ -4,7 +4,9 @@
 # Tørt (default): syntaks på alle skript, at komponentmappene ikke er tomme, at
 # ferdighetene har navn som matcher mappa, at saksløpet bare kvitteres fra ett sted
 # og krever et signal, at statusen henter begge vinduene sine, at hjelpen nevner
-# alle inngangene som finnes, at
+# alle inngangene som finnes, at inngangen henter alle fire kildene og sier at
+# lista er rå, at inngangen og saksløpet deler vindusregel, at ingen ferdighet
+# starter fra en story-brief, at
 # manifestene er gyldig JSON, at verktøyets --list-kontrakt holder, at
 # kommandoene bare refererer til modi som FINNES, at enhetstestene er grønne, og
 # at mål-presedensen er den samme i shell og JS.
@@ -301,6 +303,30 @@ else
   fail "saksløpet kaller ikke «kvitter» — «siden sist» ville stått stille"
 fi
 
+# --- 4b-bis. En brief er ikke opphavet til et saksforslag -----------------
+# `story-briefs` henter Kasus' EGNE saksforslag, laget av innholdspipelinen.
+# Inngangen LEGGER DEM FRAM — «er dette alt tenkt på?» er et reelt spørsmål før
+# man setter i gang — men ingen FERDIGHET får bygge et saksforslag på en brief.
+# Saksløpet krever et signal: sporet tilbake til hvorfor saken ble tatt opp
+# (`kasusSignalId`, `signalUrl`) er halve verdien av fila, og en brief har ikke
+# det sporet. Kunne en ferdighet starte fra en brief, ville forslaget fått et
+# opphav ingen kan slå opp — og det er usynlig i filen etterpå.
+#
+# Grensen går derfor mellom å VISE og å STARTE FRA: commands/ er utenfor,
+# skills/ og agents/ er innenfor.
+BRIEFBRUKERE=""
+for f in $(find "$ROOT/agents" "$ROOT/skills" -name '*.md' 2>/dev/null | sort); do
+  [ -f "$f" ] || continue
+  if grep -qE 'kasus\.mjs[[:space:]]+story-brief' "$f"; then
+    BRIEFBRUKERE="${BRIEFBRUKERE} ${f#"$ROOT"/}"
+  fi
+done
+if [ -n "$BRIEFBRUKERE" ]; then
+  fail "disse henter story-briefs:${BRIEFBRUKERE} — en ferdighet kan ikke bygge et forslag på en brief"
+else
+  pass "ingen ferdighet eller agent starter fra en story-brief (saksløpet krever et signal)"
+fi
+
 # --- 4c. Signalet er inngangsvilkåret -------------------------------------
 # Saksløpet skriver ikke et saksforslag uten et signal: sporet tilbake til hvorfor
 # saken ble tatt opp (`kasusSignalId`, `signalUrl`) er halve verdien av filen, og
@@ -340,29 +366,46 @@ else
   pass "ingen «kasusSignalId: null» — forslaget kan ikke skrives uten opphav"
 fi
 
-# --- 4c-bis. Inngangen legger fram et BEARBEIDET grunnlag -----------------
-# `/kasus:start` er to ting, ikke én: statusen «hva er nytt siden sist» (`nytt`,
-# som kjenner kvitteringen) OG forarbeidet — hele signalvinduet holdt mot alle
-# publiserte egne saker, konsolidert og luket av `kasus-triage`. Faller den ene ut
-# i en forenkling, blir inngangen stille dårligere: en rå liste ser like komplett
-# ut som en bearbeidet, helt til journalisten sitter og slår sammen signaler i
-# hodet igjen.
+# --- 4c-bis. Inngangen legger fram ALT materialet -------------------------
+# `/kasus:start` er statusen «hva er nytt siden sist» (`nytt`, som kjenner
+# kvitteringen) PLUSS de tre kildene journalisten velger mellom: radarsignalene,
+# Kasus' egne story-briefs og redaksjonens egne ferske artikler. Faller én av dem
+# ut i en forenkling, forsvinner et helt neste-steg fra inngangen uten at noe sier
+# fra — mangler artiklene, kan ingen velge en oppfølger; mangler signalene, kan
+# ingen velge en dybdeartikkel.
+#
+# Inngangen BEARBEIDER ikke, og gjør det med vilje: den henter vinduene selv
+# framfor å sende ut `kasus-triage`, så journalisten ser materialet slik det
+# ligger. Prisen er kontekst (~200 elementer i samtalen) og at ingenting er luket
+# — begge forbeholdene skal stå i kommandoen, og det sjekkes under.
 STATUS_CMD="$ROOT/commands/start.md"
 TRIAGE_AGENT="$ROOT/agents/kasus-triage.md"
 if [ -f "$STATUS_CMD" ]; then
-  if grep -qE 'kasus\.mjs[[:space:]]+nytt' "$STATUS_CMD" && grep -q 'kasus-triage' "$STATUS_CMD"; then
-    pass "inngangen har både statusen (nytt) og forarbeidet (kasus-triage)"
+  MANGLENDE_KALL=""
+  for modus in nytt signals story-briefs articles; do
+    grep -qE "kasus\.mjs[[:space:]]+${modus}([[:space:]]|\$)" "$STATUS_CMD" || MANGLENDE_KALL="${MANGLENDE_KALL} ${modus}"
+  done
+  if [ -z "$MANGLENDE_KALL" ]; then
+    pass "inngangen henter alle fire: nytt + signals + story-briefs + articles"
   else
-    fail "commands/start.md mangler statusen (nytt) eller forarbeidet (kasus-triage)"
+    fail "commands/start.md henter ikke:${MANGLENDE_KALL} — et neste-steg mangler i inngangen"
   fi
 
-  # Vinduene hører i AGENTEN, ikke i kommandoen: tre hundre elementer i samtalen
-  # er hele grunnen til at agenten finnes. Henter kommandoen dem selv igjen, er
-  # forarbeidet gratis i tid og dyrt i kontekst.
-  if grep -qE 'kasus\.mjs[[:space:]]+(signals|articles)' "$STATUS_CMD"; then
-    fail "commands/start.md henter signal-/artikkelvinduet selv — det hører i kasus-triage"
+  # Uten forbeholdet leses en rå liste som en bearbeidet: et fravær av treff blir
+  # en klarering, og tre signaler om samme sak blir tre saker. Det er nettopp det
+  # `kasus-triage` gjorde, og som inngangen nå IKKE gjør.
+  if grep -q 'Ingenting er konsolidert' "$STATUS_CMD" && grep -q 'Ingenting er sjekket mot egen dekning' "$STATUS_CMD"; then
+    pass "inngangen sier at ingenting er konsolidert eller dekningssjekket"
   else
-    pass "inngangen henter ikke de store vinduene selv (de ligger i agentens kontekst)"
+    fail "commands/start.md mangler forbeholdet om at lista er RÅ (konsolidering/dekning)"
+  fi
+
+  # Grovsorteringen er ikke borte, den er frivillig. Er veien dit ikke nevnt, er
+  # den i praksis utilgjengelig: agenten oppdages fra mappa og har ingen kommando.
+  if grep -q 'kasus-triage' "$STATUS_CMD"; then
+    pass "inngangen peker på kasus-triage for den som vil ha bildet luket"
+  else
+    fail "commands/start.md nevner ikke kasus-triage — grovsorteringen blir usynlig"
   fi
 fi
 
@@ -373,6 +416,36 @@ if [ -f "$TRIAGE_AGENT" ]; then
     pass "forarbeidet sveiper begge vinduene (signals + articles)"
   else
     fail "agents/kasus-triage.md mangler ett av vinduene (signals + articles)"
+  fi
+fi
+
+# --- 4c-quater. Vinduet er definert ETT sted ------------------------------
+# `/kasus:start` og saksløpet henter det SAMME vinduet: døgnet som gulv, hevet til
+# tiden siden kvitteringen. Sto regelen i begge filene, ville de drevet fra
+# hverandre uten at noe sa fra — og da viser inngangen ett vindu mens
+# arbeidsflyten den sender deg til viser et annet. Det var nettopp skjøten regelen
+# ble skrevet for å lukke: `nytt` måler mot kvitteringen, listene mot timer, og
+# signal-id-er som faller utenfor kan ikke merkes.
+WINDOW_REF="$ROOT/references/vindu.md"
+if [ ! -f "$WINDOW_REF" ]; then
+  fail "references/vindu.md mangler — vinduet har ingen felles definisjon"
+else
+  UTEN_VINDU=""
+  for f in "$STATUS_CMD" "$ROUND_SKILL"; do
+    [ -f "$f" ] || continue
+    grep -q 'vindu\.md' "$f" || UTEN_VINDU="${UTEN_VINDU} ${f#"$ROOT"/}"
+  done
+  if [ -z "$UTEN_VINDU" ]; then
+    pass "inngangen og saksløpet leser vinduet fra references/vindu.md"
+  else
+    fail "disse henter uten den felles vindusregelen:${UTEN_VINDU}"
+  fi
+
+  # Gulvet er hele poenget. Står tallet ikke i regelen, er den ikke en regel.
+  if grep -q 'max(24' "$WINDOW_REF"; then
+    pass "vindusregelen har døgnet som gulv (max(24, siden sist))"
+  else
+    fail "references/vindu.md mangler gulvet max(24, …) — skjøten mot «nytt» er åpen igjen"
   fi
 fi
 

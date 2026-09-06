@@ -54,8 +54,9 @@ i seg selv er inngangen — det finnes ikke noe kommandonavn man må huske førs
 | **bare se hva som ligger der** | «er det noe nytt å skrive om?», «er det noe om strømpriser?», «hva kom inn denne uka?» | `kasus-lookout` leser signalene og svarer. **Kvitterer aldri, skriver ingenting.** Se «Slik får du tak i signalene». |
 | **vite hva dere selv har dekket** | «har vi skrevet om dette?», «hva publiserte vi i dag?», «hvem hos oss dekker samferdsel?» | `kasus-archivist` leser deres egne artikler og svarer med id, dato og lenke. Se «Slik spør du om egen dekning». |
 | **rydde i hele bildet på én gang** | «rydd opp i signalene», «hva av dette henger sammen?», «hva har vi alt dekket av dette?» | `kasus-triage` sveiper alle signalene og alle publiserte egne saker, slår sammen det som er samme sak og merker det som er dekket. Bearbeider — velger ingenting. |
-| **komme i gang, uten å ha bestemt deg** | `/kasus:start` | Samme forarbeid som over, lagt oppå «hva er nytt siden sist» — og så **ett spørsmål**: en ny sak, en oppfølger, eller et spørsmål. Tar et par minutter, fordi den leser tre hundre elementer for deg. Utfører ingenting selv: svaret ditt sender deg videre i riktig ferdighet. |
+| **komme i gang, uten å ha bestemt deg** | `/kasus:start` | **Siste døgn av alt, på én skjerm**: radarsignalene, Kasus' egne story-briefs, deres egne ferske saker og «hva er nytt siden sist» — og så **ett spørsmål**: en oppfølger, en dybdeartikkel, eller et spørsmål. Går på sekunder. Har du ikke kjørt den på en uke, henter den uka. `--hours 72` overstyrer. **Bearbeider ingenting**: ingenting er slått sammen, ingenting er dekningssjekket. Utfører ingenting selv — svaret ditt sender deg videre. |
 | **vite hvorfor radaren fant noe** | «hva ser radaren etter?», «hvilke mønstre har vi?», «hva er profilen vår?» | Ett oppslag mot **profilen**. Se «Profilen — hvorfor signalet er der». |
+| **se hva Kasus selv har foreslått** | «hva ligger det av saksforslag i Kasus?», «har pipelinen laget noe på dette?» | Ett oppslag mot **story-briefs** — Kasus' egne forslag, laget inne i systemet. Ikke det samme som saksforslagene pluginen skriver på disk, og **ikke et utgangspunkt for saksløpet**: det går fra et rått radarsignal. Se «Story-briefs — Kasus' egne forslag». |
 | **sjekke oppsettet** | `/kasus:env`, eller `--resolve` for å se hvilken installasjon et kall treffer | Diagnostikk. |
 | **sjekke at pluginen er hel** | `/kasus:test` | Diagnostikk. `--live` tester også tilkoblingen. |
 
@@ -135,6 +136,7 @@ hva du lurer på.
 | «hent signal 1234» | Ett signal med alle kilder og hele researchkonteksten |
 | «vis flere» / «gå lenger tilbake» | Et større vindu. Vinduet er hundre signaler som standard |
 | «hva er NYTT siden sist?» | `/kasus:start` — den ene som måler mot kvitteringen din |
+| «hva har vi å jobbe med i dag?» | `/kasus:start` — siste døgn av de tre kildene side om side: signaler, briefs, egne saker. Vinduet strekker seg tilbake til forrige kvittering om det er lenger siden, så ingenting «nytt siden sist» faller utenfor |
 
 Tre ting er verdt å si videre til den som spør:
 
@@ -173,6 +175,32 @@ Vinduet er de **200 nyeste publiserte** sakene, og grensen står i svaret. Det e
 den viktigste setningen på denne siden: «ingen treff» betyr «ikke blant disse
 artiklene» — aldri «ikke dekket», og aldri «ingen kollega jobber med dette».
 
+## Story-briefs — Kasus' egne forslag
+
+Kasus lager sine egne saksforslag inne i systemet, av innholdspipelinen: en
+**story-brief** med tittel, plott, vinkling, begrunnelse og en vurdering av
+konverteringspotensial. De ligger i Kasus, ikke på disk, og journalisten kan slå
+dem opp:
+
+- **status** — `candidate` (plukket ut, ikke vurdert ferdig), `proposal` (vurdert
+  og lagt fram), `draft` (noen har begynt å skrive), `final`, `dismissed`. De to
+  første ser ut som synonymer og er det ikke.
+- **opphav** — `innhold` (pipelinen holdt egne saker mot mønstrene), `radar` (et
+  radarsignal), `url` (noen limte inn en lenke), `triage`.
+- **`--hours` måler når KASUS laget briefen**, ikke når noe ble publisert. Et tomt
+  svar betyr «ingenting ble laget i perioden».
+
+To ting må sies når du svarer på et slikt spørsmål:
+
+1. **Dette er ikke saksforslagene pluginen skriver.** Ordet betyr to ting. Bare
+   fila på disk har et signal, en dekningssjekk mot egne artikler og daterte
+   kilder bak seg — en brief er pipelinens vurdering, og ingen har etterprøvd
+   `plot`, `angle` eller `reason`.
+2. **Det er et oppslag, ikke en inngang.** Vil journalisten JOBBE med en sak, er
+   det saksløpet fra et radarsignal — ikke en ferdig brief. To utgangspunkt i
+   samme arbeidsflyt betyr at ingen kan se hvilket som gjelder for forslaget de
+   leser, og det er derfor ingen ferdighet henter briefene.
+
 ## Profilen — hvorfor signalet er der
 
 Profilen er redaksjonens eget premiss, lagret i Kasus: målgruppa, den
@@ -184,9 +212,9 @@ som mønsteret i profilen.
 Profilen er ikke en egen ferdighet eller agent, den er ett oppslag. Den hentes
 automatisk som premiss i `dybdeartikkel` og `oppfolgersak` — for å rangere
 signalene og for å treffe tonen i forslaget. Den hentes bevisst **ikke** i
-`/kasus:start` og ikke av `kasus-triage`: uten profilen kan de bearbeide og luke,
-men ikke prioritere, og en rangering uten premisset ville vært magefølelse med
-tall på.
+`/kasus:start` og ikke av `kasus-triage`: en inngang henter materialet, en agent
+bearbeider det, men prioriteringen krever premisset — og en rangering uten det
+ville vært magefølelse med tall på.
 
 Spør noen direkte «hva ser radaren etter?», er svaret ett kall unna — men det er
 ikke hjelpen som gjør det. Si hva det koster (ingenting), og tilby det.
@@ -210,9 +238,10 @@ strømpriser?» går til den første, «har vi skrevet om strømpriser?» til de
 **Ett spørsmål eller hele bildet.** `kasus-lookout` og `kasus-archivist` svarer på
 ett spørsmål hver, fort. `kasus-triage` leser begge vinduene samtidig — hundre
 signaler mot to hundre egne saker — slår sammen det som er samme sakskompleks til
-én **kandidatsak**, og gir hver av dem en foreløpig dekningsdom. Det er
-forarbeidet i `/kasus:start`, og det koster et par minutter. Et oppslag skal ikke
-betale for det.
+én **kandidatsak**, og gir hver av dem en foreløpig dekningsdom. Den koster et par
+minutter, og den kjøres **når noen ber om den**: `/kasus:start` legger materialet
+fram rått og bearbeider ingenting, så «rydd opp i dette» er et eget steg etter
+blikket. Et oppslag skal ikke betale for det.
 
 **Dommen fra `kasus-triage` klarerer ingen sak.** Den er en grovsortering på
 signalets tittel og sammendrag: god nok til å luke en åpenbar dublett og finne den
@@ -260,7 +289,7 @@ hvilken variabel hver verdi kom fra. Detaljene, inkludert de tre scopene, står 
 | Det du ser | Som regel fordi | Gjør dette |
 |---|---|---|
 | `MANGLER: KASUS_API_KEY` | Nøkkelen står i en `.env`, eller sesjonen er ikke startet på nytt | Flytt den til `env` i `.claude/settings.local.json`, og start sesjonen på nytt |
-| «Ingen signaler» | Vinduet er tomt for **denne organisasjonen** — nøkkelen avgjør hvilken | Prøv et bredere vindu (`/kasus:start --hours 168`). `/kasus:env --resolve` sier hvilken installasjon du treffer, `/kasus:test --live` hvilken organisasjon nøkkelen tilhører |
+| «Ingen signaler» | Vinduet er tomt for **denne organisasjonen** — nøkkelen avgjør hvilken | `/kasus:start` henter bare siste døgn, så prøv `--hours 168` først, eller spør `kasus-lookout` om en lengre periode. `/kasus:env --resolve` sier hvilken installasjon du treffer, `/kasus:test --live` hvilken organisasjon nøkkelen tilhører |
 | Saksløpet sier «ingenting nytt», men du vet det ligger signaler der | Kvitteringen er flyttet — de er sett før | Be om et bredere vindu, eller «ta med det som er forkastet». Vil du starte «siden sist» helt på nytt, kan kvitteringen nullstilles |
 | Et spørsmål gir færre treff enn du tror finnes | Filteret kjørte på et avkortet vindu | Be om et større vindu. Svaret sier hvor mange som ble hentet, og om taket ble nådd |
 | `404` på et signal eller en artikkel | Finnes ikke, **eller** tilhører en annen organisasjon | Sjekk id-en, og hvilken nøkkel som er i bruk |
@@ -282,7 +311,7 @@ hvilken variabel hver verdi kom fra. Detaljene, inkludert de tre scopene, står 
 | **mønster** | Hvilket av redaksjonens egne mønstre i profilen som fanget signalet. Tomt = radaren fant noe profilen ikke forklarer |
 | **`new` / `seen` / `promoted` / `dismissed`** | Signalets status **i Kasus**, ikke din kvittering. Pluginen leser den og skriver den aldri |
 | **SAMME SAK / OPPFØLGING / FUNDAMENT / SAMME TEMA** | Dommen dekningssjekken gir hver kandidat: ikke skriv / skriv som oppfølging / bygg på den / beslektet, og tonebevis. `ÅPEN` betyr at ingenting i vinduet ligner |
-| **kandidatsak** | Én sak, satt sammen av de signalene som handler om det samme. `/kasus:start` konsoliderer, så tre kilder på samme SSB-tall er én linje og ikke tre |
+| **kandidatsak** | Én sak, satt sammen av de signalene som handler om det samme. `kasus-triage` konsoliderer, så tre kilder på samme SSB-tall blir én linje og ikke tre. `/kasus:start` gjør det IKKE — der står de som tre |
 | **grovsortering** | Dekningsdommen fra inngangen, felt på signalets tittel og sammendrag. Den rangerer og advarer — den klarerer ingen sak |
 | **forbeholdet** | Linja som sier hva vinduet faktisk dekket: hvor mange som ble hentet, hvilke filtre som var i bruk, og om taket ble nådd. Den er en del av svaret, ikke en fotnote |
 | `[TRENGER VERIFISERING: …]`, `[SITAT MANGLER: …]` | Et hull som er markert framfor fylt ut. Antallet står i forslagets frontmatter som `apenePunkter` |

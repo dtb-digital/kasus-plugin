@@ -1,139 +1,169 @@
 ---
-description: Kom i gang — sveiper alle signaler og alle publiserte egne saker, slår sammen det som er samme sak, luker det som alt er dekket, og spør hva du vil gjøre. Utfører ingenting selv
-argument-hint: [--hours 72] [--limit 20] [--all]
+description: Kom i gang — henter siste døgn av alt (radarsignaler, Kasus' egne story-briefs og redaksjonens egne artikler, pluss «nytt siden sist»), eller helt tilbake til forrige kvittering om det er lenger siden, legger det fram slik det er, og spør hva du vil gjøre: en oppfølger, en dybdeartikkel eller et spørsmål. `--hours N` overstyrer alle fire. Bearbeider ingenting, utfører ingenting
+argument-hint: [--hours 72] [--all]
 allowed-tools: ["Bash", "Agent", "Task", "AskUserQuestion"]
 ---
 
-Legg fram et **bearbeidet** grunnlag, og kom i gang. Journalisten skal ikke få en
-rå liste med sju signaler som han må konsolidere i hodet — han skal få
-kandidatsakene: det som er samme sak slått sammen, og det som alt er dekket merket
-som dekket.
+Legg fram **materialet slik det ligger**, og kom i gang. Fire kall og **ett
+spørsmål** — ingen agent, ingen research, ingen fil på disk, **ingen kvittering.**
 
-Ett kall, én agent og **ett spørsmål** — ingen research, ingen fil på disk, **ingen
-kvittering.** Arbeidet gjør ferdighetene: `dybdeartikkel` for en ny sak fra
-radaren, `oppfolgersak` for en oppfølger på noe redaksjonen alt har publisert.
+Kommandoen henter **siste døgn** av tre ting journalisten ellers måtte be om hver
+for seg: radarens signaler, **Kasus' egne story-briefs** (forslagene
+innholdspipelinen har laget) og **redaksjonens egne ferske artikler** — og helt
+tilbake til forrige kvittering, om det er lenger siden. Til sammen er det svaret på
+«hva har vi å jobbe med i dag?» — og de tre kildene peker mot ulike neste steg: en
+egen artikkel mot en **oppfølger**, et signal eller en brief mot en
+**dybdeartikkel**.
 
-Det er hele delingen: her bearbeides grunnlaget valget tas på, og valget avgjør
-hvilken ferdighet som tar over.
+Arbeidet gjør ferdighetene: `dybdeartikkel` for en ny sak, `oppfolgersak` for en
+oppfølger på noe redaksjonen alt har publisert. Det er hele delingen — her hentes
+grunnlaget valget tas på, og valget avgjør hvilken ferdighet som tar over.
 
-## 1. Hent statusen, og sett i gang forarbeidet
+**Kommandoen bearbeider ingenting.** Den slår ikke sammen signaler som er samme
+sak, og den feller ingen dekningsdom. Det er et valg, og prisen står i steg 4:
+lista kan inneholde tre signaler om det samme, og en sak redaksjonen skrev i fjor.
+Vil journalisten ha det luket, finnes `kasus-triage` — se «Merk».
 
-Gjør begge i **samme melding**, så de går parallelt. Agenten bruker et par
-minutter på tre hundre elementer; kallet er ferdig på et sekund.
+## 1. Hent statusen først, så listene
+
+To runder, og det er ikke en forglemmelse: **vinduet kommer fra kvitteringen**, og
+den er det bare `nytt` som kjenner.
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs nytt $ARGUMENTS
+node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs nytt $ARGUMENTS --json
 ```
 
-…og i samme melding, `kasus-triage` med:
+Regn ut vinduet `V` etter **vindusregelen** — den står i
+[`references/vindu.md`](../references/vindu.md), og skal leses derfra framfor å
+gjengis her: `V = brukerens --hours N` hvis oppgitt, ellers
+`max(24, meta.vindu.hours)`. Døgnet er et **gulv**, ikke et tak.
 
-- **plugin-roten**, som absolutt sti: skriv ut den faktiske verdien av
-  `${CLAUDE_PLUGIN_ROOT}` i prompten, ikke variabelnavnet
-- **`--env <navn>`**, hvis det jobbes mot et annet miljø
-- **at forkastede signaler skal med**, hvis brukeren ga `--all`
+Hent så de tre listene i **samme melding**, alle med `--hours V`:
 
-Agenten henter selv de to vinduene den trenger — hele signalvinduet og
-`articles --kort --limit 200` — konsoliderer signalene til kandidatsaker, og gir
-hver av dem en foreløpig dekningsdom. **Ikke hent de vinduene her.** Tre hundre
-elementer i denne samtalen er hele poenget med at agenten finnes.
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs signals --kort --hours V --limit 100
+node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs story-briefs --hours V --limit 40
+node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs articles --kort --hours V --limit 60
+```
 
-`nytt` måler mot **kvitteringen** — tidspunktet forrige saksløp ble gjort — og
-undertrykker det som alt er sett, så den svarer på «hva er NYTT». Den skriver
-ingenting. Med `--hours` sier den selv at vinduet er overstyrt, `--all` tar med
-det som er forkastet.
+Jobbes det mot et annet miljø, skal `--env <navn>` med på **alle fire**.
 
-**De to har hvert sitt vindu, og det er med vilje.** `nytt` svarer på hva som har
-kommet inn siden sist; agenten sveiper hele vinduet uansett kvittering, fordi en
-sak journalisten så og lot ligge i går fortsatt er en sak — og fordi et signal fra
-i går og ett fra i dag kan være den samme saken. **`$ARGUMENTS` gjelder bare
-`nytt`.** Et bredere signalvindu endrer hva som regnes som nytt, ikke hva som
-ligger der.
+| Kall | Vindu | Tak |
+|---|---|---|
+| `nytt` | mot kvitteringen (24 t om den mangler) | `--limit`, default 40 |
+| `signals --kort` | `V` | maks 100 |
+| `story-briefs` | `V` | maks 40 |
+| `articles --kort` | `V` | maks 60 |
+
+**Perioden skal stå i svaret**, og den skal være den faktiske: «siste døgn» når
+`V` er 24, «siste fem døgn — siden du kvitterte tirsdag» når kvitteringen hevet
+den. En periode som ikke sies, leses som «alt».
+
+Takene er satt over normalt døgnvolum. Vokser `V`, binder de oftere: en radar som
+leverer seksti signaler i døgnet fyller `--limit 100` på under to døgn. Er
+`taketNådd` sann, mangler svaret data — **si det, og hev `--limit`** framfor å
+krympe vinduet. Det er nettopp de gamle usette signalene gulvet skulle fange.
 
 Tre svar fra `nytt` krever noe annet enn å gå videre:
 
-- **`MANGLER: …`** — oppsettet er ikke på plass. Si hva som mangler, foreslå
-  `/kasus:env`, og stopp. Agenten vil melde det samme.
+- **`MANGLER: …`** — oppsettet er ikke på plass. Da feiler alle fire likt. Si hva
+  som mangler, foreslå `/kasus:env`, og stopp.
 - **`nye: 0`** — ingenting nytt **siden sist**. Det er ikke det samme som at det
-  ikke ligger noe der, og agenten svarer på det andre spørsmålet: vent på den før
-  du konkluderer. Si når det sist ble kvittert og hva som ble holdt utenfor
-  (`holdtUtenfor`).
-- **`kvittering: null`** — første saksløp. Si at «nytt» da er siste 24 timer, og at
-  en kvittering til slutt gjør «siden sist» presist neste gang.
+  ikke ligger noe der: de tre listene svarer på det andre spørsmålet, og de kan
+  være fulle. Si når det sist ble kvittert, og gå videre.
+- **`kvittering: null`** — første gang. Si at «nytt» da er siste 24 timer, og at en
+  kvittering til slutt gjør «siden sist» presist neste gang.
 
-## 2. Les statusen
+## 2. Fire svar som måler fire forskjellige ting
 
-Fra `nytt` er det fire linjer som ER statusen:
+Dette er den ene fella i kommandoen, og den er lett å gå i: **`--hours` betyr ikke
+det samme i de tre listene.**
 
-- **hvor gammel kvitteringen er** — «siden sist» betyr ingenting uten den
-- **antall nye av antall hentet**, og hva som ble holdt utenfor og hvorfor
-- **`fordeling`** — signaler per redaksjonelt mønster, flest først. Den ene linja
-  som svarer på «hva skjer» uten at man leser sju signaler. En topp på «uten
-  mønstertreff» er også en opplysning: radaren finner noe profilen ikke forklarer.
-- **antall gamle saker** — publisert lenge før de ble oppdaget
+| Kall | `hours` måles mot | Et tomt svar betyr |
+|---|---|---|
+| `signals` | `detectedAt` — når radaren **fant** signalet | radaren har ikke funnet noe det siste døgnet |
+| `story-briefs` | `createdAt` — når **Kasus laget** briefen | pipelinen har ikke laget noe det siste døgnet |
+| `articles` | `published` — når **redaksjonen publiserte** | redaksjonen har ikke publisert det siste døgnet |
 
-`oppdaget` og `publisert` er to forskjellige tall. Et fritt temasøk hentes
-uavhengig av publiseringstidspunkt, så et signal oppdaget i dag kan være en sak
-fra 2023. Er det merket `GAMMEL SAK`, si det.
+**Er `V` et døgn, er tomt vanlig.** En redaksjon som ikke publiserte i går har
+ikke sluttet å publisere, og pipelinen kjører i puljer — så et tomt felt er et
+fravær i perioden, aldri et fravær i Kasus. Er to av tre tomme, er tiltaket å
+tilby et bredere vindu (`--hours 168`) framfor å konkludere med at det ikke er noe
+å jobbe med.
 
-## 3. Legg agentens liste over statusen
+Og innad i signalene er `oppdaget` og `publisert` to forskjellige tall: et fritt
+temasøk hentes uavhengig av publiseringstidspunkt, så et signal oppdaget i dag kan
+være en sak fra 2023. Er det merket `GAMMEL SAK`, si det.
 
-Agenten gir deg kandidatsakene — konsoliderte, med dekningsdom. `nytt` gir deg
-hvilke signal-id-er som er **nye siden sist**. Merk hver kandidat ved å slå id-ene
-opp mot hverandre:
+Fra `nytt` er det tre linjer som ER statusen: **hvor gammel kvitteringen er**,
+**antall nye av antall hentet** (og hva som ble holdt utenfor), og **`fordeling`** —
+signaler per redaksjonelt mønster, flest først. Den ene linja som svarer på «hva
+skjer» uten at man leser sju signaler. En topp på «uten mønstertreff» er også en
+opplysning: radaren finner noe profilen ikke forklarer.
 
-- **alle signalene nye** → saken er ny siden sist
-- **noen nye, noen ikke** → si det: «to av tre signaler er nye». Det er ofte den
-  mest interessante formen — en sak journalisten så i går har fått en kilde til.
-- **ingen nye** → saken lå der forrige gang også. Den skal med, men lenger ned, og
-  det skal sies. Et «har ligget her siden fredag» er en opplysning journalisten
-  bruker.
+Signal-id-ene fra `nytt` brukes til én ting: å **merke** hvilke av signalene i den
+rå lista som er nye siden sist. Et signal som lå der forrige gang også er fortsatt
+en sak — det skal med, men det skal sies.
 
-Slå ikke sammen og del ikke opp agentens kandidater. Er du uenig i en
-konsolidering, si det som en merknad — journalisten kan overprøve den, og
-signal-id-ene står der for nettopp det.
+Alle id-ene fra `nytt` **skal** finnes i signal-lista, fordi vinduet er minst så
+bredt som «siden sist» (vindusregelen). Finner du likevel en id som ikke er der,
+er taket nådd på lista — ikke en feil i merkingen. Si det framfor å utelate
+signalet i stillhet.
 
-## 4. Legg fram kort, og spør
+## 3. Legg fram kort, i tre bolker
 
-Ikke agentens svar i sin helhet, og ikke en gjennomgang av hvert signal. Fire til
-seks linjer, pluss lista:
+Ikke tre lister i sin helhet. To hundre elementer i sin helhet er ikke et blikk,
+det er en utskrift. **Fire til åtte linjer per bolk**, og bolkene i denne
+rekkefølgen — nærmest redaksjonens eget arbeid først:
 
-- **én linje om bildet**: hva som har kommet inn siden sist, og hvor mange
-  kandidatsaker det ble etter konsolidering. «Ni signaler siden fredag, fem saker
-  — to av dem har vi alt dekket» er hele forarbeidet i én setning.
-- **de tre-fire øverste kandidatene**, med antall signaler, kategori, dekningsdom
-  og **klikkbar lenke** — brukeren skal kunne åpne kilden herfra. Mangler et signal
-  lenke, si det. Er saken en `OPPFØLGING` eller et `FUNDAMENT`, skal **lenka til
-  vår egen sak** stå der også, med id og dato: det er den som gjør oppfølgeren
-  billig.
-- **det som er dekket, i én linje hver** — merket, ikke skjult. Journalisten skal
-  kunne se hva som ble luket bort og si at dommen var feil.
-- **hva som ble lagt til side**, i én linje: forkastede signaler, og de agenten
-  ikke fikk plass til.
+1. **EGNE FERSKE SAKER (oppfølger-materialet).** Alle, om det er få — er `V` et
+   døgn, er det gjerne en håndfull. Dato, seksjon og **klikkbar url**. Dette er det
+   billigste utgangspunktet som finnes: vinklingen er alt gjort, og det som mangler
+   er det nye. Én linje om bildet: «sju saker i går, tyngst på samferdsel».
+2. **RADARSIGNALER (dybde-materialet).** De tre-fem øverste, hver med kategori
+   (`egen_oppfolging`, `konkurrent_oppfolging`, `konkurrentsak`, `temasok`), **begge
+   datoer**, mønster og **klikkbar lenke**. Mangler et signal lenke, si det — da er
+   det ingenting å lese seg opp på, og det er i seg selv en grunn til å prioritere
+   det ned. Merk hvilke som er nye siden sist.
+3. **KASUS' EGNE STORY-BRIEFS.** De tre-fem nyeste, med status (`kandidat`,
+   `forslag`, …), opphav og tittel. Si hva de ER: pipelinens forslag inne i Kasus,
+   ikke saksforslagene pluginen skriver på disk, og **ikke etterprøvd av noen** —
+   `plot`, `angle` og `reason` er skrevet av en modell.
 
-**Forbeholdet står i svaret, ikke i en fotnote.** Dekningsdommen fra agenten er en
-**grovsortering** på signalets tittel og sammendrag. Den rangerer og advarer; den
-klarerer ingenting. Velges saken, leser `kasus-archivist` det samme vinduet på nytt
-med hele signalet, inne i ferdigheten. Sier du noe annet her, blir et `ÅPEN` lest
-som at saken er klarert — og det er den ikke.
+Pluss én linje om **totalene**, med perioden på: «Siste døgn: 58 signaler, tre
+briefs, sju egne saker» er grunnlaget i én setning. Perioden i den linja er `V`,
+og skal være det faktiske tallet — «siste døgn» bare når det er et døgn.
 
-**Rekkefølgen er ikke en prioritering.** Agenten sorterer på dekningsstatus, ikke
-på redaksjonell verdi, fordi profilen ikke hentes her: den er premisset for å
-prioritere og skrive, ikke for å velge hva man vil gjøre, og en inngang som hentet
-den ville vært et halvt saksløp. Rangeringen mot `criteria.patterns` skjer i
-ferdigheten, som henter profilen selv. Si det i én linje framfor å la lista se ut
-som en topplista den ikke er.
+**Tre forbehold hører i svaret, ikke i en fotnote:**
 
-Avslutt med **ett spørsmål** — `AskUserQuestion`, ikke en oppfordring i prosa som
-blir liggende ubesvart. Alternativene avhenger av hva som faktisk sto på skjermen:
+- **Ingenting er konsolidert.** Er tre av signalene den samme SSB-saken, står de
+  som tre. Ser du det, si det som en merknad — men ikke slå dem sammen selv, og
+  ikke la lista se bearbeidet ut.
+- **Ingenting er sjekket mot egen dekning.** Kommandoen feller ingen dekningsdom.
+  Artiklene i vinduet er «hva vi publiserte nå», ikke «har vi skrevet om dette
+  før?» — og `V` er *langt* fra nok til det siste, som leses mot 200 artikler av
+  `kasus-archivist` inne i ferdigheten. Sier du noe annet, blir et fravær lest som
+  en klarering.
+- **Rekkefølgen er ikke en prioritering.** Profilen hentes ikke her — den er
+  premisset for å prioritere og skrive, ikke for å velge hva man vil gjøre.
+  Rangeringen mot `criteria.patterns` er ferdighetens første egne arbeid. Si det i
+  én linje framfor å la lista se ut som en topplista den ikke er.
 
-| Statusen viste | Alternativene |
+## 4. Ett spørsmål
+
+Avslutt med **ett** — `AskUserQuestion`, ikke en oppfordring i prosa som blir
+liggende ubesvart. Alternativene bygges på hva som faktisk sto på skjermen:
+
+| Materialet viste | Alternativene (maks fire) |
 |---|---|
-| **åpne kandidatsaker** | ta en sak fra lista · følg opp en av våre egne saker · spør om noe i signalene · ikke nå |
-| **bare oppfølginger og fundament** | følg opp en av våre egne saker · ta en sak fra lista likevel · bredere vindu (`--hours 72`) · ikke nå |
-| **alt dekket, eller `nye: 0` og ingen kandidater** | bredere vindu (`--hours 72`) · ta med det forkastede (`--all`) · følg opp en av våre egne saker · ikke nå |
+| **både egne saker og signaler** | følg opp en av våre egne saker · dybdeartikkel fra et signal · spør om noe i materialet · ikke nå |
+| **egne saker, men tørr radar** | følg opp en av våre egne saker · bredere vindu (`--hours 72`) · spør om noe i materialet · ikke nå |
+| **signaler og briefs, ingen ferske egne saker** | dybdeartikkel fra et signal · spør om noe i materialet · bredere vindu (`--hours 72`) · ikke nå |
+| **alt tomt** | bredere vindu (`--hours 72`) · ta med det forkastede (`--all`) · sjekk oppsettet (`/kasus:env`) · ikke nå |
 
-Maks fire. Er ett av dem åpenbart best — en kandidat med tre signaler og en egen
-sak å bygge på — legg det først og si hvorfor.
+Er ett av dem åpenbart best — en egen sak fra i går som radaren alt har levert nye
+kilder på (`egen_oppfolging`) — legg det først og si hvorfor. Det er den billigste
+gode saken som finnes.
 
 **Spørsmålet gjelder hva som skal GJØRES, ikke hvilken sak som skal skrives.**
 Valget av sak hører i ferdigheten, der et valg fører til research, en fil på disk
@@ -141,33 +171,44 @@ og en kvittering. Her velges bare inngangen:
 
 | Svaret | Hvem tar over |
 |---|---|
-| en ny sak fra radaren | ferdigheten **`dybdeartikkel`** |
 | en oppfølger på en egen sak | ferdigheten **`oppfolgersak`** |
+| en dybdeartikkel fra et signal | ferdigheten **`dybdeartikkel`** |
 | et spørsmål om signalene | agenten **`kasus-lookout`** |
-| ikke nå | ingen. Si ingenting mer — ingen kvittering, ingenting er «brukt opp», og signalene ligger der neste gang. |
+| et spørsmål om egen dekning | agenten **`kasus-archivist`** |
+| «rydd opp i dette først» | agenten **`kasus-triage`** — konsoliderer og luker |
+| ikke nå | ingen. Si ingenting mer — ingen kvittering, ingenting er «brukt opp», og alt ligger der neste gang. |
 
 Ferdigheten kjører **sitt eget steg 1**. Ikke prøv å gi den dataene dine i stedet:
-den trenger profilen i tillegg, og `nytt` skriver ingenting, så det koster ett
-kall å hente det to ganger — mot to ulike start-tilstander å virke i.
-
-Men **forarbeidet er ikke bortkastet**: konsolideringen og dekningsdommene står i
-samtalen, og ferdigheten skal bruke dem framfor å utlede noe annet av det samme
-materialet. Det står i ferdighetens steg 2 og 4a.
+den trenger profilen i tillegg, vinduet sitt er et annet, og uthentingen skriver
+ingenting — så det koster ett kall, mot to ulike start-tilstander å virke i.
 
 **Ikke begynn arbeidet her**, uansett hvor tydelig svaret er.
 
 ## Merk
 
-- **Du trenger ikke denne kommandoen for å spørre.** «Er det noe om strømpriser?»,
-  «hvor mange signaler er det på mønsteret X?», «hvor mye av det er gamle saker?»
-  går rett til `kasus-lookout`, som bygger filtrene selv og oppgir hvor mange som
-  passerte av hvor mange hentede. Kommandoen finnes for morgenens blikk, ikke for
-  oppslag — og den koster et par minutter fordi den leser tre hundre elementer for
-  deg. Et oppslag skal ikke betale for det.
-- **`--hours` måler oppdaget, ikke sakens alder.** Et fritt temasøk kan levere en
-  sak fra 2023 som ble oppdaget i dag. Skal alderen filtreres, er det `--publisert`
-  — og det er et spørsmål til `kasus-lookout`.
+- **En brief er ikke et utgangspunkt for saksløpet.** Story-briefene legges fram
+  fordi de svarer på «er dette alt tenkt på?», og fordi en brief kan gi
+  journalisten idéen. Men `dybdeartikkel` krever et **signal**: sporet tilbake til
+  hvorfor saken ble tatt opp (`kasusSignalId`, `signalUrl`) er halve verdien av
+  forslaget, og en brief har ikke det sporet. Vil journalisten jobbe med en brief,
+  er veien å finne signalet den handler om — eller å skrive den ut selv, utenfor
+  pluginen.
+- **Kommandoen luker ikke.** Vil journalisten ha bildet bearbeidet — samme sak slått
+  sammen, det dekkede merket — er det `kasus-triage`, som sveiper hele
+  signalvinduet mot alle de 200 nyeste egne sakene og leverer kandidatsaker med
+  dekningsdom. Den koster et par minutter, og den kan kjøres etter dette blikket:
+  «rydd opp i signalene» holder.
+- **Du trenger ikke denne kommandoen for å spørre.** «Er det noe om strømpriser?»
+  går rett til `kasus-lookout`, «har vi skrevet om dette?» til `kasus-archivist`.
+  Kommandoen finnes for morgenens blikk over alt materialet, ikke for oppslag — og
+  et oppslag vil oftest ha et annet vindu enn et døgn.
+- **Vinduet varierer med hvor lenge det er siden sist.** Kjøres kommandoen daglig,
+  er det et døgn; har det ligget en uke, er det en uke — se
+  [`references/vindu.md`](../references/vindu.md). Døgn-gulvet er rullerende og
+  ikke «siden midnatt», og de tre listene kjenner ingen kvittering: hva som er NYTT
+  mellom to kjøringer er det bare `nytt` som svarer på.
 - Header-linja sier hvilken installasjon og nøkkel-variabel som ble brukt.
-  **Nøkkelen avgjør organisasjonen** — «ingen signaler» betyr «ingen for DENNE
-  organisasjonen», aldri «ingen i Kasus».
-- Mangler `KASUS_API_KEY`, stopper kallet med `MANGLER: …`. Kjør `/kasus:env`.
+  **Nøkkelen avgjør organisasjonen** — «ingenting» betyr «ingenting for DENNE
+  organisasjonen», aldri «ingenting i Kasus».
+- Mangler `KASUS_API_KEY`, stopper alle fire kallene med `MANGLER: …`. Kjør
+  `/kasus:env`.

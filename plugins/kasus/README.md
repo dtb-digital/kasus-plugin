@@ -118,7 +118,7 @@ Neste person som kloner repoet trenger bare sin egen nøkkel — resten står i
 | **fritekst** — «skriv en oppfølger på saken om X», «hva har skjedd siden vi skrev om dette?» | **Oppfølger på en egen sak.** Ferdigheten `oppfolgersak` — se under. |
 | `/kasus:oppfolgersak` | Samme ferdighet, startet fra menyen. |
 | **fritekst** — «hvordan bruker jeg denne?», «hva kan kasus?», «hjelp» | **Forklaring, ikke arbeid.** Ferdigheten `hjelp` — hvilken inngang som hører til hvilken jobb, hva ordene i outputen betyr, og hva som er galt når noe ikke virker. Også `/kasus:hjelp`. |
-| `/kasus:start` | **Kom i gang.** Sveiper **alle** signalene og **alle** deres publiserte saker, slår sammen det som er samme sak, merker det som alt er dekket — og **spør hva du vil gjøre**: en ny sak, en oppfølger, eller et spørsmål. Svaret sender deg videre i riktig ferdighet. Kvitterer aldri, skriver ingenting, gjør ingen research. |
+| `/kasus:start` | **Kom i gang.** Henter **siste døgn av alt materialet** — radarsignalene, Kasus' egne story-briefs og deres egne ferske saker, eller helt tilbake til forrige kvittering om det er lenger siden — legger det fram slik det ligger, og **spør hva du vil gjøre**: en oppfølger, en dybdeartikkel, eller et spørsmål. `--hours 72` overstyrer. Svaret sender deg videre i riktig ferdighet. **Bearbeider ingenting**, kvitterer aldri, skriver ingenting, gjør ingen research. |
 | `/kasus:env` | Sjekker oppsettet. `--resolve` sier hvilken installasjon et kall treffer og hvilken variabel hver verdi kom fra. |
 | `/kasus:test` | Selvtester pluginen. `--live` også tilkoblingen og at serveren avviser skriv. |
 
@@ -129,8 +129,10 @@ eget steg 1; kommandoen prøver ikke å gi den dataene sine, og profilen hentes 
 der, fordi en inngang som hentet premissene ville vært et halvt saksløp. De to
 siste er diagnostikk.
 
-**Bearbeidet, ikke rå — det er hele forskjellen på en inngang og en liste.** Se
-[«Lista er luket før du ser den»](#lista-er-luket-før-du-ser-den).
+**Inngangen henter, agentene bearbeider.** `/kasus:start` legger materialet fram
+slik det ligger — se [«Alt materialet, før du velger»](#alt-materialet-før-du-velger).
+Vil du ha det konsolidert og luket, er det ett steg til:
+[«Lista kan lukes, hvis du ber om det»](#lista-kan-lukes-hvis-du-ber-om-det).
 
 Et **spørsmål** trenger heller ingen kommando: «er det noe om strømpriser?», «hvor
 mange signaler er det på mønsteret X?» går rett til `kasus-lookout`, som bygger
@@ -205,14 +207,58 @@ hvor gammel saken er. Et temasøk kan levere en artikkel fra 2023 som «oppdaget
 45 min siden», så saksløpet viser begge og merker `GAMMEL SAK` når de er mer enn en
 uke fra hverandre. Mangler datoen, står det «ukjent dato» — ikke «fersk».
 
-## Lista er luket før du ser den
+## Alt materialet, før du velger
 
-`/kasus:start` legger ikke fram signalene slik radaren fant dem. Den gjør først
-forarbeidet du ellers gjorde i hodet, med sju linjer foran deg: *er disse tre
-egentlig den samme SSB-saken? har vi ikke skrevet om det der i vår?*
+`/kasus:start` svarer på ett spørsmål: **hva har vi å jobbe med i dag?** Den henter
+fire ting i samme melding — **siste døgn** av hver — og legger dem fram slik de
+ligger:
 
-Agenten `kasus-triage` sveiper **hele signalvinduet** og **alle de 200 nyeste
-publiserte egne sakene**, og leverer tilbake:
+| Kilde | Vindu | Peker mot |
+|---|---|---|
+| **radarsignalene** | `V`, maks 100 | en **dybdeartikkel** — noe andre har publisert, som dere ikke har |
+| **Kasus' egne story-briefs** | `V`, maks 40 | forslagene innholdspipelinen alt har laget. Ikke etterprøvd av noen |
+| **deres egne ferske saker** | `V`, maks 60 | en **oppfølger** — vinklingen finnes, det som mangler er det nye |
+| **«nytt siden sist»** | mot kvitteringen | hva du ikke har sett før. Det ene som kjenner kvitteringen |
+
+**`V` er døgnet som gulv, hevet til tiden siden du sist kvitterte.** Kjører du
+kommandoen daglig, er det et døgn — perioden en journalist planlegger for, og kort
+nok til at listene er et blikk framfor en utskrift. Har det ligget en uke, er det
+en uke. `--hours N` overstyrer alt. Regelen står ett sted,
+[`references/vindu.md`](./references/vindu.md), og at både inngangen og saksløpet
+leser den derfra er en test.
+
+Gulvet finnes fordi `nytt` måler mot kvitteringen mens listene måler i timer. Var
+listene alltid et døgn, ville «siden sist» kunne dekke fem døgn med signaler som
+ikke fantes i lista de skulle merkes i — og de ville blitt usynlige, selv om
+telleren hadde dem med.
+
+**Er `V` et døgn, er tomt vanlig.** En redaksjon som ikke publiserte i går har ikke
+sluttet å publisere, og pipelinen kjører i puljer. Et tomt felt er et fravær i
+perioden, aldri et fravær i Kasus — og tiltaket er et bredere vindu, ikke en
+konklusjon. **Perioden står alltid i svaret**, med det faktiske tallet.
+
+**De tre listene måler tre ulike datoer** — `detectedAt` på et signal (når radaren
+fant det), `createdAt` på en brief (når Kasus laget den), `published` på en egen
+sak. «Ingenting siste måned» betyr derfor tre forskjellige ting, og kommandoen
+sier hvilket.
+
+**Kommandoen bearbeider ingenting, og det er et valg.** Er tre av signalene den
+samme SSB-saken, står de som tre. Er saken skrevet i fjor, er det ikke merket.
+Artiklene fra det siste døgnet svarer på «hva publiserte vi nå», aldri på «har vi
+skrevet om dette før?» — det leses mot 200 artikler, av `kasus-archivist`, inne i
+ferdigheten. Begge forbeholdene står i outputen framfor i denne README-en, fordi
+et fravær ellers leses som en klarering.
+
+Prisen er at journalisten ser materialet rått. Vil du ha det luket, er det ett
+steg til — «rydd opp i signalene» — og det er avsnittet under.
+
+## Lista kan lukes, hvis du ber om det
+
+`kasus-triage` gjør forarbeidet du ellers gjorde i hodet, med sju linjer foran deg:
+*er disse tre egentlig den samme SSB-saken? har vi ikke skrevet om det der i vår?*
+
+Den sveiper **hele signalvinduet** og **alle de 200 nyeste publiserte egne sakene**,
+og leverer tilbake:
 
 - **kandidatsaker framfor signaler.** Signalene som er samme sakskompleks er slått
   sammen til én linje, med begrunnelsen for hvorfor. Tre kilder på det samme
@@ -233,20 +279,26 @@ at en sak skal skrives. Velger du saken, leser `kasus-archivist` det samme vindu
 på nytt med hele signalet — se [«Har vi dekket dette før?»](#har-vi-dekket-dette-før).
 
 **Rekkefølgen er ikke en prioritering.** Agenten sorterer på dekningsstatus, fordi
-profilen ikke hentes i inngangen. Rangeringen mot `criteria.patterns` er
-ferdighetens første egne arbeid.
+profilen ikke hentes her. Rangeringen mot `criteria.patterns` er ferdighetens
+første egne arbeid.
 
-Prisen er tid: et par minutter framfor et halvt, fordi tre hundre elementer skal
-leses. De ligger i **agentens** kontekst, ikke i samtalens — det er derfor det går
-an i det hele tatt, og at kommandoen ikke henter dem selv er en test framfor et
-løfte.
+Prisen er tid: et par minutter, fordi tre hundre elementer skal leses. De ligger i
+**agentens** kontekst og ikke i samtalens, og det er derfor det går an i det hele
+tatt. Derfor er den også et eget steg: du ber om den når du vil ha bildet
+bearbeidet — «rydd opp i signalene», «hva av dette har vi alt dekket?» — framfor å
+betale for den hver gang du bare vil se hva som ligger der.
 
-## Ukas produksjon, før du velger
+## Produksjonen siden sist, før du velger
 
-Saksløpet henter de 40 nyeste publiserte sakene fra siste uke i samme melding som
-signalene. Profilen sier hva som fungerer for disse leserne i prinsippet; dette
+Saksløpet henter de 40 nyeste publiserte sakene i **samme vindu som inngangen**
+(`V` — se over), så det journalisten så i `/kasus:start` er det saksløpet jobber
+videre på. Profilen sier hva som fungerer for disse leserne i prinsippet; dette
 sier hva redaksjonen faktisk holder på med nå — og det er den andre en journalist
 kjenner igjen.
+
+Kjøres saksløpet daglig, er det en håndfull saker. Det er tynt som grunnlag for
+«hva står vi i nå», og da skal det sies framfor å utvides i stillhet: «én sak siden
+i går» er en opplysning, ikke et hull.
 
 Tre koblinger endrer prioriteringen, og radaren kjenner ingen av dem:
 
@@ -393,8 +445,10 @@ perioden.
 `kasus-triage` er den eneste som leser **begge** vinduene samtidig, og den eneste
 som ikke besvarer et spørsmål: den bearbeider. Hele signalvinduet holdt mot alle de
 200 nyeste publiserte egne sakene, signalene som er samme sakskompleks slått
-sammen til kandidatsaker, og en foreløpig dekningsdom på hver. Det er forarbeidet
-i `/kasus:start` — se [«Lista er luket før du ser den»](#lista-er-luket-før-du-ser-den).
+sammen til kandidatsaker, og en foreløpig dekningsdom på hver. Den kjøres når noen
+ber om den — «rydd opp i signalene» — og er det naturlige neste steget etter
+`/kasus:start`, som bearbeider ingenting. Se
+[«Lista kan lukes, hvis du ber om det»](#lista-kan-lukes-hvis-du-ber-om-det).
 Den prioriterer ikke (profilen hentes ikke der) og **kvitterer aldri**, som ingen
 av de andre.
 
