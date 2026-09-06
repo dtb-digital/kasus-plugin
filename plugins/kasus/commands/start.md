@@ -62,7 +62,8 @@ den. En periode som ikke sies, leses som «alt».
 Takene er satt over normalt døgnvolum. Vokser `V`, binder de oftere: en radar som
 leverer seksti signaler i døgnet fyller `--limit 100` på under to døgn. Er
 `taketNådd` sann, mangler svaret data — **si det, og hev `--limit`** framfor å
-krympe vinduet. Det er nettopp de gamle usette signalene gulvet skulle fange.
+krympe vinduet. Det er nettopp de gamle usette signalene gulvet skulle fange. I
+tråden er formen «det kan finnes mer enn dette»; flagget er ditt.
 
 Tre svar fra `nytt` krever noe annet enn å gå videre:
 
@@ -71,8 +72,8 @@ Tre svar fra `nytt` krever noe annet enn å gå videre:
 - **`nye: 0`** — ingenting nytt **siden sist**. Det er ikke det samme som at det
   ikke ligger noe der: de tre listene svarer på det andre spørsmålet, og de kan
   være fulle. Si når det sist ble kvittert, og gå videre.
-- **`kvittering: null`** — første gang. Si at «nytt» da er siste 24 timer, og at en
-  kvittering til slutt gjør «siden sist» presist neste gang.
+- **`kvittering: null`** — første gang. Si at «nytt siden sist» derfor betyr siste
+  24 timer, og at en kvittering til slutt gjør det presist neste gang.
 
 ## 2. Fire svar som måler fire forskjellige ting
 
@@ -95,15 +96,17 @@ Og innad i signalene er `oppdaget` og `publisert` to forskjellige tall: et fritt
 temasøk hentes uavhengig av publiseringstidspunkt, så et signal oppdaget i dag kan
 være en sak fra 2023. Er det merket `GAMMEL SAK`, si det.
 
-Fra `nytt` er det tre linjer som ER statusen: **hvor gammel kvitteringen er**,
-**antall nye av antall hentet** (og hva som ble holdt utenfor), og **`fordeling`** —
-signaler per redaksjonelt mønster, flest først. Den ene linja som svarer på «hva
-skjer» uten at man leser sju signaler. En topp på «uten mønstertreff» er også en
-opplysning: radaren finner noe profilen ikke forklarer.
+Fra `nytt` er det tre ting som ER statusen: **hvor lenge det er siden du så på
+dette sist**, **hvor mye som er nytt av det som ligger der**, og **`fordeling`** —
+hva funnene handler om, flest først. Den ene linja som svarer på «hva skjer» uten
+at man leser sju signaler, og den sies med temaene i klartekst: «tolv om
+boligmarkedet, åtte om samferdsel». En topp på «uten mønstertreff» er også en
+opplysning — sagt som «og elleve som ikke ligner på noe dere pleier å dekke».
 
 Signal-id-ene fra `nytt` brukes til én ting: å **merke** hvilke av signalene i den
-rå lista som er nye siden sist. Et signal som lå der forrige gang også er fortsatt
-en sak — det skal med, men det skal sies.
+rå lista som er nye siden sist. Merkingen er et ord i tråden — «ny siden i går» —
+ikke en id. Et signal som lå der forrige gang også er fortsatt en sak: det skal
+med, men det skal sies.
 
 Alle id-ene fra `nytt` **skal** finnes i signal-lista, fordi vinduet er minst så
 bredt som «siden sist» (vindusregelen). Finner du likevel en id som ikke er der,
@@ -113,37 +116,53 @@ signalet i stillhet.
 ## 3. Legg fram kort, i tre bolker
 
 Ikke tre lister i sin helhet. To hundre elementer i sin helhet er ikke et blikk,
-det er en utskrift. **Fire til åtte linjer per bolk**, og bolkene i denne
-rekkefølgen — nærmest redaksjonens eget arbeid først:
+det er en utskrift. **Fire til åtte linjer per bolk**, og formen på hver sak er
+den som står i [`references/samtaleform.md`](../references/samtaleform.md) —
+**tittel, én til to linjer om hva saken er, klikkbar lenke**. Les den derfra
+framfor å gjengi den her.
 
-1. **EGNE FERSKE SAKER (oppfølger-materialet).** Alle, om det er få — er `V` et
-   døgn, er det gjerne en håndfull. Dato, seksjon og **klikkbar url**. Dette er det
-   billigste utgangspunktet som finnes: vinklingen er alt gjort, og det som mangler
-   er det nye. Én linje om bildet: «sju saker i går, tyngst på samferdsel».
-2. **RADARSIGNALER (dybde-materialet).** De tre-fem øverste, hver med kategori
-   (`egen_oppfolging`, `konkurrent_oppfolging`, `konkurrentsak`, `temasok`), **begge
-   datoer**, mønster og **klikkbar lenke**. Mangler et signal lenke, si det — da er
-   det ingenting å lese seg opp på, og det er i seg selv en grunn til å prioritere
-   det ned. Merk hvilke som er nye siden sist.
-3. **KASUS' EGNE STORY-BRIEFS.** De tre-fem nyeste, med status (`kandidat`,
-   `forslag`, …), opphav og tittel. Si hva de ER: pipelinens forslag inne i Kasus,
+Kortversjonen, fordi den avgjør hele dette steget: journalisten skal kunne
+**velge**, og id-er, kategorinavn, mønsternavn, feltnavn og flagg hjelper henne
+ikke å velge. De blir liggende hos deg — du trenger dem i steg 4 og i ferdigheten
+som tar over.
+
+Bolkene i denne rekkefølgen — nærmest redaksjonens eget arbeid først:
+
+1. **VÅRE EGNE FERSKE SAKER (oppfølger-materialet).** Alle, om det er få — er `V`
+   et døgn, er det gjerne en håndfull. Tittel, når den ble publisert, og lenka.
+   Dette er det billigste utgangspunktet som finnes: vinklingen er alt gjort, og
+   det som mangler er det nye. Én linje om bildet: «sju saker i går, tyngst på
+   samferdsel».
+2. **DET RADAREN HAR FUNNET (dybde-materialet).** De tre-fem øverste. Si i
+   klartekst hva hver av dem er — «ny kilde på en sak vi alt har publisert»,
+   «konkurrenten har denne, dette er kildene under den», «søketreff på et tema,
+   så sjekk datoen» — hvor gammel saken er, og hva som er kommet inn siden forrige
+   gang du så på dette. Mangler et signal lenke, si det: da er det ingenting å
+   lese seg opp på, og det er i seg selv en grunn til å prioritere det ned.
+3. **FORSLAG SOM ALT LIGGER I KASUS.** De tre-fem nyeste, med tittel og vinklingen
+   i én linje. Si hva de ER: forslag innholdspipelinen har laget inne i Kasus,
    ikke saksforslagene pluginen skriver på disk, og **ikke etterprøvd av noen** —
-   `plot`, `angle` og `reason` er skrevet av en modell.
+   plottet, vinklingen og begrunnelsen er skrevet av en modell. Er et av dem uten
+   tittel, er det en kandidat ingen har skrevet ut ennå; si det framfor å vise en
+   blank linje.
 
-Pluss én linje om **totalene**, med perioden på: «Siste døgn: 58 signaler, tre
-briefs, sju egne saker» er grunnlaget i én setning. Perioden i den linja er `V`,
-og skal være det faktiske tallet — «siste døgn» bare når det er et døgn.
+Pluss én linje om **totalene**, med perioden på: «I går fant radaren 58 saker, det
+kom tre forslag i Kasus, og vi publiserte sju» er grunnlaget i én setning.
+Perioden i den linja er `V`, og skal være det faktiske tallet — «siste døgn» bare
+når det er et døgn.
 
-**Tre forbehold hører i svaret, ikke i en fotnote:**
+**Tre forbehold hører i svaret, ikke i en fotnote** — og de sies på norsk, ikke som
+feltnavn:
 
-- **Ingenting er konsolidert.** Er tre av signalene den samme SSB-saken, står de
-  som tre. Ser du det, si det som en merknad — men ikke slå dem sammen selv, og
-  ikke la lista se bearbeidet ut.
+- **Ingenting er konsolidert.** Er tre av funnene den samme SSB-saken, står de som
+  tre. Ser du det, si det som en merknad — men ikke slå dem sammen selv, og ikke la
+  lista se bearbeidet ut.
 - **Ingenting er sjekket mot egen dekning.** Kommandoen feller ingen dekningsdom.
-  Artiklene i vinduet er «hva vi publiserte nå», ikke «har vi skrevet om dette
-  før?» — og `V` er *langt* fra nok til det siste, som leses mot 200 artikler av
-  `kasus-archivist` inne i ferdigheten. Sier du noe annet, blir et fravær lest som
-  en klarering.
+  De egne sakene i bolk 1 er «hva vi publiserte nå», ikke «har vi skrevet om dette
+  før?» — og perioden er *langt* fra nok til det siste, som leses mot de 200
+  nyeste sakene inne i ferdigheten. Si det som «jeg har ikke sjekket om vi har
+  skrevet om noe av dette før». Sier du noe annet, blir et fravær lest som en
+  klarering.
 - **Rekkefølgen er ikke en prioritering.** Profilen hentes ikke her — den er
   premisset for å prioritere og skrive, ikke for å velge hva man vil gjøre.
   Rangeringen mot `criteria.patterns` er ferdighetens første egne arbeid. Si det i
@@ -156,14 +175,19 @@ liggende ubesvart. Alternativene bygges på hva som faktisk sto på skjermen:
 
 | Materialet viste | Alternativene (maks fire) |
 |---|---|
-| **både egne saker og signaler** | følg opp en av våre egne saker · dybdeartikkel fra et signal · spør om noe i materialet · ikke nå |
-| **egne saker, men tørr radar** | følg opp en av våre egne saker · bredere vindu (`--hours 72`) · spør om noe i materialet · ikke nå |
-| **signaler og briefs, ingen ferske egne saker** | dybdeartikkel fra et signal · spør om noe i materialet · bredere vindu (`--hours 72`) · ikke nå |
-| **alt tomt** | bredere vindu (`--hours 72`) · ta med det forkastede (`--all`) · sjekk oppsettet (`/kasus:env`) · ikke nå |
+| **både egne saker og signaler** | følg opp en av våre egne saker · skriv en ny sak på et av funnene · spør om noe i materialet · ikke nå |
+| **egne saker, men tørr radar** | følg opp en av våre egne saker · se en uke tilbake · spør om noe i materialet · ikke nå |
+| **funn og forslag, ingen ferske egne saker** | skriv en ny sak på et av funnene · spør om noe i materialet · se en uke tilbake · ikke nå |
+| **alt tomt** | se en uke tilbake · ta med det som er forkastet · sjekk oppsettet · ikke nå |
+
+**Alternativene sier hva som skal gjøres, i journalistens ord.** Flagget som får
+det til å skje — `--hours 168`, `--all` — setter du selv etterpå; det er ikke noe
+hun skal velge mellom. `/kasus:env` er unntaket: den skriver hun selv, så den kan
+nevnes ved navn.
 
 Er ett av dem åpenbart best — en egen sak fra i går som radaren alt har levert nye
-kilder på (`egen_oppfolging`) — legg det først og si hvorfor. Det er den billigste
-gode saken som finnes.
+kilder på — legg det først og si hvorfor. Det er den billigste gode saken som
+finnes.
 
 **Spørsmålet gjelder hva som skal GJØRES, ikke hvilken sak som skal skrives.**
 Valget av sak hører i ferdigheten, der et valg fører til research, en fil på disk

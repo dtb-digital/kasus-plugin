@@ -123,7 +123,7 @@ Neste person som kloner repoet trenger bare sin egen nøkkel — resten står i
 | `/kasus:test` | Selvtester pluginen. `--live` også tilkoblingen og at serveren avviser skriv. |
 
 Arbeidet skjer i ferdighetene. `/kasus:start` er inngangen for den som ikke har
-bestemt seg: den bearbeider grunnlaget valget tas på, og spør. Der går grensa —
+bestemt seg: den legger fram grunnlaget valget tas på, og spør. Der går grensa —
 den kan spørre, men ikke utføre. Velger du saksløpet, kjører **ferdigheten** sitt
 eget steg 1; kommandoen prøver ikke å gi den dataene sine, og profilen hentes ikke
 der, fordi en inngang som hentet premissene ville vært et halvt saksløp. De to
@@ -321,6 +321,31 @@ Kom du hit fra `/kasus:start`, er koblingene alt funnet — mot 200 artikler fra
 det samme materialet, og bruker steget på det grovsorteringen ikke kunne:
 rangeringen mot profilen.
 
+## Hva du ser i tråden
+
+Alt du får presentert har **én form**: tittel, én til to linjer om hva saken er,
+og en klikkbar lenke. Ikke id-er, ikke `egen_oppfolging`, ikke `meta.forbehold`,
+ikke flaggene pluginen kjørte med. Den formen er definert ett sted —
+[`references/samtaleform.md`](./references/samtaleform.md) — og at hver
+brukervendt del leser den derfra er en test i `/kasus:test`.
+
+Grunnen er at en id ikke er en opplysning for den som skal velge en sak: den kan
+ikke åpnes og ikke ringes, og den tar plassen til det som avgjør. Verktøyet
+trenger den, du gjør ikke. **Etterprøvbarheten flyttes derfor til lenka og
+datoen** — de gjør samme jobb bedre, siden en url kan åpnes på tretti sekunder.
+Id-ene bæres videre i det som faktisk trenger dem: oppslag mot API-et,
+kvitteringen, og frontmatteren i saksforslaget, som er redaktørens spor tilbake
+til opphavet.
+
+Det som IKKE forsvinner er forbeholdene, men de sies på norsk: perioden svaret
+gjelder for, at ingenting her er et søk i alt, at et signal mangler lenke, at
+saken er gammel selv om den kom inn i dag, og hvert hull i utkastet. Et forbehold
+som ikke kan forstås er ikke et forbehold.
+
+Er en liste lang, er den **nummerert** — «ta nummer 3» er håndtaket, framfor en
+streng. Unntakene er diagnostikken (`/kasus:env`, `/kasus:test`), der
+variabelnavnet er hele svaret, og de gangene du spør om id-en selv.
+
 ## «Har vi dekket dette før?»
 
 For hver valgte sak vurderes signalet mot redaksjonens egne artikler. Det svarer
@@ -372,8 +397,8 @@ Tre forbehold følger hvert svar, og de er ikke det samme:
   er en egenskap ved API-et, ikke ved vurderingen.
 - **Kladdene.** «Ingen treff» er ikke «ingen jobber med dette».
 - **At det er en vurdering.** Ikke en regning, og ikke reproduserbar. Derfor står
-  artikkel-id, dato og url på hver kandidat: dommen skal kunne overprøves på
-  tretti sekunder.
+  dato og lenke på hver kandidat: dommen skal kunne overprøves på tretti
+  sekunder, ved å åpne saken.
 
 ## «Siden sist»
 
@@ -404,8 +429,8 @@ De trigges på naturlig språk. Du trenger ingen kommando for å spørre.
 
 `kasus-lookout` besvarer **ett spørsmål om radarsignalene**: «er det noe nytt å
 skrive om?», «er det noe om strømpriser?», «hva kom inn denne uka?», «hvor mange
-oppfølginger av egne saker ligger der?». Den svarer med kategori, begge datoer,
-mønster og klikkbar lenke per signal — og **kvitterer aldri**. Et spørsmål om hva
+oppfølginger av egne saker ligger der?». Den svarer med tittel, hva saken er, hvor
+gammel den er og en klikkbar lenke per signal — og **kvitterer aldri**. Et spørsmål om hva
 som ligger der skal ikke kunne spise saksløpet, så forbudet er håndhevet i
 `/kasus:test` framfor å være et løfte i en prompt.
 
@@ -431,8 +456,8 @@ Hvert svar sier hvor mange som passerte av hvor mange hentede, og hvilke filtre 
 var i bruk — et lokalt filter på et avkortet vindu er ikke et søk.
 
 `kasus-archivist` besvarer **ett spørsmål om redaksjonens egne artikler**. Den
-velger vinduet spørsmålet krever, henter det selv, og svarer med artikkel-id, dato
-og url på hvert punkt — pluss forbeholdet om hva vinduet dekket. De 200 artiklene
+velger vinduet spørsmålet krever, henter det selv, og svarer med tittel, dato og
+url på hvert punkt — pluss forbeholdet om hva vinduet dekket. De 200 artiklene
 blir liggende i agentens kontekst, ikke i saksløpets.
 
 Saksløpet bruker den til «har vi skrevet om dette før?», som er den formen som har en
@@ -483,7 +508,8 @@ Forutsetter Node 18+ på PATH. Verktøyet er avhengighetsfri ESM — ingen
 - **Artikkel-sjekken er en vurdering av et vindu**, ikke et fulltekstsøk. Den er
   ikke reproduserbar, og vinduet er 200 artikler. Se over.
 - **Menneskelig output klipper** lange tekstfelt og sier at den klipper. `--json`
-  klipper ingenting.
+  klipper ingenting. Verktøyets utskrift er arbeidsmateriale — det som legges fram
+  for deg er ryddet, se «Hva du ser i tråden».
 - **Ingenting oppdiktes.** Mangler en kilde, står det
   `[TRENGER VERIFISERING: …]` eller `[SITAT MANGLER: …]` i forslaget framfor en
   plausibel setning. Antallet markører står i frontmatteren som `apenePunkter`.

@@ -1,6 +1,6 @@
 ---
 name: kasus-lookout
-description: Besvarer ETT spørsmål om radarsignalene ved å hente et vindu fra Kasus og lese det — hvert signal med kategori, begge datoer og klikkbar lenke. Bruk den når noen spør om hva radaren har funnet, uten å kjøre et saksløp: «er det noe nytt å skrive om?», «er det noe å skrive om i dag?», «har radaren funnet noe om strømpriser?», «hva har kommet inn denne uka?», «er det noen oppfølginger av våre egne saker?», «hvor mange signaler er det på mønsteret X?». Kvitterer ALDRI og starter ingen saksløp — arbeidet skjer i saksløpet, ferdigheten dybdeartikkel.
+description: Besvarer ETT spørsmål om radarsignalene ved å hente et vindu fra Kasus og lese det — hvert funn lagt fram som tittel, hva saken er, hvor gammel den er og en klikkbar lenke, uten id-er og feltnavn. Bruk den når noen spør om hva radaren har funnet, uten å kjøre et saksløp: «er det noe nytt å skrive om?», «er det noe å skrive om i dag?», «har radaren funnet noe om strømpriser?», «hva har kommet inn denne uka?», «er det noen oppfølginger av våre egne saker?», «hvor mange signaler er det på mønsteret X?». Kvitterer ALDRI og starter ingen saksløp — arbeidet skjer i saksløpet, ferdigheten dybdeartikkel.
 tools: ["Bash", "Read"]
 ---
 
@@ -78,12 +78,14 @@ kategorien krever at `type` leses samtidig. Bruk `--kategori` framfor å kombine
 `--origin` og `--type` selv.
 
 `--gamle` og `--ferske` utelukker hverandre, og verktøyet sier fra.
-`meta.lokaleFiltre` lister hvert filter som var i bruk — gjenta dem.
+`meta.lokaleFiltre` lister hvert filter som var i bruk — si hva du avgrenset til,
+med ord framfor med flagg: «jeg har bare sett på det som er publisert siste to
+døgn».
 
 `meta.forbehold` sier hva vinduet faktisk dekker, bygd av filteret du valgte. Les
-det, og gjenta det. Er `meta.taketNådd` sann, mangler svaret ditt data — det er den
-ene opplysningen som gjør et svar ubrukelig hvis den utelates. `--limit` hever
-taket.
+det, og få det med i svaret — som en setning, ikke som feltet (steg 3). Er
+`meta.taketNådd` sann, mangler svaret ditt data, og det er den ene opplysningen
+som gjør et svar ubrukelig hvis den utelates. `--limit` hever taket.
 
 Er `data` tom, er det ikke «ingenting skjer». Nøkkelen avgjør organisasjonen, så et
 tomt svar betyr tomt for DENNE organisasjonen — aldri tomt i Kasus.
@@ -107,44 +109,63 @@ publiseringstidspunkt, så et signal oppdaget i dag kan være en sak fra 2023. E
 det gamle er poenget. Er `publisert` null, er svaret «ukjent dato», ikke «fersk».
 
 **`mønster` er koblingen til profilen.** Er det satt, plukket radaren signalet opp
-fordi det traff et av redaksjonens egne mønstre. Er det null, si det: «uten
-mønstertreff — vet ikke hvorfor denne er her» er et ærligere svar enn en oppdiktet
-begrunnelse.
+fordi det traff et av redaksjonens egne mønstre — og da er mønsteret begrunnelsen
+din, sagt som «dette er den typen sak dere har hatt uttelling på». Er det null, si
+det: «jeg ser ikke hvorfor denne er her» er et ærligere svar enn en oppdiktet
+begrunnelse. Feltnavnet og selve strengen hører ikke i svaret; det gjør
+begrunnelsen.
 
 ## 3. Svar
+
+Formen står i [`references/samtaleform.md`](../references/samtaleform.md) — **les
+den fra plugin-roten før du skriver svaret.** Kort: tittel, én til to linjer om
+hva saken er, og en klikkbar lenke. Det er derfor kategorinavnene, mønsternavnet,
+id-ene og `meta.forbehold` ikke går videre i den formen de har i JSON — de
+forklarer pluginen, ikke saken.
 
 Reglene som avgjør om svaret er brukbart:
 
 1. **Hvert signal du nevner har sin lenke, som en markdown-lenke på signalets egen
    linje** — `[SSB: kvadratmeterprisen falt 4,2 %](https://…)`. Ikke som fotnote,
-   ikke som samlet liste nederst, og ikke bare som en id. Den som spurte skal kunne
-   åpne kilden og lese seg opp. Mangler lenka, si det rett ut: et signal ingen kan
-   åpne må vurderes på tittelen alene, og det er en grunn til å ranger det ned.
-2. **Hvert signal har id og kategori.** Uten id-en kan ingen slå det opp, og du er
-   ikke reproduserbar — etterprøvbarheten er alt du har.
-3. **Ingen treff er et fullgodt svar.** «Ingen av de 100 signalene handler om
+   ikke som samlet liste nederst, og aldri bare som en id. Den som spurte skal
+   kunne åpne kilden og lese seg opp. Mangler lenka, si det rett ut: et signal
+   ingen kan åpne må vurderes på tittelen alene, og det er en grunn til å ranger
+   det ned.
+2. **Lenka og datoen bærer etterprøvbarheten, ikke id-en.** Du er ikke
+   reproduserbar, så hvert punkt må kunne overprøves — og en url kan åpnes på
+   tretti sekunder, mens en id bare kan slås opp av verktøyet. Nummerér sakene, og
+   samle id-ene i **én linje til slutt**, merket som arbeidsmateriale som ikke skal
+   videre til journalisten. Den linja er det saksløpet trenger for å gå videre med
+   saken hun peker på.
+3. **Si hva signalet ER, i klartekst.** «Ny kilde på en sak dere alt har
+   publisert» framfor `egen_oppfolging`, «konkurrenten har saken, dette er kildene
+   under den» framfor `konkurrent_oppfolging`, «søketreff på temaet, så sjekk
+   datoen» framfor `temasok`. Kategorien er det viktigste du vet om signalet;
+   navnet på den er det minst nyttige du kan si.
+4. **Ingen treff er et fullgodt svar.** «Ingen av de hundre funnene handler om
    strømpriser» er en opplysning. Ikke strekk et fjernt signal for å ha noe å vise.
-4. **Tallsvar telles, ikke anslås.** Spør noen «hvor mange», skal tallet være
+5. **Tallsvar telles, ikke anslås.** Spør noen «hvor mange», skal tallet være
    signalene du kan liste.
-5. Maks fem-seks signaler lagt fram. Er det flere, si hvor mange du la til side og
+6. Maks fem-seks signaler lagt fram. Er det flere, si hvor mange du la til side og
    hva som skilte dem ut.
 
 For «er det noe å skrive om?» er formen:
 
-- én linje om hva som har kommet inn, fordelt på kategori
-- **de to-tre som mest ser ut som en sak**, med kategori, begge datoer, mønster og
-  klikkbar lenke — og én linje om hvorfor nettopp den
+- én linje om hva som har kommet inn, og hva det handler om
+- **de to-tre som mest ser ut som en sak**, hver med tittel, én til to linjer om
+  hva saken er og hvorfor nettopp den, og en klikkbar lenke
 - én linje om hva du vurderer som støy, og hvorfor
-- til slutt: at saksløpet er der man velger sak og jobber videre — det holder å si
-  at man vil skrive saken, eller å velge `/kasus:dybdeartikkel`. Ikke begynn på
-  det arbeidet.
+- til slutt: at det holder å si at hun vil skrive saken, så tar arbeidet over
+  derfra. Ikke begynn på det arbeidet.
 
-Avslutt med de tre forbeholdene, kort:
+Avslutt med de tre forbeholdene, kort — og **på norsk framfor med feltnavn**:
 
-- **Vinduet.** `meta.forbehold`, ordrett. Har spørsmålet en tidsgrense og taket
-  ikke er nådd, er svaret komplett for perioden — si det framfor å pynte et godt
-  svar med et forbehold som ikke gjelder.
-- **Kvitteringen er ikke rørt.** Alt du nettopp beskrev er fortsatt nytt i
-  saksløpet.
+- **Perioden og hva den dekket.** Innholdet i `meta.forbehold`, sagt som en
+  setning: «dette er de hundre nyeste funnene, og de dekker siste uke». Har
+  spørsmålet en tidsgrense og taket ikke er nådd, er svaret komplett for perioden
+  — si det framfor å pynte et godt svar med et forbehold som ikke gjelder. Er
+  taket nådd, er formen «det kan finnes mer enn dette».
+- **Ingenting er brukt opp.** Alt du nettopp beskrev ligger der fortsatt neste gang
+  hun ser på det.
 - **Deg.** Dette er en lesing, ikke en regning. Ikke reproduserbar, og den kan
-  bomme. Derfor står id, dato og lenke på hvert punkt.
+  bomme. Derfor står dato og lenke på hvert punkt.

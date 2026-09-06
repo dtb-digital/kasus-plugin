@@ -158,37 +158,54 @@ overprøve, og dommen din er en lesing som kan bomme. Én linje er nok for en
 `SAMME SAK`.
 
 Maks **åtte kandidater**. Er det flere, si hvor mange du la til side og hva som
-skilte dem ut — og legg de bortlagte fram som id-er, så ingen er borte.
+skilte dem ut — og ta de bortlagte med som titler i arbeidsmateriale-linja, så
+ingen er borte.
 
 Formen, per kandidat:
 
 ```
 SAK 2 — OPPFØLGING · 3 signaler
   Kvadratmeterprisen faller i Nordland for fjerde kvartal på rad
-  signaler:
-    s-4471 · egen_oppfolging · oppdaget 2026-09-02 · publisert 2026-09-02 · mønster «boligmarkedet»
+  kilder:
+    ny kilde på vår egen sak · publisert 2026-09-02
       [SSB: boligprisindeksen falt 4,2 % i Q2](https://…)
-    s-4488 · temasok · oppdaget 2026-09-02 · publisert 2026-08-31 · uten mønstertreff
+    søketreff · publisert 2026-08-31
       [Avisa Nordland: — Nå merkes det i Bodø](https://…)
-    s-4402 · konkurrent_oppfolging · oppdaget 2026-09-01 · GAMMEL SAK (publisert 2026-06-12)
+    kildene under en konkurrentsak · GAMMEL SAK: publisert 2026-06-12
       [Eiendom Norge: kvartalsrapport](https://…)
   samme sak fordi: alle tre gjelder Q2-tallene fra samme SSB-publisering, og to av
     dem oppgir det samme prisfallet
-  egen dekning: OPPFØLGING — a-991 · publisert 2026-05-14 · https://…
+  egen dekning: OPPFØLGING — publisert 2026-05-14 · https://…
     Samme fenomen og samme by, men vår sak gjelder Q1. Tallet er nytt, vinklingen finnes.
   denne uka: 2 egne saker om boligmarkedet i Nordland
 ```
+
+**Nummeret er håndtaket, og id-ene ligger samlet til slutt** — én linje per
+kandidat, merket som arbeidsmateriale som ikke skal videre til journalisten:
+
+```
+ARBEIDSMATERIALE (ikke til journalisten)
+  SAK 2: signaler s-4471, s-4488, s-4402 · egen sak a-991
+```
+
+Da har saksløpet det det trenger for å hente signalet i full bredde og kvittere
+for det, mens lista journalisten leser er saker og ikke strenger. Formen står i
+[`references/samtaleform.md`](../references/samtaleform.md) — les den før du
+skriver svaret; det er også derfor kategorien sies i klartekst framfor som
+`egen_oppfolging`, og mønsteret som en begrunnelse framfor som et navn.
 
 Til slutt, tre linjer og ikke flere:
 
 - **Bildet i tall.** Hvor mange signaler i vinduet, hvor mange kandidatsaker etter
   konsolidering, fordelt på dom — og hvor mange forkastede som ble holdt utenfor.
 - **Hva du la til side**, og hvorfor.
-- **Forbeholdene.** `meta.forbehold` fra begge vinduene, ordrett. At taket er nådd,
-  hvis det er. At dommen din er en **grovsortering på tittel og sammendrag** som
-  ikke klarerer noen sak, og at dekningssjekken i saksløpet leser det samme vinduet
-  på nytt med hele signalet. At dette er en lesing og ikke en regning — den er
-  ikke reproduserbar, og derfor står id, dato og lenke på hvert punkt.
+- **Forbeholdene.** `meta.forbehold` fra begge vinduene, ordrett i rapporten — og
+  på norsk når de går videre: «dette er de hundre nyeste funnene og de 200 nyeste
+  sakene våre, ikke hele arkivet». At taket er nådd, hvis det er. At dommen din er
+  en **grovsortering på tittel og sammendrag** som ikke klarerer noen sak, og at
+  dekningssjekken i saksløpet leser det samme vinduet på nytt med hele signalet. At
+  dette er en lesing og ikke en regning — den er ikke reproduserbar, og derfor står
+  dato og lenke på hvert punkt.
 
 Hver lenke er en **markdown-lenke på signalets egen linje**. Mangler et signal
 lenke, si det: en sak ingen kan åpne må vurderes på tittelen alene.

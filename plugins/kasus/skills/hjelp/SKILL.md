@@ -19,7 +19,12 @@ diagnostikk.
    som fire–fem linjer om hva journalisten kan si, ikke som en kommandoliste.
 3. **Snakk om jobben, ikke om verktøyet.** Journalisten skal vite hva som må sies
    for å få gjort noe. Kommandonavn er en snarvei, ikke inngangen, og flaggene i
-   denne filen er noe maskinen setter — ikke noe han skal skrive.
+   denne filen er noe maskinen setter — ikke noe han skal skrive. **Agent- og
+   ferdighetsnavnene i tabellen under er heller ikke svar**: «jeg leser sakene
+   deres og sier hva vi har skrevet» er svaret, `kasus-archivist` er navnet mitt
+   på den jobben. Formen på alt som legges fram står i
+   [`references/samtaleform.md`](../../references/samtaleform.md) — slash-kommandoene
+   er unntaket, for dem skriver han selv.
 4. **Tilby å starte, og la journalisten bestemme.** «Vil du at jeg kjører saksløpet
    nå?» er riktig avslutning på et hjelpesvar. Å starte den uoppfordret er det
    ikke: saksløpet koster tid og **flytter kvitteringen**.
@@ -45,6 +50,10 @@ verktøyet faktisk har av modi, framfor å gjette.
 Ingen av linjene i midterste kolonne må sies ordrett. Poenget er at bestillingen
 i seg selv er inngangen — det finnes ikke noe kommandonavn man må huske først.
 
+Navnene i høyre kolonne er pluginens indre, og de står her for deg: de sier
+hvilken inngang som tar over. Svarer du journalisten, si hva som skjer framfor
+hvem som gjør det.
+
 | Vil du… | Si noe sånt som | Hva som skjer |
 |---|---|---|
 | **finne en sak å skrive** | «jeg skal skrive en dybdeartikkel», «finn meg en sak», «jeg trenger noe å jobbe med i dag», «kjør saksløpet» (eller «kjør runden» — det gamle ordet virker fortsatt) | Hele saksløpet — ferdigheten `dybdeartikkel`. Seks steg, du velger saken, den skriver et **saksforslag på disk** og kvitterer. |
@@ -52,7 +61,7 @@ i seg selv er inngangen — det finnes ikke noe kommandonavn man må huske førs
 | **jobbe med et tema** | «kan vi gjøre noe på boligmarkedet i Bodø?» | Samme saksløp. Temaet matches mot radarens vindu først — **finner den ingen signaler, stopper den**, for et forslag uten opphav er bare et nettsøk. |
 | **følge opp en av deres EGNE saker** | «hva har skjedd siden vi skrev om strømstøtte?», «kan vi følge opp denne?» | Ferdigheten `oppfolgersak`. Vinklingen finnes alt — den leter etter **det nye**, og stopper hvis det ikke finnes noe. |
 | **bare se hva som ligger der** | «er det noe nytt å skrive om?», «er det noe om strømpriser?», «hva kom inn denne uka?» | `kasus-lookout` leser signalene og svarer. **Kvitterer aldri, skriver ingenting.** Se «Slik får du tak i signalene». |
-| **vite hva dere selv har dekket** | «har vi skrevet om dette?», «hva publiserte vi i dag?», «hvem hos oss dekker samferdsel?» | `kasus-archivist` leser deres egne artikler og svarer med id, dato og lenke. Se «Slik spør du om egen dekning». |
+| **vite hva dere selv har dekket** | «har vi skrevet om dette?», «hva publiserte vi i dag?», «hvem hos oss dekker samferdsel?» | Deres egne artikler leses, og svaret kommer med dato og lenke på hver sak — `kasus-archivist`. Se «Slik spør du om egen dekning». |
 | **rydde i hele bildet på én gang** | «rydd opp i signalene», «hva av dette henger sammen?», «hva har vi alt dekket av dette?» | `kasus-triage` sveiper alle signalene og alle publiserte egne saker, slår sammen det som er samme sak og merker det som er dekket. Bearbeider — velger ingenting. |
 | **komme i gang, uten å ha bestemt deg** | `/kasus:start` | **Siste døgn av alt, på én skjerm**: radarsignalene, Kasus' egne story-briefs, deres egne ferske saker og «hva er nytt siden sist» — og så **ett spørsmål**: en oppfølger, en dybdeartikkel, eller et spørsmål. Går på sekunder. Har du ikke kjørt den på en uke, henter den uka. `--hours 72` overstyrer. **Bearbeider ingenting**: ingenting er slått sammen, ingenting er dekningssjekket. Utfører ingenting selv — svaret ditt sender deg videre. |
 | **vite hvorfor radaren fant noe** | «hva ser radaren etter?», «hvilke mønstre har vi?», «hva er profilen vår?» | Ett oppslag mot **profilen**. Se «Profilen — hvorfor signalet er der». |
@@ -158,8 +167,8 @@ saksløp. Du kan spørre så mye du vil uten å bruke opp noe.
 
 Samme begrensning, andre side av huset: artikkel-API-et har heller ikke tekstsøk,
 så «har vi skrevet om dette?» besvares ved at `kasus-archivist` henter et vindu av
-de nyeste egne artiklene og leser det. Hvert svar kommer med artikkel-id, dato og
-url, så du kan overprøve det på tretti sekunder.
+de nyeste egne artiklene og leser det. Hvert svar kommer med dato og lenke, så du
+kan åpne saken og overprøve det på tretti sekunder.
 
 | Si | Du får |
 |---|---|
@@ -167,7 +176,7 @@ url, så du kan overprøve det på tretti sekunder.
 | «hva publiserte vi i dag / denne uka?» | Full liste for perioden, ikke et utsnitt |
 | «hvem hos oss dekker samferdsel?» | Sakene på temaet, og hvem som har signert dem — signaturen står på artikkelen, så den hentes per sak |
 | «hvilken tone har vi hatt på strømpriser?» | Tonebeviset: hvordan redaksjonen faktisk skriver om temaet |
-| «hvilken sak var det vi kjørte om X i mars?» | Kandidatene med id og lenke, så du kan peke på riktig |
+| «hvilken sak var det vi kjørte om X i mars?» | Kandidatene nummerert, med dato og lenke, så du kan peke på riktig |
 | «hva ligger i kladd?» | Et eget oppslag — kladder er utenfor det vanlige vinduet |
 | «hent artikkel 4711» | Hele artikkelen i full tekst |
 
@@ -299,6 +308,11 @@ hvilken variabel hver verdi kom fra. Detaljene, inkludert de tre scopene, står 
 | Noe annet er rart | — | `/kasus:test` sier om pluginen selv er hel, `--live` om tilkoblingen er det |
 
 ## Ordene du møter i outputen
+
+Du møter færre av dem enn pluginen har: det som legges fram er ryddet etter
+`references/samtaleform.md`, så id-er, kategorinavn, feltnavn og flagg står ikke i
+svarene. Tabellen står fordi spørsmålet likevel kommer — fra et saksforslag på
+disk, fra et eldre svar, eller fra en som har sett verktøyets egen utskrift.
 
 | Ordet | Betyr |
 |---|---|

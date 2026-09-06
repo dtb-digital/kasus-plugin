@@ -6,7 +6,8 @@
 # og krever et signal, at statusen henter begge vinduene sine, at hjelpen nevner
 # alle inngangene som finnes, at inngangen henter alle fire kildene og sier at
 # lista er rå, at inngangen og saksløpet deler vindusregel, at ingen ferdighet
-# starter fra en story-brief, at
+# starter fra en story-brief, at alt brukervendt legger fram etter den felles
+# samtaleformen, at
 # manifestene er gyldig JSON, at verktøyets --list-kontrakt holder, at
 # kommandoene bare refererer til modi som FINNES, at enhetstestene er grønne, og
 # at mål-presedensen er den samme i shell og JS.
@@ -467,6 +468,41 @@ else
     pass "begge som feller dommen leser den fra references/dekningsdom.md"
   else
     fail "disse feller dommen uten å lese den felles definisjonen:$UTEN_REF"
+  fi
+fi
+
+# --- 4c-quinquies. Samtaleformen er definert ETT sted ---------------------
+# Journalisten leser meldinger i en tråd, ikke JSON. Id-er, kategori-enumer,
+# feltnavn og flagg er arbeidsmateriale — de kan ikke åpnes, ikke ringes, og de
+# tar plassen til det som avgjør valget: hva saken er og hvor den står. Formen på
+# det som legges FRAM står derfor i references/samtaleform.md, og hver brukervendt
+# fil leser den derfra. Sto den i åtte filer, ville halvparten drevet tilbake til
+# å ramse opp felt — og en enkelt fil som gjør det, gjør hele tråden teknisk igjen.
+#
+# `kasus-researcher` er utenfor med vilje: rapporten dens er fakta med URL til
+# orkestratoren, aldri en liste noen velger fra. Det samme gjelder env og test,
+# som er diagnostikk der variabelnavnet ER svaret.
+VOICE_REF="$ROOT/references/samtaleform.md"
+if [ ! -f "$VOICE_REF" ]; then
+  fail "references/samtaleform.md mangler — samtaleformen har ingen felles definisjon"
+else
+  UTEN_FORM=""
+  for f in "$STATUS_CMD" "$ROOT/agents/kasus-lookout.md" "$ROOT/agents/kasus-archivist.md" \
+           "$TRIAGE_AGENT" $(find "$ROOT/skills" -name 'SKILL.md' | sort); do
+    [ -f "$f" ] || continue
+    grep -q 'samtaleform\.md' "$f" || UTEN_FORM="${UTEN_FORM} ${f#"$ROOT"/}"
+  done
+  if [ -z "$UTEN_FORM" ]; then
+    pass "alt brukervendt legger fram etter references/samtaleform.md"
+  else
+    fail "disse legger fram uten den felles samtaleformen:${UTEN_FORM}"
+  fi
+
+  # Regelen er hele poenget. Står de tre tingen ikke der, er filen en holdning.
+  if grep -q 'klikkbar lenke\|Lenka' "$VOICE_REF" && grep -q 'id-ene bæres, de skrives ikke ut' "$VOICE_REF"; then
+    pass "samtaleformen har regelen: tittel, hva saken er, lenke — og id-er som ikke skrives ut"
+  else
+    fail "references/samtaleform.md mangler selve regelen (lenke framfor id)"
   fi
 fi
 
