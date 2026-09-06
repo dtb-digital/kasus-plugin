@@ -2,7 +2,8 @@
 
 Lastes ved behov. Den autoritative dokumentasjonen bor i kasus-repoet
 (`docs/signals-api-README.md`, `docs/articles-api-README.md`,
-`docs/profile-api-README.md`); dette er det pluginen faktisk er avhengig av.
+`docs/profile-api-README.md`, `docs/story-briefs-api-README.md`); dette er det
+pluginen faktisk er avhengig av.
 
 ## Grunnlaget
 
@@ -23,12 +24,43 @@ Lastes ved behov. Den autoritative dokumentasjonen bor i kasus-repoet
 | `GET /api/v1/signals/{id}` | — | 404 = finnes ikke eller annen org |
 | `GET /api/v1/articles` | `status`, `cms`, `hours`, `limit` (maks 100), `cursor`, `include=body` | Redaksjonens EGNE saker. Nyest publisert først; upublisert sorteres sist. |
 | `GET /api/v1/articles/{id}` | — | Alltid med `body`. 404 = finnes ikke eller annen org |
+| `GET /api/v1/story-briefs` | `status`, `hours`, `limit` (maks 100), `cursor` | Kasus' EGNE saksforslag. Sortert på `createdAt` desc |
+| `GET /api/v1/story-briefs/{id}` | — | 404 = finnes ikke eller annen org |
 | `GET /api/v1/profile` | — | Ett objekt per organisasjon |
 
-`/api/v1/story-briefs` finnes i API-et, men **pluginen bruker det ikke**. Saksløpet
-går fra rått radarsignal til saksforslag i én prosess, og et ferdig vurdert
-saksforslag fra pipelinen ville vært et konkurrerende utgangspunkt i samme
-arbeidsflyt.
+**Story-briefs er et OPPSLAG, ikke en inngang.** Modiene `story-briefs` og
+`story-brief <id>` svarer på «hva ligger det alt av forslag i Kasus?» — typisk før
+man setter i gang, for ikke å gjøre arbeidet innholdspipelinen alt har gjort. Men
+ingen ferdighet og ingen agent kaller dem, og det er håndhevet i `/kasus:test`:
+saksløpet går fra et RÅTT radarsignal til et forslag med research og et spor
+tilbake til opphavet, og en ferdig vurdert brief ville vært et konkurrerende
+utgangspunkt i samme arbeidsflyt — to steder å starte fra, uten at noen kan se
+hvilket som gjelder for forslaget de leser.
+
+Ordet «saksforslag» betyr derfor to ting, og de må ikke forveksles: fila pluginen
+skriver på disk etter et saksløp, og briefen pipelinen har laget inne i Kasus.
+Bare den ene har et signal, en dekningssjekk og daterte kilder bak seg — det sies
+i outputen, ikke bare her.
+
+**`hours` på story-briefs måles mot `createdAt`** — når KASUS laget briefen. Ikke
+mot en publiseringsdato (artikler) og ikke mot `detectedAt` (signaler). De tre
+listemodiene måler mot tre ulike felt, så modusen sier i `meta.hoursMåler` hva
+filteret faktisk målte: et tomt svar betyr «ingenting ble LAGET i perioden», ikke
+«ingenting har skjedd».
+
+**Brief-`status` er et ENUM serverside** (`candidate`, `proposal`, `draft`,
+`final`, `dismissed`), i motsetning til artikkel-`status`: feltet eies av Kasus,
+ikke av kundens CMS, så en ukjent verdi gir `400` og ikke en tom liste. Verktøyet
+validerer den derfor lokalt. `candidate` og `proposal` ser ut som synonymer og er
+det ikke — forskjellen er om noen har vurdert saken ferdig.
+
+**Brief-`origin`** (`innhold`, `radar`, `url`, `triage`) er ikke signalets
+`origin`. Feltene heter det samme og betyr ikke det samme: her er det hvor briefen
+oppsto i Kasus, ikke hvorfor radaren fant noe. `title`, `plot` og `angle` er
+nullable — en `candidate` som ikke er skrevet ut ennå har ingen tittel, og det
+sies framfor å vises som en blank linje. `plot`, `angle`, `reason` og
+`conversionReason` er skrevet av pipelinen: de er ikke kilder, og ingen har
+etterprøvd dem. `sources` er det eneste i en brief som peker utenfor Kasus.
 
 `nextCursor` er `null` på siste side. `limit` over 100 finnes ikke — verktøyet
 pagineres i stedet, og sier fra når taket er nådd.

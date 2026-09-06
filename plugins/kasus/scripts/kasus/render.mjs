@@ -382,6 +382,158 @@ export function renderArticle(article, { full = false } = {}) {
 }
 
 /**
+ * Hva `status` på en story-brief betyr redaksjonelt.
+ *
+ * Verdiene er et enum i API-et (`candidate` … `dismissed`), men de er ikke
+ * selvforklarende på engelsk i en norsk redaksjon: `candidate` og `proposal`
+ * ser ut som synonymer, og forskjellen er nettopp om noen har vurdert saken.
+ */
+const BRIEF_STATUS_LABELS = {
+  candidate: "kandidat — plukket ut, ikke vurdert ferdig",
+  proposal: "forslag — vurdert og lagt fram i Kasus",
+  draft: "kladd — noen har begynt å skrive på den",
+  final: "ferdig — ferdigstilt i Kasus",
+  dismissed: "forkastet",
+};
+
+/** Hvor briefen oppsto. Ikke det samme som `origin` på et signal. */
+const BRIEF_ORIGIN_LABELS = {
+  innhold: "innholdspipelinen (egne saker holdt mot mønstrene)",
+  radar: "et radarsignal",
+  url: "en url noen limte inn i Kasus",
+  triage: "triage i Kasus",
+};
+
+const CONVERSION_LABELS = {
+  pluss: "pluss — vurdert som en sak som konverterer",
+  open: "åpen — vurdert som åpen sak",
+};
+
+/**
+ * Nye verdier i disse feltene er ikke en brytende endring — pipelinen eier dem.
+ * En ukjent verdi VISES derfor rå, med et forbehold, framfor å bli skjult bak
+ * en labelslåing som stille sier «(ukjent)».
+ */
+export function describeBriefStatus(status) {
+  if (!status) return "uten status";
+  return BRIEF_STATUS_LABELS[status] ?? `${status} (ukjent status for denne versjonen)`;
+}
+
+export function describeBriefOrigin(origin) {
+  if (!origin) return null;
+  return BRIEF_ORIGIN_LABELS[origin] ?? `${origin} (ukjent opphav for denne versjonen)`;
+}
+
+function conversionNote(brief) {
+  if (!brief.conversionPotential) return null;
+  const label = CONVERSION_LABELS[brief.conversionPotential] ?? brief.conversionPotential;
+  return brief.conversionReason ? `${label} — ${clip(brief.conversionReason, 300)}` : label;
+}
+
+/**
+ * Tittelen er NULLABLE, og en tom tittel betyr noe: en `candidate` som ikke er
+ * skrevet ut ennå. En blank linje ville sett ut som en feil i verktøyet.
+ */
+function briefTitle(brief) {
+  return brief.title ?? "(uten tittel — kandidaten er ikke skrevet ut)";
+}
+
+/** Én story-brief på få linjer — nok til å se om den er verdt å åpne. */
+function renderBriefLine(brief) {
+  const meta = [
+    `opprettet ${fmtAge(brief.createdAt)}`,
+    describeBriefOrigin(brief.origin),
+    brief.matchedPattern ? `mønster: ${brief.matchedPattern}` : "uten mønstertreff",
+  ].filter(Boolean);
+
+  return block([
+    `  ▸ [${describeBriefStatus(brief.status)}] ${clip(briefTitle(brief), 140)}`,
+    `    ${meta.join(" · ")}`,
+    line("id", brief.id, "    "),
+    line("konvertering", conversionNote(brief), "    "),
+    line("vinkling", clip(brief.angle, 180), "    "),
+    line("kilde-url", brief.sourceUrl, "    "),
+  ]);
+}
+
+/**
+ * Kasus' EGNE saksforslag.
+ *
+ * Overskriften sier hva dette IKKE er, og det er ikke pynt. Ordet «saksforslag»
+ * betyr to ting i denne verdenen: fila pluginen skriver på disk etter et
+ * saksløp, og briefen innholdspipelinen har laget inne i Kasus. De ser like ut i
+ * en liste, og bare den ene har et signal og en research bak seg.
+ *
+ * Derfor er modusen et OPPSLAG og ikke en inngang: saksløpet går fra et rått
+ * radarsignal til et forslag, og en ferdig vurdert brief ville vært et
+ * konkurrerende utgangspunkt i samme arbeidsflyt — to steder å starte fra, uten
+ * at noen kan se hvilket som gjelder.
+ */
+export function renderBriefs(briefs, { truncated = false } = {}) {
+  if (!briefs.length) {
+    return block([
+      "Ingen story-briefs for denne organisasjonen med dette filteret.",
+      "",
+      "Nøkkelen avgjør organisasjonen, så tomt betyr tomt for DENNE — aldri tomt i Kasus.",
+    ]);
+  }
+
+  const parts = [
+    "STORY-BRIEFS — KASUS' EGNE SAKSFORSLAG",
+    `  ${briefs.length} briefs, nyest opprettet først`,
+    "  MERK: laget av innholdspipelinen INNE i Kasus. Dette er ikke saksforslagene",
+    "  pluginen skriver på disk, og ikke et utgangspunkt for saksløpet — det går fra",
+    "  et rått radarsignal. Et oppslag: «hva ligger det alt av forslag i Kasus?».",
+    "",
+  ];
+  for (const brief of briefs) parts.push(renderBriefLine(brief), "");
+  if (truncated) parts.push("Taket er nådd — det finnes MER enn dette. Øk --limit.");
+  return block(parts);
+}
+
+/**
+ * Én story-brief med hele vurderingen.
+ *
+ * Feltene er ikke et signals felt, og forvekslingen er dyr: et signal er et FUNN
+ * (noen har publisert noe), en brief er en VURDERING (Kasus har ment noe om det).
+ * `plot`, `angle`, `reason` og `conversionReason` er skrevet av pipelinen — de er
+ * ikke kilder, og ingen har etterprøvd dem. `sources` er det eneste her som
+ * peker på noe utenfor Kasus.
+ */
+export function renderBrief(brief, { full = false } = {}) {
+  const max = full ? 2000 : 300;
+  const eng = brief.engagement ?? {};
+
+  return block([
+    `[${describeBriefStatus(brief.status)}] ${briefTitle(brief)}`,
+    line("id", brief.id),
+    line("opphav", describeBriefOrigin(brief.origin)),
+    line("mønster", brief.matchedPattern),
+    line(
+      "opprettet",
+      [fmtTime(brief.createdAt), fmtAge(brief.createdAt)].filter(Boolean).join(" · "),
+    ),
+    line("sist endret", fmtTime(brief.updatedAt)),
+    line("kilde-url", brief.sourceUrl),
+    line("konvertering", conversionNote(brief)),
+    line("plott", clip(brief.plot, max)),
+    line("vinkling", clip(brief.angle, max)),
+    line("begrunnelse", clip(brief.reason, max)),
+    full
+      ? line(
+          "innsikt",
+          [brief.insightTitle, clip(brief.insightDescription, max)].filter(Boolean).join(" — "),
+        )
+      : null,
+    full ? line("nøkkelaktører", eng.keyActors) : null,
+    full ? line("aktører", renderActors(eng.actors)) : null,
+    full ? line("nøkkeltall", eng.keyFigures) : null,
+    full ? line("åpne spørsmål", eng.openQuestions) : null,
+    full ? renderSources(brief.sources) : renderSourceCount(brief.sources),
+  ]);
+}
+
+/**
  * Saksløpet: hva som har kommet inn siden forrige kvittering.
  *
  * Signalene er gruppert på opphav, og hver gruppe bærer forklaringen sin. Det er

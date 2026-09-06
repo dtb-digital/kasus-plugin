@@ -21,6 +21,8 @@
  *   kasus.mjs articles [--kort] [--status P] [--cms labrador]
  *                      [--hours N] [--limit 200] [--json]
  *   kasus.mjs article <id> [--json]
+ *   kasus.mjs story-briefs [--status proposal] [--hours N] [--limit 20] [--json]
+ *   kasus.mjs story-brief <id> [--json]
  *   kasus.mjs profile  [--json]
  *   kasus.mjs --list --json
  *
@@ -49,6 +51,8 @@ import {
   renderArticle,
   renderArticles,
   renderArticleWindow,
+  renderBrief,
+  renderBriefs,
   renderDigest,
   renderSignalWindow,
   renderProfile,
@@ -87,7 +91,7 @@ import {
   writeState,
 } from "./state.mjs";
 
-const VERSION = "0.15.0";
+const VERSION = "0.19.0";
 const DEFAULT_LIMIT = 20;
 
 /**
@@ -99,6 +103,13 @@ const DIGEST_LIMIT = 40;
 /** Tillatte serverside-verdier. Sjekkes lokalt for å gi et bedre svar enn 400. */
 const SIGNAL_STATUSES = ["new", "seen", "promoted", "dismissed"];
 const SIGNAL_TYPES = ["competitor_article", "market_signal"];
+
+/**
+ * Story-brief-statusene. ENUM serverside, i motsetning til artikkel-`status` —
+ * `StoryBrief.status` eies av Kasus, ikke av kundens CMS, så en ukjent verdi er
+ * en `400` og ikke en tom liste. Derfor valideres den lokalt.
+ */
+const BRIEF_STATUSES = ["candidate", "proposal", "draft", "final", "dismissed"];
 
 /**
  * Vinduet «har vi dekket dette før?» sjekkes mot.
@@ -180,6 +191,19 @@ const MODES = {
     flags: [...COMMON_FLAGS],
     args: "<id>",
     run: runArticle,
+  },
+  "story-briefs": {
+    summary:
+      "Kasus' EGNE saksforslag, nyest opprettet først. Et OPPSLAG — ikke en inngang til saksløpet, som går fra et rått radarsignal. --hours måles mot createdAt.",
+    flags: [...COMMON_FLAGS, "status", "hours", "limit"],
+    run: runStoryBriefs,
+  },
+  "story-brief": {
+    summary:
+      "Én story-brief med plott, vinkling, begrunnelse, kilder og engagement. Vurderingen Kasus har gjort — ikke kilder som er etterprøvd.",
+    flags: [...COMMON_FLAGS],
+    args: "<id>",
+    run: runStoryBrief,
   },
   profile: {
     summary:
@@ -566,6 +590,62 @@ async function runArticle(target, flags, positional) {
     kind: "article",
     items: [body.data],
     render: () => renderArticle(body.data, { full: true }),
+  };
+}
+
+/**
+ * Kasus' egne saksforslag — briefene innholdspipelinen har laget.
+ *
+ * Modusen er et OPPSLAG, og det er en grense framfor en forglemmelse. Saksløpet
+ * går fra et rått radarsignal til et forslag på disk, med research og et spor
+ * tilbake til hvorfor saken ble tatt opp. En ferdig vurdert brief fra pipelinen
+ * ville vært et konkurrerende utgangspunkt i samme arbeidsflyt: to steder å
+ * starte fra, uten at noen kan se hvilket som gjelder for forslaget de leser.
+ *
+ * Spørsmålet den svarer på er derfor «hva ligger det ALT av forslag i Kasus?» —
+ * typisk før man setter i gang, for ikke å gjøre arbeidet pipelinen alt har
+ * gjort. Ingen agent leser den, og ingen ferdighet kaller den (håndhevet i
+ * `/kasus:test`).
+ *
+ * `--hours` måles mot `createdAt` — når KASUS laget briefen. Ikke mot en
+ * publiseringsdato, som på artikler, og ikke mot `detectedAt`, som på signaler.
+ */
+async function runStoryBriefs(target, flags) {
+  const status = assertOneOf(stringFlag(flags, "status"), BRIEF_STATUSES, "status");
+  const hours = intFlag(flags, "hours");
+  const limit = intFlag(flags, "limit", DEFAULT_LIMIT);
+
+  const { items, truncated, pages } = await apiList(
+    target,
+    "/api/v1/story-briefs",
+    { status, hours },
+    limit,
+  );
+
+  return {
+    kind: "story-briefs",
+    items,
+    meta: {
+      hentet: items.length,
+      sider: pages,
+      taketNådd: truncated,
+      filter: { status, hours },
+      // Hva `hours` MÅLTE står i svaret, ikke bare i dokumentasjonen: de tre
+      // listemodiene måler mot tre ulike felt, og et tomt svar leses ellers som
+      // «ingenting har skjedd» når det egentlig betyr «ingenting ble LAGET».
+      hoursMåler: hours ? "createdAt (da Kasus laget briefen)" : null,
+    },
+    render: () => renderBriefs(items, { truncated }),
+  };
+}
+
+async function runStoryBrief(target, flags, positional) {
+  const id = requireId(positional, "story-brief");
+  const body = await apiGet(target, `/api/v1/story-briefs/${encodeURIComponent(id)}`);
+  return {
+    kind: "story-brief",
+    items: [body.data],
+    render: () => renderBrief(body.data, { full: true }),
   };
 }
 
