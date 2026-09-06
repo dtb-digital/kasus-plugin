@@ -128,23 +128,40 @@ som tar over.
 
 Bolkene i denne rekkefølgen — nærmest redaksjonens eget arbeid først:
 
-1. **VÅRE EGNE FERSKE SAKER (oppfølger-materialet).** Alle, om det er få — er `V`
-   et døgn, er det gjerne en håndfull. Tittel, når den ble publisert, og lenka.
-   Dette er det billigste utgangspunktet som finnes: vinklingen er alt gjort, og
-   det som mangler er det nye. Én linje om bildet: «sju saker i går, tyngst på
-   samferdsel».
-2. **DET RADAREN HAR FUNNET (dybde-materialet).** De tre-fem øverste. Si i
-   klartekst hva hver av dem er — «ny kilde på en sak vi alt har publisert»,
-   «konkurrenten har denne, dette er kildene under den», «søketreff på et tema,
-   så sjekk datoen» — hvor gammel saken er, og hva som er kommet inn siden forrige
-   gang du så på dette. Mangler et signal lenke, si det: da er det ingenting å
-   lese seg opp på, og det er i seg selv en grunn til å prioritere det ned.
+1. **VÅRE EGNE FERSKE SAKER (oppfølger-materialet).** Uttrekket fra redaksjonens
+   eget CMS — Labrador hos de fleste — og bare det som er **publisert**: ruten
+   sorterer kladder bakerst, så de faller utenfor i det øyeblikket taket nås.
+   Lista er «hva vi publiserte», ikke «hva noen sitter og jobber med»; kladdene er
+   et eget oppslag (`articles --status D`). Alle, om det er få — er `V` et døgn, er
+   det gjerne en håndfull. Tittel, når den ble publisert, og lenka. Dette er det
+   billigste utgangspunktet som finnes: vinklingen er alt gjort, og det som mangler
+   er det nye. Én linje om bildet: «sju saker i går, tyngst på samferdsel».
+2. **DET RADAREN HAR FUNNET (dybde-materialet).** De tre-fem øverste. Radaren er
+   tre ting i ett — konkurrentenes forsider, redaksjonens egne ferske saker, og søk
+   gjort på grunnlag av begge — og det avgjør hvor mye arbeid som gjenstår på hvert
+   funn. **Si i klartekst hvilket av de fire slagene funnet er.** Kategorinavnet
+   blir hos deg; betydningen skal på skjermen:
+
+   - **oppfølging av EGEN sak** — «nytt om en sak vi alt har publisert». Egne
+     domener er utelatt fra søket, så treffene er det andre har og vi ikke har.
+   - **oppfølging av konkurrentsak** — «konkurrenten har denne, dette er kildene
+     under den». Konkurrentenes egne domener er utelatt: dette er materialet til å
+     gjøre saken bedre enn dem, ikke saken deres.
+   - **konkurrentsak direkte** — «denne ligger på forsiden deres nå». Plukket fra
+     en overvåket forside, ikke et søketreff.
+   - **fritt temasøk** — «søketreff på et tema, så sjekk datoen». Hentet uavhengig
+     av publiseringstidspunkt, og det slaget med mest varierende relevans.
+
+   Si i tillegg hvor gammel saken er, og hva som er kommet inn siden forrige gang
+   du så på dette. Mangler et signal lenke, si det: da er det ingenting å lese seg
+   opp på, og det er i seg selv en grunn til å prioritere det ned.
 3. **FORSLAG SOM ALT LIGGER I KASUS.** De tre-fem nyeste, med tittel og vinklingen
    i én linje. Si hva de ER: forslag innholdspipelinen har laget inne i Kasus,
    ikke saksforslagene pluginen skriver på disk, og **ikke etterprøvd av noen** —
-   plottet, vinklingen og begrunnelsen er skrevet av en modell. Er et av dem uten
-   tittel, er det en kandidat ingen har skrevet ut ennå; si det framfor å vise en
-   blank linje.
+   plottet, vinklingen og begrunnelsen er skrevet av en modell. Kildelenkene er det
+   eneste i en brief som peker utenfor Kasus — det er der etterprøvingen begynner.
+   Er et av dem uten tittel, er det en kandidat ingen har skrevet ut ennå; si det
+   framfor å vise en blank linje.
 
 Pluss én linje om **totalene**, med perioden på: «I går fant radaren 58 saker, det
 kom tre forslag i Kasus, og vi publiserte sju» er grunnlaget i én setning.
