@@ -25,9 +25,13 @@ import { apiGet, apiList, ApiError } from "./api.mjs";
 import {
   bucketOf,
   bucketTitle,
+  describeBriefOrigin,
+  describeBriefStatus,
   describeOrigin,
   publishedNote,
   renderArticleWindow,
+  renderBrief,
+  renderBriefs,
   renderDigest,
   renderSignalWindow,
   SIGNAL_BUCKETS,
@@ -1264,4 +1268,100 @@ test("applyLocalFilters: uten filtre passerer alt, og utenDato telles ikke", () 
   assert.deepEqual(r.lokale, []);
   // Tallet ville vært misvisende uten et datofilter: ingen falt ut på datoen.
   assert.equal(r.utenDato, 0);
+});
+
+// ---------------------------------------------------------------------------
+// Story-briefs: Kasus' EGNE saksforslag
+// ---------------------------------------------------------------------------
+
+/** En brief slik `/api/v1/story-briefs` faktisk leverer den. */
+const BRIEF = {
+  id: "brief_1",
+  status: "proposal",
+  origin: "innhold",
+  title: "Boligprisene faller i distriktene",
+  plot: "Prisene har falt fire kvartaler på rad.",
+  angle: "Hva skjer med dem som må selge?",
+  reason: "Mønsteret «Lokal prisutvikling» er i bevegelse.",
+  matchedPattern: "Lokal prisutvikling",
+  sources: [{ url: "https://ssb.no/x", name: "SSB", isPrimary: true }],
+  engagement: {
+    keyActors: ["Eiendom Norge"],
+    openQuestions: ["Hvor mange sitter med tap?"],
+    actors: [{ name: "Kari Nordmann", role: "megler" }],
+    keyFigures: ["-4,1 % siste kvartal"],
+  },
+  conversionPotential: "pluss",
+  conversionReason: "Leserne har klikket på prisutvikling før.",
+  insightTitle: "Distriktene henger etter",
+  insightDescription: "Segmentet leser mest om egen kommune.",
+  sourceUrl: null,
+  createdAt: new Date(Date.now() - 3 * 3600_000).toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
+test("describeBriefStatus: candidate og proposal er ikke synonymer, og forskjellen SIES", () => {
+  assert.match(describeBriefStatus("candidate"), /ikke vurdert ferdig/);
+  assert.match(describeBriefStatus("proposal"), /vurdert/);
+  assert.notEqual(describeBriefStatus("candidate"), describeBriefStatus("proposal"));
+});
+
+test("describeBriefStatus: en ukjent verdi vises RÅ — pipelinen eier enumet", () => {
+  // Nye statuser er ikke en brytende endring. En labelslåing som svarte
+  // «(ukjent)» ville skjult verdien som faktisk kom fra API-et.
+  assert.match(describeBriefStatus("kuratert"), /kuratert/);
+  assert.match(describeBriefStatus("kuratert"), /ukjent status/);
+  assert.equal(describeBriefStatus(null), "uten status");
+});
+
+test("describeBriefOrigin: opphavet er brief-ets eget, ikke et signals origin", () => {
+  // `innhold` og `radar` er verdier på StoryBrief. `own_followup` er et SIGNAL.
+  // De to feltene heter det samme og betyr ikke det samme.
+  assert.match(describeBriefOrigin("innhold"), /innholdspipelinen/);
+  assert.match(describeBriefOrigin("radar"), /radarsignal/);
+  assert.match(describeBriefOrigin("own_followup"), /ukjent opphav/);
+  assert.equal(describeBriefOrigin(null), null);
+});
+
+test("renderBriefs: sier at dette IKKE er saksforslagene pluginen skriver", () => {
+  const out = renderBriefs([BRIEF]);
+  // Ordet «saksforslag» betyr to ting, og bare den ene har research bak seg.
+  assert.match(out, /ikke saksforslagene/i);
+  assert.match(out, /ikke et utgangspunkt for saksløpet/i);
+  assert.match(out, /brief_1/);
+  assert.match(out, /Boligprisene faller/);
+});
+
+test("renderBriefs: en brief UTEN tittel sier hvorfor, framfor en blank linje", () => {
+  const out = renderBriefs([{ ...BRIEF, title: null, status: "candidate" }]);
+  assert.match(out, /uten tittel/);
+  assert.match(out, /ikke skrevet ut/);
+});
+
+test("renderBriefs: tomt er tomt for DENNE organisasjonen, ikke tomt i Kasus", () => {
+  const out = renderBriefs([]);
+  assert.match(out, /tomt for DENNE/);
+});
+
+test("renderBriefs: taket SIES, ellers leses 20 som «det finnes bare 20»", () => {
+  assert.match(renderBriefs([BRIEF], { truncated: true }), /Taket er nådd/);
+});
+
+test("renderBrief: vurderingen er med, og kildene er det eneste utenfor Kasus", () => {
+  const out = renderBrief(BRIEF, { full: true });
+  assert.match(out, /plott:/);
+  assert.match(out, /vinkling:/);
+  assert.match(out, /begrunnelse:/);
+  // Konverteringsvurderingen betyr ingenting uten begrunnelsen ved siden av.
+  assert.match(out, /konvertering: pluss/);
+  assert.match(out, /klikket på prisutvikling/);
+  assert.match(out, /åpne spørsmål:/);
+  assert.match(out, /Kari Nordmann \(megler\)/);
+  assert.match(out, /https:\/\/ssb\.no\/x/);
+});
+
+test("renderBrief: uten --full telles kildene framfor å listes", () => {
+  const out = renderBrief(BRIEF);
+  assert.match(out, /kilder: 1/);
+  assert.doesNotMatch(out, /ssb\.no/);
 });
