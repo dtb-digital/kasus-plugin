@@ -9,24 +9,22 @@
  *
  * To ting gjør kvitteringen etterprøvbar framfor magisk:
  *
- * 1. **Bare `kvitter` skriver.** `nytt` leser. En oversikt som stilltiende
+ * 1. **Bare `kvitter` skriver.** `vindu` leser. En oversikt som stilltiende
  *    flyttet kvitteringen ville betydd at et avbrutt kall — eller en lukket
  *    terminal — mistet en hel dags signaler uten at noe sa fra.
  *
  * 2. **Etterslep-vinduet.** Et signal kan bli indeksert etter at det ble
  *    oppdaget, så en kvittering på klokkeslettet alene mister det som kommer
- *    inn med en `detectedAt` litt bakover i tid. `nytt` ser derfor
+ *    inn med en `detectedAt` litt bakover i tid. `vindu` ser derfor
  *    `LAG_HOURS` bakover FORBI kvitteringen, og undertrykker det som alt er
  *    vist via `seenIds`. Overlappen er usynlig for brukeren, og gjør at et
  *    sent-ankommet signal fortsatt blir sett.
  */
 
-import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
 
-import { readEnvValue } from "../lib/env.mjs";
-import { ConfigError, hostOf } from "./targets.mjs";
+import { ConfigError } from "./target.mjs";
 
 /** Stien kvitteringen ligger på når ingen variabel er satt. Relativ til cwd. */
 export const DEFAULT_STATE_FILE = ".claude/kasus-state.json";
@@ -42,7 +40,7 @@ export const STATE_VERSION = 1;
 export const MAX_SEEN_IDS = 300;
 
 /**
- * Etterslepet `nytt` ser bakover forbi kvitteringen. To timer er valgt for å
+ * Etterslepet `vindu` ser bakover forbi kvitteringen. To timer er valgt for å
  * dekke indekseringsforsinkelse i pipelinen uten å hente et helt døgn hver gang.
  */
 export const LAG_HOURS = 2;
@@ -68,42 +66,35 @@ export const STREAMS = ["signals"];
  * pluginen bor i en cache-mappe brukeren ikke ser, og en kvittering der ville
  * vært umulig å finne igjen.
  *
- * @param {{ env?: string|null, source?: Record<string,string|undefined>, cwd?: string }} [opts]
+ * @param {{ source?: Record<string,string|undefined>, cwd?: string }} [opts]
  * @returns {{ path: string, source: string }}
  */
-export function resolveStatePath({ env = null, source = process.env, cwd = process.cwd() } = {}) {
-  const found = readEnvValue("KASUS_STATE_FILE", env, source);
-  const raw = found.value ?? DEFAULT_STATE_FILE;
+export function resolveStatePath({ source = process.env, cwd = process.cwd() } = {}) {
+  const value = source.KASUS_STATE_FILE?.trim();
+  const raw = value || DEFAULT_STATE_FILE;
   return {
     path: isAbsolute(raw) ? raw : join(cwd, raw),
-    source: found.source ?? `default (${DEFAULT_STATE_FILE})`,
+    source: value ? "KASUS_STATE_FILE" : `default (${DEFAULT_STATE_FILE})`,
   };
 }
 
 /**
- * Nøkkelen én organisasjons kvittering ligger under.
+ * Nøkkelen én organisasjons kvittering ligger under: verten til MCP-serveren og
+ * organisasjonens slug.
  *
- * Fingeravtrykket av API-nøkkelen er med fordi NØKKELEN avgjør organisasjonen:
- * to redaksjoner i samme repo, eller en byttet nøkkel, skal ikke arve hverandres
- * «siden sist». Verten og miljøet alene holder ikke.
+ * Organisasjonen er med fordi TILKOBLINGEN avgjør den: to redaksjoner i samme
+ * repo, eller en ny innlogging mot en annen organisasjon, skal ikke arve
+ * hverandres «siden sist». Verten er med så staging og produksjon holdes fra
+ * hverandre.
  *
- * @param {{ baseUrl: string, env: string|null, apiKey: string }} target
+ * Kvitteringer fra før MCP (nøklet på API-nøkkelens fingeravtrykk) treffer ikke
+ * denne nøkkelen. Første saksløp etter oppgraderingen er derfor et første
+ * saksløp — 24 timer, og det sies.
+ *
+ * @param {{ host: string, org: string }} target
  */
-export function targetKey(target) {
-  return [hostOf(target.baseUrl), target.env ?? "-", fingerprint(target.apiKey)].join("|");
-}
-
-/**
- * SHA-256 av nøkkelen, forkortet.
- *
- * Dette er ikke en credential og kan ikke brukes til å autentisere — det er en
- * enveis-sjekksum som bare skiller to nøkler fra hverandre. Nøkkelen selv havner
- * aldri i fila, og fingeravtrykket skrives aldri ut i output.
- *
- * @param {string} apiKey
- */
-export function fingerprint(apiKey) {
-  return createHash("sha256").update(String(apiKey)).digest("hex").slice(0, 12);
+export function targetKey({ host, org }) {
+  return `${host}|${org}`;
 }
 
 /** Tom kvitteringsfil. */
@@ -205,27 +196,6 @@ export function windowFor({ checkpoint, now = Date.now(), override = null }) {
 }
 
 /**
- * Er dette elementet nytt for brukeren?
- *
- * To grunner til at noe IKKE er nytt, og de må skilles i rapporten: det er for
- * gammelt for vinduet, eller det er alt kvittert for. Det andre er hele grunnen
- * til at etterslep-vinduet kan overlappe uten å bli støy.
- *
- * @param {{ id?: string }} item
- * @param {string|null|undefined} timestamp
- * @param {{ from: number, seenIds: Set<string> }} ctx
- * @returns {"ny"|"alt sett"|"utenfor vinduet"|"uten tidspunkt"}
- */
-export function classify(item, timestamp, { from, seenIds }) {
-  if (item?.id && seenIds.has(item.id)) return "alt sett";
-  const ts = timestamp ? Date.parse(timestamp) : NaN;
-  // Et element uten brukbart tidspunkt VISES framfor å forsvinne: en utelatelse
-  // her er et signal ingen får se, og det er den dyre feilen av de to.
-  if (Number.isNaN(ts)) return "uten tidspunkt";
-  return ts >= from ? "ny" : "utenfor vinduet";
-}
-
-/**
  * Setter kvitteringen for begge strømmer, og legger id-ene til de sette.
  *
  * Id-ene lagres i ÉN liste per organisasjon, ikke per strøm: id-ene er unike på
@@ -237,10 +207,10 @@ export function classify(item, timestamp, { from, seenIds }) {
  * saksløpet bare rakk noen av sakene.
  *
  * @param {object} state
- * @param {{ key: string, host: string, env: string|null, at: string|null, ids?: string[] }} opts
+ * @param {{ key: string, host: string, org: string, at: string|null, ids?: string[] }} opts
  * @returns {object} ny state (input mutéres ikke)
  */
-export function ack(state, { key, host, env, at, ids = [] }) {
+export function ack(state, { key, host, org, at, ids = [] }) {
   const previous = entryFor(state, key);
   const seen = [...previous.seenIds, ...ids.filter((id) => typeof id === "string" && id.trim())];
   const unique = [...new Set(seen)];
@@ -254,7 +224,7 @@ export function ack(state, { key, host, env, at, ids = [] }) {
       ...state.targets,
       [key]: {
         host,
-        env,
+        org,
         updatedAt: new Date().toISOString(),
         checkpoints,
         // Nyeste sist, og taket kutter de eldste — de er de som er lengst

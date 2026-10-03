@@ -23,8 +23,8 @@ saksforslag på dette signalet». Vil du starte den med vilje, er
 sted: [`skills/dybdeartikkel/SKILL.md`](./skills/dybdeartikkel/SKILL.md).
 
 **Kommer bestillingen som et tema** — «skriv en dybdeartikkel om strømpriser» —
-matches temaet først mot radarens vindu, semantisk, fordi signal-API-et ikke har
-tekstsøk og et tema derfor ikke er et filter. Vinduet er da ikke «siden sist»:
+matches temaet først mot radarens vindu, semantisk, fordi radarens søk bare er et
+ordsøk og et tema derfor ikke er et filter. Vinduet er da ikke «siden sist»:
 kvitteringen svarer på hva DU har sett, mens spørsmålet er hva radaren har på
 temaet, så saksløpet leser sju døgn og sier for hvert treff om det er nytt eller alt
 sett. Finner radaren ingenting, sies det — og det betyr ikke at det ikke finnes en
@@ -44,7 +44,9 @@ om hva som ligger der — det svarer `kasus-lookout` på, uten å kvittere. Saks
 researcher, skriver til disk og flytter kvitteringen, og skal derfor ikke starte
 fordi noen lurte på om det var noe.
 
-API-laget er **read-only**. Det pluginen skriver, skriver den i prosjektet:
+Dataene kommer fra **Kasus' MCP-server**, som er read-only — ingen status i
+Kasus endres. Det pluginen skriver, skriver den i
+prosjektet:
 saksforslagene i `./artikler`, kvitteringen «siden sist» i
 `.claude/kasus-state.json`. Begge stiene er relative til der du står, så to
 prosjekter teller sine egne saksløp.
@@ -79,48 +81,42 @@ versjon som gjelder står i git framfor i en maskin.
    ```
 
    De tre scopene: `project` er fila over, som deles; `local` er
-   `.claude/settings.local.json`, som er prosjektet men bare deg — dit hører
-   nøkkelen i steg 3; `user` er `~/.claude/settings.json`, deg på tvers av
-   prosjekter, riktig bare hvis du bruker Kasus i repoer som ikke skal dele
-   oppsett.
+   `.claude/settings.local.json`, som er prosjektet men bare deg; `user` er
+   `~/.claude/settings.json`, deg på tvers av prosjekter, riktig bare hvis du
+   bruker Kasus i repoer som ikke skal dele oppsett.
 
-2. Lag en API-nøkkel i Kasus: **Innstillinger → API-nøkler → Ny nøkkel**. Den
-   vises kun én gang.
-3. Sett den under `env` i prosjektets `.claude/settings.local.json`. Den fila
-   hører til deg og ikke repoet — legg den i `.gitignore`, så deles
-   plugin-oppsettet mens nøkkelen blir liggende hos deg. En eksport i skallet
-   virker også. **`.env`-filer leses ikke av Claude Code.**
-
-   ```json
-   {
-     "env": {
-       "KASUS_API_KEY": "kasus_sk_…"
-     }
-   }
-   ```
-
-4. Start sesjonen på nytt i prosjektmappa — marketplacet hentes, pluginen
-   installeres, og `env`-innslag og komponenter plukkes opp ved oppstart.
-5. Verifiser: `/kasus:env --resolve`
-6. Kom i gang: `/kasus:start` går gjennom alt som ligger der, bearbeider det, og
+2. Start sesjonen på nytt i prosjektmappa — marketplacet hentes, pluginen
+   installeres, og komponentene og MCP-tilkoblingen til Kasus plukkes opp ved
+   oppstart.
+3. **Logg inn**: `/mcp` → `plugin:kasus:kasus` → **Authenticate**. Du logger inn
+   med Kasus-kontoen i nettleseren, og har du flere organisasjoner, velger du den
+   redaksjonen pluginen skal jobbe for. Ingen API-nøkkel, og ingenting å lime inn.
+   Tilkoblingen kan kobles fra i Kasus under **Innstillinger → Tilkoblede apper**.
+4. Verifiser: `/kasus:env` — den sier hvilken organisasjon du er logget inn i.
+5. Kom i gang: `/kasus:start` går gjennom alt som ligger der, bearbeider det, og
    spør hva du vil gjøre. Vet du det alt, si det i stedet — «jeg skal skrive en
    dybdeartikkel»
 
-Neste person som kloner repoet trenger bare sin egen nøkkel — resten står i
+Neste person som kloner repoet trenger bare å logge inn — resten står i
 `.claude/settings.json`.
+
+**Fra en tidligere versjon med API-nøkkel?** `KASUS_API_KEY` brukes ikke lenger, og
+kan fjernes fra `env` (`/kasus:env` sier fra om den står der). Kvitteringen er nå
+nøklet på organisasjonen framfor nøkkelen, så første saksløp etter oppgraderingen
+ser 24 timer tilbake.
 
 ## Inngangene
 
 | Inngang | Gjør |
 |---|---|
 | **fritekst** — «jeg skal skrive en dybdeartikkel», «finn meg en sak å skrive» | **Hele arbeidsflyten.** Ferdigheten `dybdeartikkel` trigges av bestillingen selv, uten at noen må huske et kommandonavn. |
-| `/kasus:dybdeartikkel` | Samme ferdighet, startet med vilje fra menyen. Tar `--hours 72` for et bredere vindu og `--all` for å ta med forkastede signaler. |
+| `/kasus:dybdeartikkel` | Samme ferdighet, startet med vilje fra menyen. Tar `--hours 72` for et bredere vindu, og «ta med det som er forkastet». |
 | **fritekst** — «skriv en oppfølger på saken om X», «hva har skjedd siden vi skrev om dette?» | **Oppfølger på en egen sak.** Ferdigheten `oppfolgersak` — se under. |
 | `/kasus:oppfolgersak` | Samme ferdighet, startet fra menyen. |
 | **fritekst** — «hvordan bruker jeg denne?», «hva kan kasus?», «hjelp» | **Forklaring, ikke arbeid.** Ferdigheten `hjelp` — hvilken inngang som hører til hvilken jobb, hva ordene i outputen betyr, og hva som er galt når noe ikke virker. Også `/kasus:hjelp`. |
 | `/kasus:start` | **Kom i gang.** Henter **siste døgn av alt materialet** — radarsignalene, Kasus' egne story-briefs og deres egne ferske saker, eller helt tilbake til forrige kvittering om det er lenger siden — legger det fram slik det ligger, og **spør hva du vil gjøre**: en oppfølger, en dybdeartikkel, eller et spørsmål. `--hours 72` overstyrer. Svaret sender deg videre i riktig ferdighet. **Bearbeider ingenting**, kvitterer aldri, skriver ingenting, gjør ingen research. |
-| `/kasus:env` | Sjekker oppsettet. `--resolve` sier hvilken installasjon et kall treffer og hvilken variabel hver verdi kom fra. |
-| `/kasus:test` | Selvtester pluginen. `--live` også tilkoblingen og at serveren avviser skriv. |
+| `/kasus:env` | Sjekker oppsettet, og hvilken organisasjon du er logget inn i. `--resolve` sier hvilken installasjon tilkoblingen går mot og hvor kvitteringen ligger. |
+| `/kasus:test` | Selvtester pluginen. `--live` også tilkoblingen til Kasus. |
 
 Arbeidet skjer i ferdighetene. `/kasus:start` er inngangen for den som ikke har
 bestemt seg: den legger fram grunnlaget valget tas på, og spør. Der går grensa —
@@ -143,7 +139,7 @@ bedre stilt som et spørsmål.
 av jobbene. Prisen for at ingenting har et kommandonavn man MÅ huske, er at
 «hvordan bruker jeg denne?» er et reelt spørsmål — og det er et spørsmål **om**
 pluginen framfor en bestilling **til** den, så det skal ikke starte et saksløp. Den
-henter ingenting fra API-et, kvitterer aldri, og tilbyr å starte riktig inngang
+henter ingenting fra Kasus, kvitterer aldri, og tilbyr å starte riktig inngang
 framfor å gjøre arbeidet selv. At den nevner hver kommando, agent og ferdighet
 som faktisk finnes, er en test i `/kasus:test`: komponentene oppdages fra mappa,
 så en ny inngang blir ellers bare usynlig i kartet.
@@ -165,7 +161,7 @@ når, eller hvem som må ha bestemt seg.
 Den leser artikkelen i full tekst (`article <id>` gir alltid brødteksten), henter
 premissene fra profilen, og spør så tre ting:
 
-1. **Har radaren funnet noe?** `signals --kategori egen_oppfolging` er
+1. **Har radaren funnet noe?** Oppfølgingssøkene (`origin: own_followup`) er
    oppfølgingssøkene: kilder på redaksjonens egne saker, med egne domener
    utelatt — altså andre kilder enn artikkelen selv. Hele vinduet leses også,
    fordi et fritt temasøk kan gjelde saken uten at radaren visste det.
@@ -192,7 +188,7 @@ gjentakelse på tretti sekunder.
 ## De fire kategoriene
 
 Hvert signal merkes med hva det faktisk er. De krever ulike tiltak, og i rå
-API-felt ser de like ut — `origin` og `type` må leses samtidig, og begge
+felt ser de like ut — `origin` og `type` må leses samtidig, og begge
 oppfølgingssøkene lagrer funnene som `market_signal`:
 
 | Kategori | Hva du har i hånda | Tiltaket |
@@ -202,8 +198,8 @@ oppfølgingssøkene lagrer funnene som `market_signal`:
 | **Konkurrentsak direkte** | Konkurrentens egen sak, fra en overvåket forside. | Ikke et søketreff og ikke research. Følges den opp, starter researchen på null. |
 | **Fritt temasøk** | Søketreff på et tema, hentet **uavhengig av publiseringstidspunkt**. | Sjekk publisert-datoen før du prioriterer. Her ligger støyen, og de gamle sakene. |
 
-**Ferskhet er to tall.** `oppdaget` er når radaren fant signalet, `publisert` er
-hvor gammel saken er. Et temasøk kan levere en artikkel fra 2023 som «oppdaget for
+**Ferskhet er to tall.** `detectedAt` er når radaren fant signalet,
+`publishedDate` er hvor gammel saken er. Et temasøk kan levere en artikkel fra 2023 som «oppdaget for
 45 min siden», så saksløpet viser begge og merker `GAMMEL SAK` når de er mer enn en
 uke fra hverandre. Mangler datoen, står det «ukjent dato» — ikke «fersk».
 
@@ -227,7 +223,8 @@ en uke. `--hours N` overstyrer alt. Regelen står ett sted,
 [`references/vindu.md`](./references/vindu.md), og at både inngangen og saksløpet
 leser den derfra er en test.
 
-Gulvet finnes fordi `nytt` måler mot kvitteringen mens listene måler i timer. Var
+Gulvet finnes fordi «nytt siden sist» måles mot kvitteringen mens listene måler i
+timer. Var
 listene alltid et døgn, ville «siden sist» kunne dekke fem døgn med signaler som
 ikke fantes i lista de skulle merkes i — og de ville blitt usynlige, selv om
 telleren hadde dem med.
@@ -324,8 +321,8 @@ rangeringen mot profilen.
 ## Hva du ser i tråden
 
 Alt du får presentert har **én form**: tittel, én til to linjer om hva saken er,
-og en klikkbar lenke. Ikke id-er, ikke `egen_oppfolging`, ikke `meta.forbehold`,
-ikke flaggene pluginen kjørte med. Den formen er definert ett sted —
+og en klikkbar lenke. Ikke id-er, ikke `egen_oppfolging`, ikke feltnavn,
+ikke argumentene pluginen kjørte med. Den formen er definert ett sted —
 [`references/samtaleform.md`](./references/samtaleform.md) — og at hver
 brukervendt del leser den derfra er en test i `/kasus:test`.
 
@@ -333,7 +330,7 @@ Grunnen er at en id ikke er en opplysning for den som skal velge en sak: den kan
 ikke åpnes og ikke ringes, og den tar plassen til det som avgjør. Verktøyet
 trenger den, du gjør ikke. **Etterprøvbarheten flyttes derfor til lenka og
 datoen** — de gjør samme jobb bedre, siden en url kan åpnes på tretti sekunder.
-Id-ene bæres videre i det som faktisk trenger dem: oppslag mot API-et,
+Id-ene bæres videre i det som faktisk trenger dem: oppslag i Kasus,
 kvitteringen, og frontmatteren i saksforslaget, som er redaktørens spor tilbake
 til opphavet.
 
@@ -362,10 +359,10 @@ en dublett på nett. De fire dommene er definert ett sted, i
 [`references/dekningsdom.md`](./references/dekningsdom.md), så de betyr det samme
 begge steder.
 
-**Artikkel-API-et har ingen tekstsøk.** Spørsmålet kan derfor ikke stilles til
-serveren. Verktøyet henter i stedet et vindu på de 200 nyeste egne artiklene —
-tittelfelt, emneknagger, ingress og dato, uten brødtekst — og
-`kasus-archivist` leser dem og svarer.
+**Søket i egne artikler er et ordsøk.** Spørsmålet kan derfor ikke stilles til
+serveren. `kasus-archivist` henter i stedet et vindu på de 200 nyeste egne
+artiklene — tittelfelt, emneknagger, ingress og dato, uten brødtekst — leser dem,
+og bruker ordsøket som et tillegg for å nå lenger tilbake.
 
 Vurderingen er semantisk, og det er poenget: «prisfall i Bodø» og «nedgang i
 kvadratmeterprisen i Nordland» er samme sak for en leser og har ikke ett ord til
@@ -384,17 +381,17 @@ brødteksten, hentes de avgjørende kandidatene i full tekst.
 
 **Kladder er utenfor vinduet.** Ikke fordi de er uinteressante — en kladd på samme
 tema er det mest verdifulle treffet sjekken kan gi, fordi den betyr at en kollega
-alt skriver saken — men fordi alternativet ikke er «kladder er med». API-et
-sorterer `published desc, nulls last`, så upublisert ligger bakerst: en redaksjon
-med 250 publiserte saker fikk null kladder i et vindu på 200, mens en med 100 fikk
-alle sine. Samme kommando, ulikt svar. Nå er utelatelsen eksplisitt, antallet står
-i `meta.utenPublisering`, og kladdene er et eget oppslag: `articles --status D`.
+alt skriver saken — men fordi alternativet ikke er «kladder er med». Kasus
+sorterer upublisert bakerst, så i en blandet liste ville en redaksjon med 250
+publiserte saker fått null kladder i et vindu på 200, mens en med 100 fikk alle
+sine. Samme oppslag, ulikt svar. Utelatelsen er derfor eksplisitt — vinduet er
+bare de publiserte — og kladdene er et eget oppslag.
 
 Tre forbehold følger hvert svar, og de er ikke det samme:
 
 - **Vindusgrensen.** **«Ingen treff» betyr «ikke blant disse artiklene»**, aldri
-  «ikke dekket». En sak eldre enn vinduet er usynlig for enhver vurdering — det
-  er en egenskap ved API-et, ikke ved vurderingen.
+  «ikke dekket». En sak eldre enn vinduet, skrevet med andre ord, er usynlig for
+  enhver vurdering — det er en egenskap ved lesingen, ikke ved vurderingen.
 - **Kladdene.** «Ingen treff» er ikke «ingen jobber med dette».
 - **At det er en vurdering.** Ikke en regning, og ikke reproduserbar. Derfor står
   dato og lenke på hver kandidat: dommen skal kunne overprøves på tretti
@@ -413,17 +410,17 @@ Saksløpet måler mot en **kvittering**: tidspunktet forrige saksløp ble gjort,
   du alt har sett.
 - **Rakk du bare noen av sakene**, kvitteres de alene — resten er fortsatt nytt
   neste gang. Saksløpet sier hvilken av de to som ble gjort.
-- Fila inneholder verter, tidspunkter og id-er. **Ingen nøkkel.** Organisasjoner
-  skilles med et forkortet SHA-256 av nøkkelen, som ikke kan autentisere noe.
-  Legg den i `.gitignore`: kvitteringen er DITT saksløp, ikke redaksjonens, og en
+- Fila inneholder verter, organisasjoners slug, tidspunkter og id-er. **Ingenting
+  som kan autentisere.** Organisasjoner skilles på slugen, installasjoner på
+  verten. Legg den i `.gitignore`: kvitteringen er DITT saksløp, ikke redaksjonens, og en
   delt kvittering ville sagt at du har sett noe du ikke har sett.
 
 ## Agenter
 
-De tre første finnes av samme grunn: **API-et har ingen tekstsøk**, verken på
-signaler eller artikler. Et tema er ikke et filter — det må leses. Agentene henter
-vinduet selv, så de hundre eller to hundre elementene blir liggende i deres
-kontekst framfor i samtalens.
+De tre første finnes av samme grunn: **søket i Kasus er et ordsøk**, verken på
+signaler eller artikler et semantisk søk. Et tema er ikke et filter — det må leses.
+Agentene henter vinduet selv, så de hundre eller to hundre elementene blir liggende
+i deres kontekst framfor i samtalens.
 
 De trigges på naturlig språk. Du trenger ingen kommando for å spørre.
 
@@ -434,26 +431,25 @@ gammel den er og en klikkbar lenke per signal — og **kvitterer aldri**. Et sp�
 som ligger der skal ikke kunne spise saksløpet, så forbudet er håndhevet i
 `/kasus:test` framfor å være et løfte i en prompt.
 
-Den bygger sitt eget filter, og **bare tre av filtrene finnes serverside**
-(`--status`, `--type`, `--hours`). Resten filtrerer det som er hentet, fordi
-API-et ikke støtter dem — og de er der fordi de svarer på spørsmål redaksjonen
-faktisk stiller:
+Den bygger sitt eget filter. Noe går til serveren (`status`, `type`, `origin`,
+`hours`, `min_relevance`); resten gjør den på det som er hentet, fordi serveren
+ikke kan uttrykke det:
 
-| Filter | Svarer på | Hvorfor lokalt |
-|---|---|---|
-| `--kategori` | «er det oppfølginger av EGNE saker?» | `origin` er `null` for både konkurrentsak og temasøk, så kategorien krever at `type` leses samtidig |
-| `--uten-monster` | «finner radaren noe profilen ikke forklarer?» | `--pattern` krever en streng — fraværet kan ikke uttrykkes |
-| `--publisert <timer>` / `--ferske` | «er det noe FERSKT å skrive om?» | `hours` måler når radaren fant signalet, ikke hvor gammel saken er |
-| `--gamle` | «hvor mye av det er gamle saker?» | `GAMMEL SAK` er pluginens egen utregning |
-| `--uten-lenke` | «er det signaler vi ikke kan åpne?» | — |
+| Spørsmålet | Hvorfor det ikke er et serverfilter |
+|---|---|
+| «er det noe fra konkurrentenes forsider?» / «hvor mye er temasøk?» | `origin` er `null` for begge, så kategorien krever at `type` leses samtidig |
+| «finner radaren noe profilen ikke forklarer?» | fraværet av et mønstertreff kan ikke uttrykkes som et filter |
+| «er det noe FERSKT å skrive om?» | `hours` måler når radaren fant signalet, ikke hvor gammel saken er |
+| «hvor mye av det er gamle saker?» | `GAMMEL SAK` er pluginens egen utregning |
+| «er det signaler vi ikke kan åpne?» | — |
 
-**`--hours` og `--publisert` er ikke samme spørsmål.** Et fritt temasøk hentes
-uavhengig av publiseringstidspunkt, så `--hours 24` kan gi en sak fra 2023 som ble
+**`hours` og publiseringsdatoen er ikke samme spørsmål.** Et fritt temasøk hentes
+uavhengig av publiseringstidspunkt, så `hours: 24` kan gi en sak fra 2023 som ble
 oppdaget i dag. Et signal uten publiseringsdato faller ut av datofiltrene, og
 antallet oppgis: de er *ukjente*, ikke gamle.
 
 Hvert svar sier hvor mange som passerte av hvor mange hentede, og hvilke filtre som
-var i bruk — et lokalt filter på et avkortet vindu er ikke et søk.
+var i bruk — et filter på et avkortet vindu er ikke et søk.
 
 `kasus-archivist` besvarer **ett spørsmål om redaksjonens egne artikler**. Den
 velger vinduet spørsmålet krever, henter det selv, og svarer med tittel, dato og
@@ -482,34 +478,32 @@ går til primærkilden framfor omtalen, daterer alt, og skiller mellom bekreftet
 motstridende og ubekreftet. Saksløpet sender ut én per spørsmål, parallelt, maks
 seks. Redaksjonens egne og konkurrentens domener er aldri et svar i seg selv.
 
-## Variabler
+## Tilkoblingen og variablene
+
+Pluginen kobler til Kasus med `.mcp.json` i pluginroten: serveren `kasus`, over
+HTTP, med innlogging (OAuth). Verktøyene heter `mcp__plugin_kasus_kasus__*`, og
+kontrakten pluginen bygger på står i
+[`references/kasus-mcp.md`](./references/kasus-mcp.md).
 
 | Variabel | Påkrevd | Betydning |
 |---|---|---|
-| `KASUS_API_KEY[_<ENV>]` | **Ja** | Nøkkel fra Innstillinger → API-nøkler. Ekkoes aldri i output. |
-| `KASUS_BASE_URL[_<ENV>]` | Nei | Default `https://app.kasus.io`. Sett den for staging eller egen installasjon. |
-| `KASUS_TIMEOUT_MS[_<ENV>]` | Nei | Default `30000`. |
-| `KASUS_ARTICLES_DIR[_<ENV>]` | Nei | Default `./artikler`. Hit skrives saksforslagene. |
-| `KASUS_STATE_FILE[_<ENV>]` | Nei | Default `.claude/kasus-state.json`, tolket fra der du står. Kvitteringen «siden sist» måles mot. |
+| `KASUS_MCP_URL` | Nei | Default `https://app.kasus.io/api/mcp`. Sett den for staging eller egen installasjon — samme variabel styrer tilkoblingen og hvilken installasjon kvitteringen gjelder. |
+| `KASUS_ARTICLES_DIR` | Nei | Default `./artikler`. Hit skrives saksforslagene. |
+| `KASUS_STATE_FILE` | Nei | Default `.claude/kasus-state.json`, tolket fra der du står. Kvitteringen «siden sist» måles mot. |
 
-Per-miljø-variabelen vinner over den delte. Suffikset er miljønavnet i VERSALER
-med bindestrek → understrek (`pre-prod` → `PRE_PROD`), og uten `--env` leses BARE
-den delte varianten. `/kasus:env --resolve <miljø>` svarer på hva et kall faktisk
-ville truffet.
-
-Forutsetter Node 18+ på PATH. Verktøyet er avhengighetsfri ESM — ingen
-`npm install`, ingen byggesteg.
+Forutsetter Node 18+ på PATH, til kvitteringen. Den er avhengighetsfri ESM — ingen
+`npm install`, ingen byggesteg — og har ingen nettverkskode.
 
 ## Det du bør vite før du stoler på outputen
 
-- **Nøkkelen avgjør organisasjonen.** Ingen organisasjons-id sendes. «Ingen
-  signaler» betyr «ingen for denne organisasjonen», og en `404` betyr «finnes
+- **Innloggingen avgjør organisasjonen.** Ingen organisasjons-id sendes. «Ingen
+  signaler» betyr «ingen for denne organisasjonen», og «ikke funnet» betyr «finnes
   ikke ELLER tilhører en annen organisasjon».
 - **Artikkel-sjekken er en vurdering av et vindu**, ikke et fulltekstsøk. Den er
   ikke reproduserbar, og vinduet er 200 artikler. Se over.
-- **Menneskelig output klipper** lange tekstfelt og sier at den klipper. `--json`
-  klipper ingenting. Verktøyets utskrift er arbeidsmateriale — det som legges fram
-  for deg er ryddet, se «Hva du ser i tråden».
+- **Listene fra Kasus klipper** lange tekstfelt; enkeltoppslagene gjør det ikke.
+  Svarene er arbeidsmateriale — det som legges fram for deg er ryddet, se «Hva du
+  ser i tråden».
 - **Ingenting oppdiktes.** Mangler en kilde, står det
   `[TRENGER VERIFISERING: …]` eller `[SITAT MANGLER: …]` i forslaget framfor en
   plausibel setning. Antallet markører står i frontmatteren som `apenePunkter`.
@@ -517,7 +511,7 @@ Forutsetter Node 18+ på PATH. Verktøyet er avhengighetsfri ESM — ingen
   `generertAv: claude-code/kasus-plugin`, også når teksten leser godt.
 
 Prinsippene i sin helhet: [`references/principles.md`](./references/principles.md).
-API-kontrakten: [`references/kasus-api.md`](./references/kasus-api.md).
+MCP-kontrakten: [`references/kasus-mcp.md`](./references/kasus-mcp.md).
 Formatet på det som legges på disk:
 [`references/proposal-format.md`](./references/proposal-format.md).
 
@@ -525,9 +519,8 @@ Formatet på det som legges på disk:
 
 ```bash
 claude --plugin-dir plugins/kasus                # last pluginen lokalt
-bash plugins/kasus/scripts/self-test.sh          # tørt
-bash plugins/kasus/scripts/self-test.sh --live   # + ekte kall mot API-et
-node --test plugins/kasus/scripts/kasus/         # bare enhetstestene
+bash plugins/kasus/scripts/self-test.sh          # selvtesten
+node --test plugins/kasus/scripts/kasus/*.test.mjs   # bare enhetstestene
 ```
 
 Nye kommandoer, ferdigheter og agenter registreres ikke noe sted — de oppdages
@@ -535,7 +528,7 @@ fra mappa, og krever omstart av sesjonen. **Legger du til en, skal den også inn
 `skills/hjelp/SKILL.md`** — selvtesten sjekker at hjelpen nevner alle inngangene
 som finnes. En ferdighets `name:` må matche
 MAPPENAVNET (`skills/dybdeartikkel/SKILL.md` → `name: dybdeartikkel`), ellers
-lastes den ikke; selvtesten sjekker det. Endrer du verktøyets modi, oppdater `MODES` i
+lastes den ikke; selvtesten sjekker det. Endrer du kvitteringsverktøyets modi, oppdater `MODES` i
 `scripts/kasus/kasus.mjs`; selvtesten sjekker at kommandoene ikke refererer til en
 modus som ikke finnes, og at versjonen i `plugin.json`, `marketplace.json` og
 verktøyet er den samme.

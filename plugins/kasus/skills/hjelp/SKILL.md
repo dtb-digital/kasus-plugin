@@ -1,6 +1,6 @@
 ---
 name: hjelp
-description: Forklarer hvordan kasus-pluginen brukes — hva den gjør, hva den kan spørres om, hvordan man får tak i signalene, hva et signal ER, hvilken inngang som hører til hvilken jobb, hva ordene i outputen betyr, og hva som er galt når noe ikke virker. Skal brukes på spørsmål OM pluginen framfor bestillinger TIL den: «hvordan bruker jeg denne?», «hva kan kasus?», «hva kan jeg spørre om?», «hjelp», «hvor begynner jeg?», «hva er et signal?», «hvor kommer signalene fra?», «hvordan finner jeg signaler om et tema?», «kan jeg filtrere signalene?», «hva ser radaren etter?», «hva er forskjellen på et saksløp og en oppfølger?», «hvorfor får jeg ingen signaler?», «hvor legger den saksforslagene?», «hva står i et saksforslag?», «hva betyr GAMMEL SAK / kvitteringen / SAMME SAK?», «kan den skrive noe tilbake til Kasus?», «hvordan setter jeg opp API-nøkkelen?». Skal IKKE brukes når bestillingen er selve arbeidet: «finn meg en sak å skrive» er ferdigheten dybdeartikkel, «er det noe nytt?» er kasus-lookout, «har vi skrevet om X?» er kasus-archivist. Svarer på spørsmålet som ble stilt og tilbyr å starte riktig inngang — henter aldri signaler eller artikler, skriver ingenting og kvitterer aldri.
+description: Forklarer hvordan kasus-pluginen brukes — hva den gjør, hva den kan spørres om, hvordan man får tak i signalene, hva et signal ER, hvilken inngang som hører til hvilken jobb, hva ordene i outputen betyr, og hva som er galt når noe ikke virker. Skal brukes på spørsmål OM pluginen framfor bestillinger TIL den: «hvordan bruker jeg denne?», «hva kan kasus?», «hva kan jeg spørre om?», «hjelp», «hvor begynner jeg?», «hva er et signal?», «hvor kommer signalene fra?», «hvordan finner jeg signaler om et tema?», «kan jeg filtrere signalene?», «hva ser radaren etter?», «hva er forskjellen på et saksløp og en oppfølger?», «hvorfor får jeg ingen signaler?», «hvor legger den saksforslagene?», «hva står i et saksforslag?», «hva betyr GAMMEL SAK / kvitteringen / SAMME SAK?», «kan den skrive noe tilbake til Kasus?», «hvordan kobler jeg til Kasus?», «hvordan logger jeg inn?». Skal IKKE brukes når bestillingen er selve arbeidet: «finn meg en sak å skrive» er ferdigheten dybdeartikkel, «er det noe nytt?» er kasus-lookout, «har vi skrevet om X?» er kasus-archivist. Svarer på spørsmålet som ble stilt og tilbyr å starte riktig inngang — henter aldri signaler eller artikler, skriver ingenting og kvitterer aldri.
 ---
 
 Hjelp en journalist bruke pluginen. Den gjør **én ting**: går fra et radarsignal
@@ -43,7 +43,9 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs --list
 
 Den første når spørsmålet er «hvorfor virker det ikke» — det er samme sjekk som
 `/kasus:env`, og du skal si at det er den. Den andre når du er i tvil om hva
-verktøyet faktisk har av modi, framfor å gjette.
+kvitteringsverktøyet faktisk har av modi, framfor å gjette. Om Kasus er koblet
+til, ser du av om MCP-verktøyene finnes (`mcp__plugin_kasus_kasus__*`) — du kaller
+dem ikke herfra.
 
 ## Hva journalisten kan si
 
@@ -122,9 +124,10 @@ signaler holdes utenfor med mindre man ber om dem, og antallet sies.
 
 ## Slik får du tak i signalene
 
-**Det finnes ikke noe tekstsøk.** Kasus-API-et har ingen `q`, verken på signaler
-eller artikler. Et tema er derfor ikke et filter — det er noe som må **leses**. Det
-er hele grunnen til at `kasus-lookout` finnes: den henter et vindu av signaler
+**Søket i Kasus er et ordsøk.** Det finner signalet med ordet «nettleie», men ikke
+det som handler om det samme med andre ord. Et tema er derfor ikke et filter — det
+er noe som må **leses**, med ordsøket som et tillegg. Det er hele grunnen til at
+`kasus-lookout` finnes: den henter et vindu av signaler
 inn i sin egen kontekst, leser det, og svarer. Du trenger ingen kommando; du sier
 hva du lurer på.
 
@@ -132,7 +135,7 @@ hva du lurer på.
 |---|---|
 | «er det noe å skrive om i dag?» | Døgnets signaler, med de to–tre som mest ser ut som en sak |
 | «hva har kommet inn denne uka?» | Samme, med et vindu på sju døgn |
-| «er det noe om strømpriser?» | Hele vinduet lest for temaet — ikke et filter, en gjennomlesing |
+| «er det noe om strømpriser?» | Hele vinduet lest for temaet — en gjennomlesing, pluss et ordsøk lenger tilbake |
 | «er det oppfølginger av våre egne saker?» | Bare kategorien som bygger på noe dere har publisert |
 | «er det noe fra konkurrentene?» | Konkurrentsaker, og oppfølgingene av dem |
 | «hvor mye av dette er bare temasøk?» | Et tall, med signalene bak |
@@ -153,21 +156,21 @@ Tre ting er verdt å si videre til den som spør:
   er ulike spørsmål, og svaret sier alltid hvilket av dem som ble målt. Et signal
   uten publiseringsdato faller ut av det siste, og antallet oppgis — de er
   *ukjente*, ikke gamle.
-- **Et filter på et avkortet vindu er ikke et søk.** Bare tre av filtrene finnes
+- **Et filter på et avkortet vindu er ikke et søk.** Noen av filtrene finnes
   serverside; resten sorterer det som alt er hentet. Derfor sier hvert svar hvor
   mange som passerte av hvor mange hentede, og om taket ble nådd. «2 treff» betyr
   «2 av de 100 vi så».
-- **Tomt betyr tomt for DENNE organisasjonen.** Nøkkelen avgjør hvilken. Det
-  betyr aldri «ingenting i Kasus».
+- **Tomt betyr tomt for DENNE organisasjonen.** Tilkoblingen avgjør hvilken — du
+  valgte den da du logget inn. Det betyr aldri «ingenting i Kasus».
 
 Ingen av disse spørsmålene rører kvitteringen, og ingen av dem starter et
 saksløp. Du kan spørre så mye du vil uten å bruke opp noe.
 
 ## Slik spør du om egen dekning
 
-Samme begrensning, andre side av huset: artikkel-API-et har heller ikke tekstsøk,
+Samme begrensning, andre side av huset: søket i egne artikler er også et ordsøk,
 så «har vi skrevet om dette?» besvares ved at `kasus-archivist` henter et vindu av
-de nyeste egne artiklene og leser det. Hvert svar kommer med dato og lenke, så du
+de nyeste egne artiklene, leser det, og søker etter de bærende ordene i resten. Hvert svar kommer med dato og lenke, så du
 kan åpne saken og overprøve det på tretti sekunder.
 
 | Si | Du får |
@@ -277,35 +280,33 @@ en maskin, også når teksten leser godt. Ingenting i den er publisert noe sted.
 
 ## Første gang: oppsettet
 
-Fire ting, og den fjerde er den folk glemmer:
+Tre ting, og den tredje er den folk glemmer:
 
 1. Pluginen installeres med **prosjekt-scope** i redaksjonens repo, så den følger
-   repoet framfor din maskin.
-2. Nøkkelen lages i Kasus under **Innstillinger → API-nøkler**. Den vises **kun
-   én gang**.
-3. Den settes som `KASUS_API_KEY` under `env` i `.claude/settings.local.json` —
-   den fila hører til deg og skal i `.gitignore`. **`.env`-filer leses ikke av
-   Claude Code**, og det er den desidert vanligste feilen.
-4. **Start sesjonen på nytt.** Nye `env`-innslag og nye komponenter plukkes opp
-   ved oppstart, ikke underveis.
+   repoet framfor din maskin. Den tar med seg tilkoblingen til Kasus.
+2. **Start sesjonen på nytt.** Nye plugins og nye komponenter plukkes opp ved
+   oppstart, ikke underveis.
+3. **Logg inn.** Skriv `/mcp`, velg `plugin:kasus:kasus` og «Authenticate». Du
+   logger inn med Kasus-kontoen din i nettleseren, og har du flere
+   organisasjoner, velger du én der. Ingen API-nøkkel, og ingenting å lime inn.
 
-Så: `/kasus:env --resolve`. Den sier hvilken installasjon kallene går mot og
-hvilken variabel hver verdi kom fra. Detaljene, inkludert de tre scopene, står i
+Så: `/kasus:env`. Den sier hvilken installasjon tilkoblingen går mot, og hvilken
+organisasjon du er logget inn i. Detaljene, inkludert de tre scopene, står i
 [`README.md`](../../README.md).
 
 ## Når noe ikke virker
 
 | Det du ser | Som regel fordi | Gjør dette |
 |---|---|---|
-| `MANGLER: KASUS_API_KEY` | Nøkkelen står i en `.env`, eller sesjonen er ikke startet på nytt | Flytt den til `env` i `.claude/settings.local.json`, og start sesjonen på nytt |
-| «Ingen signaler» | Vinduet er tomt for **denne organisasjonen** — nøkkelen avgjør hvilken | `/kasus:start` henter bare siste døgn, så prøv `--hours 168` først, eller spør `kasus-lookout` om en lengre periode. `/kasus:env --resolve` sier hvilken installasjon du treffer, `/kasus:test --live` hvilken organisasjon nøkkelen tilhører |
+| «Kasus er ikke koblet til», verktøyene finnes ikke, eller «needs authentication» | Du har ikke logget inn, innloggingen er utløpt, eller sesjonen er ikke startet på nytt etter installasjonen | `/mcp` → `plugin:kasus:kasus` → Authenticate. Står den ikke der, start sesjonen på nytt i prosjektmappa |
+| «Ingen signaler» | Vinduet er tomt for **denne organisasjonen** — tilkoblingen avgjør hvilken | `/kasus:start` henter bare siste døgn, så prøv `--hours 168` først, eller spør `kasus-lookout` om en lengre periode. `/kasus:env` sier hvilken installasjon og organisasjon du er koblet til. Feil organisasjon: logg ut og inn igjen via `/mcp` |
 | Saksløpet sier «ingenting nytt», men du vet det ligger signaler der | Kvitteringen er flyttet — de er sett før | Be om et bredere vindu, eller «ta med det som er forkastet». Vil du starte «siden sist» helt på nytt, kan kvitteringen nullstilles |
 | Et spørsmål gir færre treff enn du tror finnes | Filteret kjørte på et avkortet vindu | Be om et større vindu. Svaret sier hvor mange som ble hentet, og om taket ble nådd |
-| `404` på et signal eller en artikkel | Finnes ikke, **eller** tilhører en annen organisasjon | Sjekk id-en, og hvilken nøkkel som er i bruk |
-| `401` | Nøkkelen er ugyldig, utløpt, tilbakekalt — eller hører til en annen installasjon | `/kasus:env --resolve`, og se hvilken variabel verdien kom fra |
+| «ikke funnet» på et signal eller en artikkel | Finnes ikke, **eller** tilhører en annen organisasjon | Sjekk id-en, og hvilken organisasjon du er koblet til (`/kasus:env`) |
+| Det virket i går, men avvises nå | Appen er koblet fra i Kasus (Innstillinger → Tilkoblede apper), eller du er ikke lenger medlem av organisasjonen | Logg inn på nytt via `/mcp` |
 | Ferdigheten trigges ikke, eller `/kasus:…` finnes ikke | Sesjonen er ikke startet på nytt, eller pluginen er ikke slått på i dette prosjektet | Start på nytt i prosjektmappa, og sjekk `enabledPlugins` i `.claude/settings.json` |
 | Saksforslagene dukker ikke opp der du venter | `./artikler` og `.claude/kasus-state.json` er **relative til der du står** | Sjekk at sesjonen kjører fra prosjektmappa |
-| Noe annet er rart | — | `/kasus:test` sier om pluginen selv er hel, `--live` om tilkoblingen er det |
+| Noe annet er rart | — | `/kasus:test` sier om pluginen selv er hel, `/kasus:env` om tilkoblingen er det |
 
 ## Ordene du møter i outputen
 
@@ -337,13 +338,12 @@ disk, fra et eldre svar, eller fra en som har sett verktøyets egen utskrift.
   200 nyeste egne artiklene. En eldre sak er usynlig for den, og **kladder er
   utenfor vinduet** — «ingen treff» betyr heller ikke «ingen kollega jobber med
   dette».
-- **Ingenting her er et søk i alt.** Verken signaler eller artikler kan
-  tekstsøkes. Hvert svar er et vindu som er lest, og størrelsen på vinduet står i
-  svaret.
-- **Nøkkelen avgjør organisasjonen.** Ingen organisasjons-id sendes noe sted.
+- **Ingenting her er et søk i alt.** Søket i Kasus finner ord, ikke saker. Hvert
+  svar er et vindu som er lest, og størrelsen på vinduet står i svaret.
+- **Tilkoblingen avgjør organisasjonen.** Ingen organisasjons-id sendes noe sted.
 - **Ingenting dikter pluginen opp.** Mangler en kilde, står det som en markør.
 - **Mot Kasus er alt lesing.** Ingen status endres, ingenting løftes, ingenting
-  forkastes. Det pluginen skriver, skriver den til disk i ditt eget repo:
+  forkastes — tilkoblingen til Kasus kan bare lese. Det pluginen skriver, skriver den til disk i ditt eget repo:
   forslagene i `./artikler`, kvitteringen i `.claude/kasus-state.json`.
 
 Vil noen ha begrunnelsene bak dette framfor reglene, ligger de i

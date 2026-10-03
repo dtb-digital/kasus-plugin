@@ -9,11 +9,11 @@
 # starter fra en story-brief, at alt brukervendt legger fram etter den felles
 # samtaleformen, at
 # manifestene er gyldig JSON, at verktøyets --list-kontrakt holder, at
-# kommandoene bare refererer til modi som FINNES, at enhetstestene er grønne, og
-# at mål-presedensen er den samme i shell og JS.
+# kommandoene bare refererer til modi som FINNES, at MCP-oppsettet er på plass,
+# at hvert MCP-verktøy i en verktøyliste finnes, og at enhetstestene er grønne.
 #
-# --live: i tillegg et ekte kall mot API-et, og en verifisering av at serveren
-# FAKTISK avviser skriv — ikke bare at pluginen ikke prøver.
+# Tilkoblingen til Kasus testes ikke her: den er en MCP-server Claude Code
+# kobler til, og bare Claude kan kalle den. `/kasus:test --live` gjør det.
 
 set -u
 
@@ -21,17 +21,11 @@ if [ -n "${ZSH_VERSION:-}" ]; then setopt shwordsplit; fi
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
-# shellcheck source=lib/env.sh
-. "$HERE/lib/env.sh"
 
-LIVE=0
-ENV_NAME=""
 for arg in "$@"; do
   case "$arg" in
-    --live) LIVE=1 ;;
-    --help|-h) printf 'Bruk: self-test.sh [--live] [miljø]\n'; exit 0 ;;
-    --*) printf 'Ukjent flagg: %s\n' "$arg" >&2; exit 2 ;;
-    *) ENV_NAME="$arg" ;;
+    --help|-h) printf 'Bruk: self-test.sh\n'; exit 0 ;;
+    *) printf 'Ukjent argument: %s (tilkoblingen testes av /kasus:test --live, ikke her)\n' "$arg" >&2; exit 2 ;;
   esac
 done
 
@@ -39,7 +33,7 @@ FAILED=0
 pass() { printf 'OK    %s\n' "$1"; }
 fail() { printf 'FEIL  %s\n' "$1"; FAILED=$((FAILED + 1)); }
 
-printf 'kasus — selvtest%s\n\n' "$([ "$LIVE" -eq 1 ] && printf ' (--live)')"
+printf 'kasus — selvtest\n\n'
 
 # --- 1. Syntaks ------------------------------------------------------------
 # Bash-verktøyet kan bruke bash, sh eller zsh, så shell-skript må sjekkes i
@@ -215,14 +209,14 @@ else
 import json, sys
 m = json.load(sys.stdin)
 assert m["tool"] == "kasus", "tool skal være kasus"
-assert m["readOnly"] is True, "readOnly skal være true"
+assert m["network"] is False, "verktøyet skal ikke ha nettverk — dataene kommer fra MCP"
 assert m["modes"], "ingen modi i manifestet"
 for mode in m["modes"]:
     navn = mode["name"]
     assert navn, "modus uten navn"
     assert mode["summary"], "modus " + navn + " mangler summary"
     assert isinstance(mode["flags"], list) and mode["flags"], "modus " + navn + " mangler flagg"
-    for common in ("env", "json"):
+    for common in ("org", "json"):
         assert common in mode["flags"], "modus " + navn + " mangler --" + common
 ' 2>/dev/null; then
     pass "kasus.mjs --list --json oppfyller manifest-kontrakten"
@@ -318,7 +312,7 @@ fi
 BRIEFBRUKERE=""
 for f in $(find "$ROOT/agents" "$ROOT/skills" -name '*.md' 2>/dev/null | sort); do
   [ -f "$f" ] || continue
-  if grep -qE 'kasus\.mjs[[:space:]]+story-brief' "$f"; then
+  if grep -qE '(list|get|search)_story_briefs?' "$f"; then
     BRIEFBRUKERE="${BRIEFBRUKERE} ${f#"$ROOT"/}"
   fi
 done
@@ -383,11 +377,12 @@ STATUS_CMD="$ROOT/commands/start.md"
 TRIAGE_AGENT="$ROOT/agents/kasus-triage.md"
 if [ -f "$STATUS_CMD" ]; then
   MANGLENDE_KALL=""
-  for modus in nytt signals story-briefs articles; do
-    grep -qE "kasus\.mjs[[:space:]]+${modus}([[:space:]]|\$)" "$STATUS_CMD" || MANGLENDE_KALL="${MANGLENDE_KALL} ${modus}"
+  grep -qE 'kasus\.mjs[[:space:]]+vindu' "$STATUS_CMD" || MANGLENDE_KALL="${MANGLENDE_KALL} vindu"
+  for verktoy in get_organization list_radar_signals list_story_briefs list_articles; do
+    grep -q "$verktoy" "$STATUS_CMD" || MANGLENDE_KALL="${MANGLENDE_KALL} ${verktoy}"
   done
   if [ -z "$MANGLENDE_KALL" ]; then
-    pass "inngangen henter alle fire: nytt + signals + story-briefs + articles"
+    pass "inngangen henter alle fire: vindu + signaler + story-briefs + artikler"
   else
     fail "commands/start.md henter ikke:${MANGLENDE_KALL} — et neste-steg mangler i inngangen"
   fi
@@ -413,10 +408,10 @@ fi
 # ...og agenten må FAKTISK hente begge. Ett vindu er ingen dekningsdom: uten
 # artiklene kan den konsolidere, men ikke si hva som alt er skrevet.
 if [ -f "$TRIAGE_AGENT" ]; then
-  if grep -qE 'kasus\.mjs[[:space:]]+signals' "$TRIAGE_AGENT" && grep -qE 'kasus\.mjs[[:space:]]+articles' "$TRIAGE_AGENT"; then
-    pass "forarbeidet sveiper begge vinduene (signals + articles)"
+  if grep -q 'list_radar_signals' "$TRIAGE_AGENT" && grep -q 'list_articles' "$TRIAGE_AGENT"; then
+    pass "forarbeidet sveiper begge vinduene (signaler + artikler)"
   else
-    fail "agents/kasus-triage.md mangler ett av vinduene (signals + articles)"
+    fail "agents/kasus-triage.md mangler ett av vinduene (list_radar_signals + list_articles)"
   fi
 fi
 
@@ -425,8 +420,8 @@ fi
 # tiden siden kvitteringen. Sto regelen i begge filene, ville de drevet fra
 # hverandre uten at noe sa fra — og da viser inngangen ett vindu mens
 # arbeidsflyten den sender deg til viser et annet. Det var nettopp skjøten regelen
-# ble skrevet for å lukke: `nytt` måler mot kvitteringen, listene mot timer, og
-# signal-id-er som faller utenfor kan ikke merkes.
+# ble skrevet for å lukke: «nytt» måles mot kvitteringen, listene mot timer, og
+# signaler som faller utenfor lista kan ikke merkes.
 WINDOW_REF="$ROOT/references/vindu.md"
 if [ ! -f "$WINDOW_REF" ]; then
   fail "references/vindu.md mangler — vinduet har ingen felles definisjon"
@@ -446,7 +441,7 @@ else
   if grep -q 'max(24' "$WINDOW_REF"; then
     pass "vindusregelen har døgnet som gulv (max(24, siden sist))"
   else
-    fail "references/vindu.md mangler gulvet max(24, …) — skjøten mot «nytt» er åpen igjen"
+    fail "references/vindu.md mangler gulvet max(24, …) — skjøten mot «siden sist» er åpen igjen"
   fi
 fi
 
@@ -535,18 +530,18 @@ else
     fail "hjelpen nevner ikke:$MANGLER — inngangen er usynlig for journalisten"
   fi
 
-  # Hjelpen orienterer, den arbeider ikke. Et API-kall herfra ville gjort den til
-  # et alternativt sted å gjøre jobben (prinsipp 0) — og et hjelpesvar som henter
+  # Hjelpen orienterer, den arbeider ikke. Et kall herfra ville gjort den til et
+  # alternativt sted å gjøre jobben (prinsipp 0) — og et hjelpesvar som henter
   # signaler er et saksløp som startet fordi noen spurte hvordan man starter en.
-  if grep -qE 'kasus\.mjs[[:space:]]+[a-z]' "$HELP_SKILL"; then
-    fail "hjelpen kaller en modus i verktøyet — den skal bare orientere (--list er unntaket)"
+  if grep -qE 'kasus\.mjs[[:space:]]+[a-z]|(list|get|search)_(radar_signals?|story_briefs?|articles?|editorial_profile)' "$HELP_SKILL"; then
+    fail "hjelpen kaller verktøyet eller et MCP-verktøy — den skal bare orientere (--list er unntaket)"
   else
-    pass "hjelpen henter ingenting fra API-et"
+    pass "hjelpen henter ingenting fra Kasus"
   fi
 fi
 
 # --- 5. Enhetstester -------------------------------------------------------
-if node --test "$ROOT/scripts/kasus/" >"${TMPDIR:-/tmp}/kasus-unit-$$.log" 2>&1; then
+if node --test "$ROOT"/scripts/kasus/*.test.mjs >"${TMPDIR:-/tmp}/kasus-unit-$$.log" 2>&1; then
   pass "enhetstester ($(grep -c '^ok ' "${TMPDIR:-/tmp}/kasus-unit-$$.log" | tr -d ' ') tester)"
 else
   fail "enhetstester feilet:"
@@ -554,87 +549,85 @@ else
 fi
 rm -f "${TMPDIR:-/tmp}/kasus-unit-$$.log"
 
-# --- 6. Mål-presedens: shell vs JS ----------------------------------------
-# De to har driftet fra hverandre i en annen plugin før: shell mappet a-z- til
-# A-Z_, JS brukte bare toUpperCase(). Resultatet var at env-sjekken ba om
-# KASUS_API_KEY_PRE_PROD mens verktøyet leste KASUS_API_KEY_PRE-PROD.
-PARITY_FAIL=0
-for env_case in production staging pre-prod PRE-PROD test-env-2 a; do
-  shell_out="$(env_suffix "$env_case")"
-  js_out="$(node --input-type=module -e "
-import { envSuffix } from '$ROOT/scripts/lib/env.mjs';
-process.stdout.write(envSuffix('$env_case'));
-" 2>/dev/null)"
-  if [ "$shell_out" != "$js_out" ]; then
-    fail "presedens-drift for «${env_case}»: shell=«${shell_out}», js=«${js_out}»"
-    PARITY_FAIL=1
-  fi
-done
-[ "$PARITY_FAIL" -eq 0 ] && pass "env-suffiks er identisk i shell og JS (6 miljøer)"
-
-# --- 7. Read-only: ingen skrivende kodesti --------------------------------
-if grep -rnE 'method:[[:space:]]*"(POST|PUT|PATCH|DELETE)"' "$ROOT/scripts" >/dev/null 2>&1; then
-  fail "et skript har en skrivende HTTP-metode — pluginen skal kun gjøre GET"
+# --- 6. MCP-oppsettet -----------------------------------------------------
+# Dataene kommer fra Kasus' MCP-server, og den kobles til av `.mcp.json` i
+# pluginroten. Mangler fila, eller heter serveren noe annet enn `kasus`, finnes
+# ikke verktøyene — og ALLE navnene i kommandoene og agentene
+# (`mcp__plugin_kasus_kasus__*`) peker på ingenting, uten at noe sier fra før
+# journalisten prøver.
+MCP_JSON="$ROOT/.mcp.json"
+if MCP_FILE="$MCP_JSON" python3 -c '
+import json, os
+m = json.load(open(os.environ["MCP_FILE"]))
+s = m["mcpServers"]["kasus"]
+assert s["type"] == "http", "type skal være http"
+assert s["url"].startswith("${KASUS_MCP_URL:-https://"), "url skal være ${KASUS_MCP_URL:-…}"
+assert "headers" not in s, "ingen headere — innloggingen er OAuth"
+' 2>/dev/null; then
+  pass ".mcp.json kobler til serveren «kasus» over http, med OAuth"
 else
-  pass "ingen skrivende HTTP-metode i scripts/"
+  fail ".mcp.json mangler, er ugyldig, eller serveren heter ikke «kasus» — verktøyene finnes da ikke"
 fi
 
-# --- 8. Live ---------------------------------------------------------------
-if [ "$LIVE" -eq 1 ]; then
-  printf '\nLIVE\n'
-  ENV_FLAG=""
-  [ -n "$ENV_NAME" ] && ENV_FLAG="--env $ENV_NAME"
+# Verktøyene Kasus' MCP-server har — alle leseverktøy, serveren er read-only.
+# Alt annet med prefikset er en skrivefeil: et verktøy agenten aldri får.
+PREFIX="mcp__plugin_kasus_kasus__"
+LESEVERKTOY="get_organization get_editorial_profile list_radar_signals search_radar_signals get_radar_signal list_signal_buckets list_story_briefs search_story_briefs get_story_brief list_articles search_articles get_article"
 
-  OUT="${TMPDIR:-/tmp}/kasus-live-$$.json"
-  ERR="${TMPDIR:-/tmp}/kasus-live-$$.err"
-
-  if node "$ROOT/scripts/kasus/kasus.mjs" profile $ENV_FLAG --json >"$OUT" 2>"$ERR"; then
-    ORG="$(ORG_FILE="$OUT" python3 -c 'import json, os; print(json.load(open(os.environ["ORG_FILE"]))["data"][0]["organization"]["name"])' 2>/dev/null)"
-    [ -z "${ORG:-}" ] && ORG="(navn ikke i svaret)"
-    pass "tilkobling virker — nøkkelen tilhører organisasjonen «${ORG}»"
-  else
-    fail "kall mot /api/v1/profile feilet:"
-    sed 's/^/      /' "$ERR"
-  fi
-
-  if node "$ROOT/scripts/kasus/kasus.mjs" signals $ENV_FLAG --limit 1 >/dev/null 2>"$ERR"; then
-    pass "signals-endepunktet svarer"
-  else
-    fail "signals-endepunktet feilet:"
-    sed 's/^/      /' "$ERR"
-  fi
-
-  # Artiklene er halve saksløpet — «har vi dekket dette før?» er ikke mulig å svare
-  # på uten dem, og et manglende endepunkt ville ellers dukket opp midt i et saksløp.
-  if node "$ROOT/scripts/kasus/kasus.mjs" articles $ENV_FLAG --limit 1 >"$OUT" 2>"$ERR"; then
-    if grep -q "Ingen egne artikler" "$OUT"; then
-      pass "articles-endepunktet svarer — men organisasjonen har ingen artikler synkronisert"
-    else
-      pass "articles-endepunktet svarer"
-    fi
-  else
-    fail "articles-endepunktet feilet:"
-    sed 's/^/      /' "$ERR"
-  fi
-
-  # Verifiser at SERVEREN avviser skriv, ikke bare at pluginen ikke prøver.
-  # Ruten har ingen POST-handler, så et 405/404 er beviset. Ingen sideeffekt.
-  BASE="$(KASUS_SELFTEST_ENV="$ENV_NAME" node --input-type=module -e "
-import { resolveTarget } from '$ROOT/scripts/kasus/targets.mjs';
-const env = process.env.KASUS_SELFTEST_ENV || null;
-process.stdout.write(resolveTarget({ env }).baseUrl);
-" 2>/dev/null)"
-  if [ -n "$BASE" ]; then
-    CODE="$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/api/v1/signals" 2>/dev/null || printf '000')"
-    case "$CODE" in
-      405|404|401|403) pass "serveren avviser POST /api/v1/signals ($CODE) — API-et er read-only" ;;
-      000) fail "fikk ikke kontakt med $BASE for skrive-sjekken" ;;
-      *) fail "POST /api/v1/signals svarte $CODE — forventet 405/404/401/403" ;;
+# Hvert MCP-verktøy i en `tools:`/`allowed-tools:`-liste må finnes. En skrivefeil
+# der er et verktøy agenten aldri får, og den oppdager det først midt i jobben.
+# Det fanger også et verktøy noen tror finnes: serveren har ingen skriveverktøy.
+UKJENTE=""
+for f in $(find "$ROOT/commands" "$ROOT/agents" -name '*.md' | sort); do
+  for navn in $(sed -n '1,8p' "$f" | grep -E '^(tools|allowed-tools):' | grep -oE "${PREFIX}[a-z_]+" | sed "s/^${PREFIX}//"); do
+    case " $LESEVERKTOY " in
+      *" $navn "*) ;;
+      *) UKJENTE="${UKJENTE} ${f#"$ROOT"/}:${navn}" ;;
     esac
+  done
+done
+if [ -z "$UKJENTE" ]; then
+  pass "alle MCP-verktøy i verktøylistene er kjente leseverktøy"
+else
+  fail "ukjente MCP-verktøy i verktøylister:${UKJENTE}"
+fi
+
+# Agentene henter selv. Står et verktøy i teksten men ikke i `tools:`, får agenten
+# det ikke — og svarer med «jeg har ikke tilgang» midt i et saksløp.
+for f in $(find "$ROOT/agents" -name '*.md' | sort); do
+  rel="${f#"$ROOT"/}"
+  LISTE="$(sed -n '1,8p' "$f" | grep -E '^tools:')"
+  MANGLER_I_LISTE=""
+  for navn in $LESEVERKTOY; do
+    if sed '1,8d' "$f" | grep -q "\b${navn}\b" && ! printf '%s' "$LISTE" | grep -q "${PREFIX}${navn}"; then
+      MANGLER_I_LISTE="${MANGLER_I_LISTE} ${navn}"
+    fi
+  done
+  if [ -z "$MANGLER_I_LISTE" ]; then
+    pass "$rel har verktøyene teksten bruker"
   else
-    fail "kunne ikke løse base-URL for skrive-sjekken"
+    fail "$rel bruker verktøy som ikke står i tools::${MANGLER_I_LISTE}"
   fi
-  rm -f "$OUT" "$ERR"
+done
+
+# Ingen rester av HTTP-laget. API-nøkkelen og /api/v1 hører til før MCP, og en
+# instruks som fortsatt nevner dem sender journalisten til et oppsett som ikke
+# finnes lenger. Diagnostikken (env, test) er unntatt: den nevner restene for å
+# si at de ikke er i bruk.
+RESTER="$(grep -rlE 'KASUS_API_KEY|KASUS_BASE_URL|/api/v1/' "$ROOT/commands" "$ROOT/agents" "$ROOT/skills" "$ROOT/references" 2>/dev/null | grep -vE '/commands/(env|test)\.md$' | sed "s|$ROOT/||" | tr '\n' ' ')"
+if [ -z "$RESTER" ]; then
+  pass "ingen rester av HTTP-API-et (KASUS_API_KEY, /api/v1) i instruksene"
+else
+  fail "disse nevner fortsatt HTTP-API-et: $RESTER"
+fi
+
+# --- 7. Ingen nettverk i scripts/ -----------------------------------------
+# Scriptet er bare kvitteringen. Nettverkskode her ville vært en vei utenom
+# MCP-tilkoblingen — med egen auth, egen feilhåndtering og egne svar.
+if grep -rnE '\bfetch[[:space:]]*\(|node:https?|curl ' "$ROOT/scripts" --include='*.mjs' --include='*.sh' 2>/dev/null | grep -vE 'self-test\.sh|\.test\.mjs' >/dev/null; then
+  fail "et skript i scripts/ har nettverkskode — dataene skal komme fra MCP"
+else
+  pass "ingen nettverkskode i scripts/"
 fi
 
 printf '\n'
