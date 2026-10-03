@@ -22,34 +22,41 @@ V = brukerens --hours N,  hvis oppgitt
 
 ## Slik regnes den ut
 
-Kvitteringen er det bare `nytt` som kjenner. Den kjøres derfor **først**, alene, og
-oppgir vinduet sitt i svaret:
+Kvitteringen ligger på disk, og det er bare `kasus.mjs vindu` som leser den. Den
+trenger organisasjonens slug, så rekkefølgen er fast:
 
-```bash
-node <plugin-rot>/scripts/kasus/kasus.mjs nytt --json      # eller: nytt $ARGUMENTS
-```
+1. **Hvem**: `get_organization` (eller `get_editorial_profile`, som også har
+   `organization.slug`).
+2. **Vinduet**, alene:
 
-I `--json` står tallet i **`meta.vindu.hours`**. Feltnavnet er norsk, som resten av
-`meta` — det er `vindu`, ikke `window`. Ved siden av står:
+   ```bash
+   node <plugin-rot>/scripts/kasus/kasus.mjs vindu --org <slug> --json      # + --hours N om brukeren ba om det
+   ```
+
+3. **Listene**, i én melding, alle med `hours: V`.
+
+Scriptet har alt regnet ut regelen. I `--json`:
 
 | Felt | Verdi |
 |---|---|
+| `meta.listevindu` | **`V`** — timene listene hentes med. Brukes som det er |
+| `meta.vindu.hours` | vinduet «siden sist», med etterslepet på 2 timer lagt til og rundet opp |
+| `meta.vindu.fra` | starten på «siden sist», som ISO-tid. Et signal oppdaget før dette er ikke nytt |
 | `meta.vindu.basis` | `kvittering`, `første saksløp` eller `overstyrt` (jf. `windowFor()` i `state.mjs`) |
-| `meta.vindu.from` | starten på vinduet, som ms siden epoch |
 | `meta.kvittering` | tidspunktet det sist ble kvittert, eller `null` |
+| `meta.altSett` | id-ene som alt er kvittert for |
+| `meta.kvitterAt` | tidspunktet som skal brukes i `kvitter --at` hvis saksløpet fullføres |
 
-`nytt` har alt lagt til etterslepet på 2 timer og rundet timene opp, så tallet
-brukes som det er. Verifisert: ingen kvittering gir `24 / første saksløp`, en
-kvittering fem døgn tilbake gir `123 / kvittering`, og `--hours 72` gir
-`72 / overstyrt`.
+Feltnavnene er norske, som resten av `meta` — det er `vindu`, ikke `window`.
+Verifisert: ingen kvittering gir `24 / første saksløp`, en kvittering fem døgn
+tilbake gir `123 / kvittering`, og `--hours 72` gir `72 / overstyrt` med
+`listevindu: 72`.
 
-`V` settes til `max(24, meta.vindu.hours)` — og deretter hentes listene, i én
-melding, alle med `--hours V`.
+Hvilke signaler som er NYE avgjøres etterpå, mot `meta.vindu.fra` og
+`meta.altSett` — regelen står i [`kasus-mcp.md`](kasus-mcp.md), under «Nytt
+siden sist».
 
-Leses outputen uten `--json`, står det samme på den andre linja: «kvittert: … ·
-etterslep-vindu: 2 t» og, når vinduet er overstyrt, en `MERK:`-linje med timene.
-
-To kall er altså minimum: **`nytt` først, listene etterpå.** Det er ikke en
+Det er altså tre runder: **hvem, så vinduet, så listene.** Det er ikke en
 forglemmelse. Kjøres alt i samme melding, må vinduet gjettes før kvitteringen er
 lest, og da er det ikke regelen lenger.
 
@@ -60,10 +67,10 @@ framfor en utskrift, og langt nok til å dekke natten radaren jobbet.
 
 ## Hvorfor kvitteringen hever det
 
-`nytt` måler mot kvitteringen, listene mot et fast antall timer. Er de to ulike,
-oppstår en skjøt som ikke er til å se: har journalisten ikke kvittert på fem
-døgn, rapporterer `nytt` fem døgn med signaler mens lista ved siden av viser ett —
-og signal-id-ene fra `nytt` brukes nettopp til å MERKE signalene i lista. De som
+«Nytt siden sist» måles mot kvitteringen, listene mot et fast antall timer. Er de
+to ulike, oppstår en skjøt som ikke er til å se: har journalisten ikke kvittert på
+fem døgn, er det fem døgn med nye signaler mens lista bare viser ett — og det er i
+lista de nye skal MERKES. De som
 faller utenfor kan ikke merkes, og blir usynlige i bolken selv om telleren har
 med dem.
 
@@ -77,6 +84,6 @@ svaret** — «siste døgn» når det er et døgn, «siste fem døgn (siden du k
 tirsdag)» når det er det. En periode som ikke sies, leses som «alt».
 
 **Takene binder oftere når vinduet vokser.** En radar som leverer seksti signaler i
-døgnet fyller `--limit 100` på under to døgn. Er `taketNådd` sann, mangler svaret
-data: si det, og hev `--limit` framfor å krympe vinduet — det er nettopp de gamle
+døgnet fyller et vindu på 100 på under to døgn. Er `nextCursor` ikke `null` når du
+stopper, mangler svaret data: si det, og hent en side til framfor å krympe vinduet — det er nettopp de gamle
 usette signalene gulvet skulle fange.

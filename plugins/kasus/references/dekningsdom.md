@@ -57,13 +57,15 @@ saken fra signalet. En id kan hun ikke åpne. Formen står i
 
 ## «Ingen treff» er ikke «ikke dekket»
 
-Artikkel-API-et har ingen tekstsøk, så dommen felles mot et VINDU av de nyeste
-egne artiklene. En eldre sak er usynlig, og kladder er utenfor vinduet — så «ingen
-treff» betyr heller ikke «ingen kollega jobber med dette».
+Søket i egne artikler er et ordsøk, så dommen felles mot et VINDU av de nyeste
+egne artiklene — med ordsøket som et tillegg som når lenger tilbake, aldri som
+lesingen. En eldre sak skrevet med andre ord er usynlig, og kladder er utenfor
+vinduet — så «ingen treff» betyr heller ikke «ingen kollega jobber med dette».
 
-Vindusgrensen står i `meta.forbehold` og skal gjentas ordrett i rapporten. Er
-`meta.taketNådd` sann, mangler svaret data, og det er den ene opplysningen som gjør
-en dom ubrukelig hvis den utelates. Videre til journalisten sies den samme
+Vindusgrensen — hvor mange artikler som ble lest, og hvilke ord det ble søkt på —
+skal stå i rapporten. Var `nextCursor` ikke `null` der lesingen stoppet, mangler
+svaret data, og det er den ene opplysningen som gjør en dom ubrukelig hvis den
+utelates. Videre til journalisten sies den samme
 grensen på norsk framfor ordrett: «dette er de nyeste sakene våre, ikke hele
 arkivet» — jf. `samtaleform.md`.
 

@@ -29,7 +29,7 @@ pluginen, men ikke redaksjonen.
 | Scope | Fil | Betyr |
 |---|---|---|
 | `project` | `.claude/settings.json` | **Bruk denne.** Sjekkes inn, følger repoet. Alle som jobber i det får samme plugin og samme versjon. |
-| `local` | `.claude/settings.local.json` | Prosjektet, men bare for deg. Ikke sjekket inn. Hit hører **API-nøkkelen**, ikke pluginen. |
+| `local` | `.claude/settings.local.json` | Prosjektet, men bare for deg. Ikke sjekket inn. Ikke for pluginen. |
 | `user` | `~/.claude/settings.json` | Deg, på tvers av prosjekter. Riktig hvis du bruker Kasus i flere repoer som ikke skal dele oppsett. |
 
 Dette er hva `--scope project` skriver, hvis du heller vil sette det selv:
@@ -51,9 +51,10 @@ Dette er hva `--scope project` skriver, hvis du heller vil sette det selv:
 ```
 
 Start sesjonen på nytt i prosjektmappa etterpå — marketplacet hentes, pluginen
-installeres, og kommandoer, ferdigheter, agenter og `env`-innslag plukkes opp ved
-oppstart. Neste person som kloner repoet trenger ikke gjøre noe: de svarer ja på
-at mappa er til å stole på, og kan si «jeg skal skrive en dybdeartikkel».
+installeres, og kommandoer, ferdigheter, agenter og tilkoblingen til Kasus plukkes
+opp ved oppstart. Logg så inn: `/mcp` → `plugin:kasus:kasus` → **Authenticate**.
+Neste person som kloner repoet trenger bare å gjøre det samme: svare ja på at
+mappa er til å stole på, logge inn, og si «jeg skal skrive en dybdeartikkel».
 
 ## Arbeidsflyten
 
@@ -146,39 +147,30 @@ Full dokumentasjon: [`plugins/kasus/README.md`](plugins/kasus/README.md).
 ## Krav
 
 - Claude Code
-- Node 18+ (verktøyet er avhengighetsfri ESM, ingen byggesteg)
-- En API-nøkkel fra Kasus: **Innstillinger → API-nøkler**
+- Node 18+ (kvitteringen er avhengighetsfri ESM, ingen byggesteg)
+- En Kasus-konto i redaksjonen pluginen skal jobbe for
 
-Nøkkelen settes som `KASUS_API_KEY` under `env` i prosjektets
-`.claude/settings.local.json`. Den fila hører til deg og ikke repoet — legg den i
-`.gitignore`, så blir nøkkelen liggende hos deg mens plugin-oppsettet i
-`.claude/settings.json` deles. Ikke i en `.env`-fil: **Claude Code leser ikke
-`.env`**. Verifiser med `/kasus:env --resolve`.
+Dataene kommer fra **Kasus' MCP-server**, som pluginen kobler til selv via
+`.mcp.json`. Første gang logger du inn med Kasus-kontoen: `/mcp` →
+`plugin:kasus:kasus` → **Authenticate**. Har du flere organisasjoner, velger du
+én i nettleseren. Ingen API-nøkkel, og ingenting å sette i `env`. Verifiser med
+`/kasus:env`, som sier hvilken organisasjon du er logget inn i.
 
-```json
-{
-  "env": {
-    "KASUS_API_KEY": "kasus_sk_…"
-  }
-}
-```
+Tilkoblingen er bundet til organisasjonen du valgte, så «0 signaler» betyr tomt
+for *den* organisasjonen. For staging eller en egen installasjon: sett
+`KASUS_MCP_URL` (default `https://app.kasus.io/api/mcp`).
 
-API-et er org-scopet av nøkkelen: den avgjør hvilken organisasjon kallene treffer,
-så «0 signaler» betyr tomt for *den* organisasjonen. Nøkkelen ekkoes aldri av
-verktøyet — den rapporteres som `(satt)` med variabelnavnet.
-
-API-laget er **read-only**. Det pluginen skriver, skriver den i prosjektet:
-saksforslagene i `./artikler`, kvitteringen «siden sist» i
-`.claude/kasus-state.json`. Begge er relative til der du står, så to prosjekter
-teller sine egne saksløp.
+Pluginen bruker bare Kasus' **leseverktøy** — ingen status endres der. Det
+pluginen skriver, skriver den i prosjektet: saksforslagene i `./artikler`,
+kvitteringen «siden sist» i `.claude/kasus-state.json`. Begge er relative til der
+du står, så to prosjekter teller sine egne saksløp.
 
 ## Utvikling
 
 ```bash
 claude --plugin-dir plugins/kasus              # last pluginen lokalt
-bash plugins/kasus/scripts/self-test.sh        # tørt
-bash plugins/kasus/scripts/self-test.sh --live # + ekte kall mot API-et
-node --test plugins/kasus/scripts/kasus/       # bare enhetstestene
+bash plugins/kasus/scripts/self-test.sh        # selvtesten
+node --test plugins/kasus/scripts/kasus/*.test.mjs   # bare enhetstestene
 ```
 
 ## Lisens

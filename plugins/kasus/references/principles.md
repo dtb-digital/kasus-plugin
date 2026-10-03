@@ -4,7 +4,7 @@
 
 Pluginen gjør én ting: nye radarsignaler → journalisten velger → sjekk mot egne
 artikler → bredt søk → saksforslag → kvittering. Ikke en samling oppslagsverktøy
-rundt et API. En kommando som «også kunne vært nyttig» konkurrerer med saksløpet om
+rundt en MCP-server. En kommando som «også kunne vært nyttig» konkurrerer med saksløpet om
 oppmerksomheten, og en journalist som må velge verktøy før hun velger sak har fått
 ett problem ekstra.
 
@@ -46,7 +46,7 @@ mindre enn det, er den et nytt produkt og ikke et nytt opphav.
 ### Hjelpen er ikke et tredje opphav
 
 `hjelp` er den tredje ferdigheten, og avsnittet over ville forbudt den hvis den
-lagde noe. Den lager ingenting: den henter ikke fra API-et, skriver ikke til disk,
+lagde noe. Den lager ingenting: den henter ikke fra Kasus, skriver ikke til disk,
 kvitterer ikke, og gjør ingen research. Den er **kartet over inngangene**, og den
 finnes fordi fritekst-inngangen har en kostnad ingen kommandoliste har — når
 ingenting HETER noe man må huske, er «hvordan bruker jeg denne?» et reelt
@@ -55,8 +55,8 @@ spørsmål, og det spørsmålet skal ikke starte et saksløp.
 Grensa som holder den til én ting: hjelpen **svarer og gir slipp**. Den forklarer
 inngangen og tilbyr å starte den; den utfører den ikke. Skulle hjelpen begynne å
 hente signaler «bare for å vise hvordan det ser ut», er den blitt det alternative
-stedet å gjøre jobben som dette prinsippet handler om — derfor er et API-kall fra
-`skills/hjelp/SKILL.md` en rød test i `/kasus:test`, ikke en smakssak.
+stedet å gjøre jobben som dette prinsippet handler om — derfor er et kall mot Kasus
+fra `skills/hjelp/SKILL.md` en rød test i `/kasus:test`, ikke en smakssak.
 
 Prisen er at hjelpen kan drifte fra pluginen: en ny kommando eller agent oppdages
 fra mappa og sier ikke fra noe sted, så et kart som mangler en inngang lar
@@ -141,35 +141,38 @@ utgangspunkt, og to utgangspunkt i samme arbeidsflyt betyr at ingen av dem blir
 fulgt til ende. Saksløpet krever et signal, fordi sporet tilbake til hvorfor saken
 ble tatt opp er halve verdien av fila — og en brief har ikke det sporet.
 
-## 1. Nøkkelen avgjør organisasjonen — si det
+## 1. Innloggingen avgjør organisasjonen — si det
 
-API-et er org-scopet av API-nøkkelen. Ingen organisasjons-id sendes. Derfor er
-«ingen signaler» aldri et utsagn om Kasus, bare om denne organisasjonen, og en
-404 er ikke det samme som slettet. Hver header-linje oppgir installasjon og
-nøkkel-variabel, slik at svaret er etterprøvbart.
+MCP-tilkoblingen er bundet til én organisasjon, valgt da brukeren logget inn.
+Ingen organisasjons-id sendes. Derfor er «ingen signaler» aldri et utsagn om
+Kasus, bare om denne organisasjonen, og «ikke funnet» er ikke det samme som
+slettet. `get_organization` sier hvilken organisasjon det er, og `/kasus:env` sier
+det til den som spør.
 
 ## 2. Ingen stille fallbacks
 
-Mangler konfigurasjon, stopper kallet med et synlig `MANGLER: …`. Base-URL-en er
-den ENESTE verdien som defaulteres, og kilden rapporteres som
-`default (app.kasus.io)` framfor et variabelnavn — det skal være synlig at ingen
+Mangler konfigurasjon, stopper kallet med et synlig `MANGLER: …`. Adressen til
+Kasus er den ENESTE verdien som defaulteres — i `.mcp.json` og i kvitteringen, med
+samme default, og en test sjekker at de er like — og kilden rapporteres som
+`default (app.kasus.io)` framfor et variabelnavn: det skal være synlig at ingen
 konfigurasjon lå bak. Et ugyldig satt flagg eller en ugyldig satt variabel er en
 feil, ikke en grunn til å bruke defaulten.
 
-## 3. Ingen credentials i output
+## 3. Ingen credentials i pluginen
 
-API-nøkkelen ekkoes aldri — heller ikke i feilmeldinger eller oppsummeringer. Den
-refereres ved variabelnavn og rapporteres som `(satt)`. Hemmelig-navngitte nøkler
-i API-svarene maskeres i dybden, men ikke bredere enn nødvendig: `keyFigures` og
-`keyStats` er redaksjonelle data, ikke hemmeligheter, og en for bred regel ville
-tømt saken for tall uten å si fra.
+Pluginen har ingen nøkkel å lekke. Innloggingen er OAuth mot Kasus, og tokenet
+eies av Claude Code — det er aldri i en variabel, en fil i repoet eller en output.
+Kvitteringen på disk har organisasjonens slug, ikke noe som kan autentisere.
 
-## 4. Read-only, og garden er FRAVÆRET av en kodesti
+## 4. Read-only, og garden er FRAVÆRET av verktøyet
 
-API-et har ingen skrivende ruter, og verktøyet har ingen kodesti for annet enn
-GET — metoden er ikke en parameter noe sted. Enhetstestene håndhever det, og
-`/kasus:test --live` verifiserer at **serveren** avviser POST, ikke bare at
-pluginen ikke prøver. Det pluginen skriver, skriver den til disk i ditt eget repo.
+Kasus' MCP-server har skriveverktøy — status på signaler og briefs — og en
+innlogging kan ha lov til å bruke dem. Pluginen bruker dem aldri: ingen kommando,
+agent eller ferdighet har dem i verktøylista si, og ingen gir seg alle med en
+wildcard. `/kasus:test` håndhever det, fordi et løfte i en prompt er lett å bryte.
+Signalstatus i Kasus er DELT av hele redaksjonen; «hva har jeg sett» er
+journalistens egen kvittering. Det pluginen skriver, skriver den til disk i ditt
+eget repo, og scriptene har ingen nettverkskode i det hele tatt.
 
 ## 5. Ingenting oppdiktet
 
@@ -186,17 +189,18 @@ av `editorialProfile` og `whatWorks`, og avgrensningen av `whatToAvoid` og
 `keywords`. Uten profilen blir resultatet generisk — og da skal det sies at
 profilen mangler, framfor å levere generisk stoff som om det var tilpasset.
 
-## 7. Klipp lesbart, `--json` klipper ikke
+## 7. Lister klipper, enkeltoppslag gjør det ikke
 
-Menneskelig output klipper lange felt og sier at den klipper. `--json` klipper
-ingenting, fordi et artikkelutkast trenger hele `plot` og `angle`. Et tak som nås
-uten å bli nevnt leses som at det ikke finnes mer.
+Listene fra Kasus korter ned lange felt; `get_*` gir hele teksten, fordi et
+artikkelutkast trenger hele `plot`, `angle` og brødteksten. Et tak som nås uten å
+bli nevnt leses som at det ikke finnes mer — derfor sies det når `nextCursor` ikke
+er `null`.
 
 ## 8. «Ingen treff» er ikke «ikke dekket»
 
-Artikkel-API-et har ingen tekstsøk, så «har vi skrevet om dette før?» kan ikke
-stilles til serveren. Verktøyet henter et vindu av de nyeste egne artiklene, og
-`kasus-archivist` leser det. Det er en nyttig sjekk og en dårlig garanti,
+Søket i egne artikler er et ordsøk, så «har vi skrevet om dette før?» kan ikke
+stilles til serveren. `kasus-archivist` henter et vindu av de nyeste egne
+artiklene og leser det, med ordsøket som et tillegg som når lenger tilbake. Det er en nyttig sjekk og en dårlig garanti,
 og forskjellen må stå i svaret — ikke i dokumentasjonen. Derfor rapporteres
 vindusstørrelsen, og hver kandidat bærer dato og lenke. Id-en bæres av agenten
 som slo den opp, ikke av setningen journalisten leser — se prinsipp 10.
@@ -211,7 +215,7 @@ Prisen er at sjekken ikke er reproduserbar, og den prisen skal ikke skjules. Den
 betales med etterprøvbarhet: dato og lenke på hver kandidat, og en begrunnelse
 som sier hva som er likt OG hva som skiller. Vindusgrensen er den andre halvparten
 av forbeholdet, og den forsvant ikke med ordmatchen — den er en egenskap ved
-API-et.
+lesingen.
 
 Dommen felles to ganger, og bare den ene klarerer. `kasus-triage` feller en
 **grovsortering** i inngangen, på signalets tittel og sammendrag, for alle saker
@@ -230,13 +234,13 @@ test.
 
 «Nytt siden sist» krever at noe husker når sist var. Det ligger i
 `.claude/kasus-state.json` i brukerens eget repo, og **bare `kvitter` skriver
-det**. `nytt` leser. En oversikt som kvitterte seg selv ville betydd at et
+det**. `vindu` leser. En oversikt som kvitterte seg selv ville betydd at et
 avbrutt kall — eller et saksløp som ble avbrutt av noe viktigere — mistet en hel
 dags signaler uten at noe sa fra.
 
 To ting følger av at kvitteringen er et tidspunkt:
 
-- **Etterslep.** Et signal kan indekseres etter at det ble oppdaget. `nytt` ser
+- **Etterslep.** Et signal kan indekseres etter at det ble oppdaget. Vinduet ser
   derfor to timer bakover FORBI kvitteringen, og undertrykker det som alt er vist
   ved id. Overlappen er usynlig, og et sent-ankommet signal blir likevel sett.
 - **En full kvittering svelger det du ikke fikk se.** Derfor finnes
@@ -244,9 +248,9 @@ To ting følger av at kvitteringen er et tidspunkt:
   tidspunktet stå. Det er det riktige svaret på et halvferdig saksløp, og
   outputen sier hvilken av de to som ble gjort.
 
-Nøkkelen havner aldri i fila. Organisasjonene skilles med et forkortet SHA-256 av
-nøkkelen — en enveis-sjekksum som ikke kan autentisere noe, men som hindrer at to
-redaksjoner i samme repo arver hverandres «siden sist».
+Organisasjonene skilles på slugen fra `get_organization`, og installasjonene på
+verten — så to redaksjoner i samme repo, eller staging og produksjon, ikke arver
+hverandres «siden sist».
 
 ## 10. Tråden er journalistens, ikke verktøyets
 
@@ -254,7 +258,7 @@ Pluginen brukes av en journalist midt i en arbeidsdag, og alt hun ser av den er
 meldinger i en tråd. Der er en id ikke en opplysning: den kan ikke åpnes og ikke
 ringes, og den tar plassen til det som avgjør om saken er verdt en time — hva
 saken er, hvor gammel den er, og hvor den står. Det samme gjelder
-`egen_oppfolging`, `meta.forbehold`, `--hours 72` og navnet på agenten som svarte.
+`egen_oppfolging`, `nextCursor`, `hours: 72` og navnet på agenten som svarte.
 Det er pluginens indre liv, og det forklarer ingenting for den som ikke har lest
 denne mappa.
 
@@ -268,8 +272,8 @@ To grenser holder det fra å bli en forenkling som lyver:
 
 - **Forbeholdene består, i klartekst.** Perioden, at ingenting her er et søk i
   alt, en manglende lenke, en gammel sak, hullene i utkastet — alle fem endrer hva
-  journalisten gjør, og de sies på norsk framfor med feltnavn. `meta.forbehold`
-  ordrett er ikke et forbehold, det er en linje man hopper over. Å fjerne et
+  journalisten gjør, og de sies på norsk framfor med feltnavn. Et forbehold med
+  feltnavn i er ikke et forbehold, det er en linje man hopper over. Å fjerne et
   forbehold sammen med støyen er den ene måten dette prinsippet kan gjøre skade.
 - **Id-ene bæres, de skrives ikke ut.** Etterprøvbarheten flyttes fra id til lenke
   og dato, ikke bort — en url kan åpnes på tretti sekunder, mens en id bare kan

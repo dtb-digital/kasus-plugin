@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
-# /kasus:env — sjekker at runtime-env har det pluginen trenger, og svarer med
-# --resolve hvilken Kasus-installasjon et kall FAKTISK ville truffet, og hvilken
-# variabel hver verdi kom fra.
+# /kasus:env — sjekker at det lokale oppsettet pluginen trenger er på plass, og
+# svarer med --resolve hvilken Kasus-installasjon tilkoblingen går mot og hvor
+# kvitteringen ligger.
 #
-# Dette er den ENE kilden til sannhet for hva pluginen krever. Legger du til en
-# ny variabel et sted i pluginen, skal den inn her også — ellers sier
+# Dette er den ENE kilden til sannhet for hva pluginen krever LOKALT. Legger du
+# til en ny variabel et sted i pluginen, skal den inn her også — ellers sier
 # `/kasus:env` «ALT OK» mens kommandoen stopper, som er nøyaktig den stille
 # fallbacken prinsippene forbyr.
 #
-# Leser KUN env-variabler. Ingen tilkobling, ingen nettverk, ingen nøkkelverdier
-# i outputen.
+# Innloggingen sjekkes IKKE her. Den er en OAuth-tilkobling Claude Code eier, og
+# et skall kan ikke se den: `/kasus:env` kaller MCP-verktøyet get_organization
+# etter dette skriptet, og det er svaret derfra som sier om tilkoblingen virker.
+#
+# Leser KUN env-variabler og filer i pluginen. Ingen nettverk.
 
 set -u
 
@@ -17,203 +20,108 @@ set -u
 if [ -n "${ZSH_VERSION:-}" ]; then setopt shwordsplit; fi
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=lib/env.sh
-. "$HERE/lib/env.sh"
+ROOT="$(cd "$HERE/.." && pwd)"
 
 RESOLVE=0
-ENV_NAME=""
-
 for arg in "$@"; do
   case "$arg" in
     --resolve) RESOLVE=1 ;;
     --help|-h)
-      printf 'Bruk: check-env.sh [--resolve] [miljø]\n'
+      printf 'Bruk: check-env.sh [--resolve]\n'
       exit 0
       ;;
-    --*)
-      printf 'Ukjent flagg: %s\n' "$arg" >&2
+    *)
+      printf 'Ukjent argument: %s\n' "$arg" >&2
       exit 2
       ;;
-    *) ENV_NAME="$arg" ;;
   esac
 done
 
 PROBLEMS=0
 WARNINGS=0
+ok() { printf 'OK       %s\n' "$1"; }
+missing() { printf 'MANGLER: %s\n' "$1"; PROBLEMS=$((PROBLEMS + 1)); }
+warn() { printf 'ADVARSEL: %s\n' "$1"; WARNINGS=$((WARNINGS + 1)); }
 
-# get_var <base> — skriver «<variabelnavn>\t<verdi>» for den varianten som
-# vinner, eller «\t» hvis ingen er satt. Presedens: <BASE>_<ENV> før <BASE>.
-# Motstykket i JS er readEnvValue() i lib/env.mjs; self-test.sh sammenligner dem.
-get_var() {
-  base="$1"
-  if [ -n "$ENV_NAME" ]; then
-    scoped="$(env_var "$base" "$ENV_NAME")"
-    eval "value=\${$scoped-}"
-    if [ -n "${value:-}" ]; then printf '%s\t%s' "$scoped" "$value"; return 0; fi
-  fi
-  eval "value=\${$base-}"
-  if [ -n "${value:-}" ]; then printf '%s\t%s' "$base" "$value"; return 0; fi
-  printf '\t'
-}
-
-name_of() { printf '%s' "$1" | cut -f1; }
-value_of() { printf '%s' "$1" | cut -f2-; }
-
-tried_names() {
-  if [ -n "$ENV_NAME" ]; then
-    printf '%s eller %s' "$(env_var "$1" "$ENV_NAME")" "$1"
-  else
-    printf '%s' "$1"
-  fi
-}
-
-printf 'kasus — miljøsjekk\n'
-if [ -n "$ENV_NAME" ]; then
-  printf 'Miljø: %s (suffiks %s)\n' "$ENV_NAME" "$(env_suffix "$ENV_NAME")"
-else
-  printf 'Miljø: (ingen) — kun de delte variablene leses. Kjør med et miljønavn for per-miljø-oppslag.\n'
-fi
-printf '\n'
+printf 'kasus — miljøsjekk\n\n'
 
 # --- Node ------------------------------------------------------------------
-# fetch er innebygd fra Node 18. Verktøyet har ingen avhengigheter, så Node er
-# hele forutsetningen.
+# Kvitteringen er et Node-skript. Uten Node kan saksløpet hente, men ikke vite hva
+# som er nytt — og ikke kvittere.
 if command -v node >/dev/null 2>&1; then
-  NODE_VERSION="$(node --version 2>/dev/null)"
-  NODE_MAJOR="$(printf '%s' "$NODE_VERSION" | sed 's/^v//' | cut -d. -f1)"
-  if [ "${NODE_MAJOR:-0}" -ge 18 ] 2>/dev/null; then
-    printf 'OK       node %s (innebygd fetch)\n' "$NODE_VERSION"
+  NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || printf '0')"
+  if [ "${NODE_MAJOR:-0}" -ge 18 ]; then
+    ok "node ${NODE_MAJOR} (kvitteringen krever 18+)"
   else
-    printf 'MANGLER: node 18+ kreves for innebygd fetch, fant %s\n' "$NODE_VERSION"
-    PROBLEMS=$((PROBLEMS + 1))
+    missing "node 18 eller nyere — fant ${NODE_MAJOR}. Kvitteringen («siden sist») kjører ikke uten."
   fi
 else
-  printf 'MANGLER: node finnes ikke på PATH. Verktøyet er avhengighetsfri ESM og krever Node 18+.\n'
-  PROBLEMS=$((PROBLEMS + 1))
+  missing "node — kvitteringen («siden sist») kjører ikke uten. Installer Node 18+."
 fi
 
-# --- API-nøkkel (påkrevd) --------------------------------------------------
-KEY_ROW="$(get_var KASUS_API_KEY)"
-KEY_NAME="$(name_of "$KEY_ROW")"
-KEY_VALUE="$(value_of "$KEY_ROW")"
-
-if [ -z "$KEY_NAME" ]; then
-  printf 'MANGLER: %s — API-nøkkel fra Kasus → Innstillinger → API-nøkler.\n' "$(tried_names KASUS_API_KEY)"
-  PROBLEMS=$((PROBLEMS + 1))
+# --- MCP-tilkoblingen ------------------------------------------------------
+MCP_JSON="$ROOT/.mcp.json"
+if [ -f "$MCP_JSON" ] && grep -q '"kasus"' "$MCP_JSON"; then
+  ok ".mcp.json kobler til Kasus (server «kasus»)"
 else
-  # Verdien ekkoes ALDRI. Lengden er nok for å se at det ikke er en tom streng
-  # eller et avkuttet lim-inn.
-  printf 'OK       %s = (satt, %s tegn)\n' "$KEY_NAME" "$(printf '%s' "$KEY_VALUE" | wc -c | tr -d ' ')"
-  case "$KEY_VALUE" in
-    kasus_sk_*) ;;
-    *)
-      printf 'ADVARSEL %s starter ikke med kasus_sk_ — er dette en Kasus-API-nøkkel?\n' "$KEY_NAME"
-      WARNINGS=$((WARNINGS + 1))
-      ;;
+  missing ".mcp.json med serveren «kasus» i pluginroten — uten den finnes ingen Kasus-verktøy. Installer pluginen på nytt."
+fi
+
+DEFAULT_MCP_URL="https://app.kasus.io/api/mcp"
+MCP_URL="${KASUS_MCP_URL:-}"
+if [ -n "$MCP_URL" ]; then
+  case "$MCP_URL" in
+    http://*|https://*) ok "KASUS_MCP_URL er satt: ${MCP_URL}" ;;
+    *) missing "gyldig KASUS_MCP_URL — «${MCP_URL}» må starte med http:// eller https://" ;;
   esac
+  MCP_SOURCE="KASUS_MCP_URL"
+else
+  MCP_URL="$DEFAULT_MCP_URL"
+  MCP_SOURCE="default"
+  ok "KASUS_MCP_URL er ikke satt — default ${DEFAULT_MCP_URL}"
 fi
 
-# --- Base-URL (valgfri, defaulter) -----------------------------------------
-URL_ROW="$(get_var KASUS_BASE_URL)"
-URL_NAME="$(name_of "$URL_ROW")"
-URL_VALUE="$(value_of "$URL_ROW")"
+# Restene av HTTP-oppsettet. De gjør ingen skade, men de er ikke i bruk — og en
+# som ser dem tror at det er de som avgjør organisasjonen.
+for gammel in KASUS_API_KEY KASUS_BASE_URL KASUS_TIMEOUT_MS; do
+  eval "verdi=\${${gammel}-}"
+  if [ -n "${verdi:-}" ]; then
+    warn "${gammel} er satt, men brukes ikke lenger — pluginen kobler til via MCP med innlogging. Kan fjernes fra env."
+  fi
+done
 
-if [ -z "$URL_NAME" ]; then
-  printf 'OK       %s = (usatt) → default https://app.kasus.io\n' "$(tried_names KASUS_BASE_URL)"
+# --- Kvitteringen ----------------------------------------------------------
+STATE_FILE="${KASUS_STATE_FILE:-.claude/kasus-state.json}"
+case "$STATE_FILE" in
+  /*) STATE_PATH="$STATE_FILE" ;;
+  *) STATE_PATH="$(pwd)/${STATE_FILE}" ;;
+esac
+STATE_DIR="$(dirname "$STATE_PATH")"
+PROBE_DIR="$STATE_DIR"
+while [ ! -d "$PROBE_DIR" ] && [ "$PROBE_DIR" != "/" ]; do PROBE_DIR="$(dirname "$PROBE_DIR")"; done
+if [ -w "$PROBE_DIR" ]; then
+  ok "kvitteringen kan skrives: ${STATE_PATH}"
 else
-  case "$URL_VALUE" in
-    http://*|https://*) printf 'OK       %s = %s\n' "$URL_NAME" "$URL_VALUE" ;;
-    *)
-      printf 'MANGLER: %s = «%s» — må starte med http:// eller https://\n' "$URL_NAME" "$URL_VALUE"
-      PROBLEMS=$((PROBLEMS + 1))
-      ;;
-  esac
+  missing "skrivetilgang til ${STATE_DIR} — kvitteringen kan ikke lagres. Sett KASUS_STATE_FILE til en sti du kan skrive til."
 fi
-
-# --- Timeout (valgfri, defaulter) ------------------------------------------
-TMO_ROW="$(get_var KASUS_TIMEOUT_MS)"
-TMO_NAME="$(name_of "$TMO_ROW")"
-TMO_VALUE="$(value_of "$TMO_ROW")"
-
-if [ -z "$TMO_NAME" ]; then
-  printf 'OK       %s = (usatt) → default 30000 ms\n' "$(tried_names KASUS_TIMEOUT_MS)"
-else
-  case "$TMO_VALUE" in
-    ''|*[!0-9]*)
-      printf 'MANGLER: %s = «%s» — må være et positivt heltall (millisekunder)\n' "$TMO_NAME" "$TMO_VALUE"
-      PROBLEMS=$((PROBLEMS + 1))
-      ;;
-    *) printf 'OK       %s = %s ms\n' "$TMO_NAME" "$TMO_VALUE" ;;
-  esac
-fi
-
-# --- Artikkelmappe (valgfri, defaulter) ------------------------------------
-DIR_ROW="$(get_var KASUS_ARTICLES_DIR)"
-DIR_NAME="$(name_of "$DIR_ROW")"
-DIR_VALUE="$(value_of "$DIR_ROW")"
-if [ -z "$DIR_NAME" ]; then
-  printf 'OK       %s = (usatt) → default ./artikler\n' "$(tried_names KASUS_ARTICLES_DIR)"
-else
-  printf 'OK       %s = %s\n' "$DIR_NAME" "$DIR_VALUE"
-fi
-
-# --- Kvitteringsfila (valgfri, defaulter) ----------------------------------
-# Her ligger «siden sist». Stien SIES, fordi en kvittering ingen finner igjen er
-# umulig å nullstille — og fordi en relativ sti tolkes fra der du står, ikke fra
-# pluginmappa.
-STATE_ROW="$(get_var KASUS_STATE_FILE)"
-STATE_NAME="$(name_of "$STATE_ROW")"
-STATE_VALUE="$(value_of "$STATE_ROW")"
-if [ -z "$STATE_NAME" ]; then
-  STATE_PATH="$PWD/.claude/kasus-state.json"
-  printf 'OK       %s = (usatt) → default .claude/kasus-state.json\n' "$(tried_names KASUS_STATE_FILE)"
-else
-  case "$STATE_VALUE" in
-    /*) STATE_PATH="$STATE_VALUE" ;;
-    *) STATE_PATH="$PWD/$STATE_VALUE" ;;
-  esac
-  printf 'OK       %s = %s\n' "$STATE_NAME" "$STATE_VALUE"
-fi
-if [ -f "$STATE_PATH" ]; then
-  printf 'OK       kvittering finnes: %s\n' "$STATE_PATH"
-else
-  printf 'OK       kvittering ikke opprettet ennå: %s (første saksløp viser siste 24 t)\n' "$STATE_PATH"
+if [ -f "$STATE_PATH" ] && ! python3 -c "import json,sys;json.load(open(sys.argv[1]))" "$STATE_PATH" 2>/dev/null; then
+  missing "kvitteringsfila ${STATE_PATH} er ikke gyldig JSON — kjør «kasus.mjs kvitter --org <slug> --reset», eller slett fila."
 fi
 
 # --- Mål-oppløsning --------------------------------------------------------
 if [ "$RESOLVE" -eq 1 ]; then
-  printf '\nMÅL-OPPLØSNING\n'
-  printf '  Presedens per variabel: <BASE>_<ENV> vinner over <BASE>.\n'
-  if [ -n "$ENV_NAME" ]; then
-    printf '  Suffiks for «%s»: _%s\n' "$ENV_NAME" "$(env_suffix "$ENV_NAME")"
-  else
-    printf '  Uten miljønavn leses BARE den delte varianten.\n'
-  fi
-  printf '\n'
-  if [ -z "$URL_NAME" ]; then
-    printf '  Et kall ville truffet: app.kasus.io  (kilde: default, ingen konfigurasjon)\n'
-  else
-    printf '  Et kall ville truffet: %s  (kilde: %s)\n' \
-      "$(printf '%s' "$URL_VALUE" | sed -e 's#^https\{0,1\}://##' -e 's#/.*$##')" "$URL_NAME"
-  fi
-  if [ -z "$KEY_NAME" ]; then
-    printf '  Med nøkkel fra:        (ingen — kallet ville stoppet med MANGLER)\n'
-  else
-    printf '  Med nøkkel fra:        %s\n' "$KEY_NAME"
-  fi
-  printf '\n'
-  printf '  Nøkkelen avgjør ORGANISASJONEN. Ingen organisasjons-id sendes, så et tomt\n'
-  printf '  svar betyr «tomt for denne organisasjonen» — ikke «tomt i Kasus».\n'
+  printf '\nMÅL\n'
+  printf '  Kasus:          %s (%s)\n' "$MCP_URL" "$MCP_SOURCE"
+  printf '  Innlogging:     OAuth via /mcp → plugin:kasus:kasus. Organisasjonen velges ved innlogging.\n'
+  printf '  Kvittering:     %s (%s)\n' "$STATE_PATH" "$([ -n "${KASUS_STATE_FILE:-}" ] && printf 'KASUS_STATE_FILE' || printf 'default')"
+  printf '                  nøklet på vert + organisasjonens slug\n'
 fi
 
 printf '\n'
-if [ "$PROBLEMS" -eq 0 ] && [ "$WARNINGS" -eq 0 ]; then
-  printf 'ALT OK\n'
-  exit 0
-fi
 if [ "$PROBLEMS" -eq 0 ]; then
-  printf 'OK med %s advarsel(er)\n' "$WARNINGS"
+  printf 'ALT OK lokalt%s. Om innloggingen virker, svarer get_organization på.\n' \
+    "$([ "$WARNINGS" -gt 0 ] && printf ' (%s advarsel(er))' "$WARNINGS")"
   exit 0
 fi
-printf '%s problem(er), %s advarsel(er)\n' "$PROBLEMS" "$WARNINGS"
+printf '%s ting mangler\n' "$PROBLEMS"
 exit 1

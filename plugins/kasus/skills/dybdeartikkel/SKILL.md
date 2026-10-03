@@ -1,10 +1,13 @@
 ---
 name: dybdeartikkel
-description: Prosessen for å lage en dybdeartikkel i denne redaksjonen — fra nytt radarsignal til et saksforslag på disk, i seks steg: nye signaler siden forrige saksløp pluss profilen og ukas egen produksjon, en prioritering journalisten velger fra, sjekk mot redaksjonens EGNE artikler, bredt søk med én agent per spørsmål, saksforslag i redaksjonens tone, og en kvittering. Skal brukes når noen vil JOBBE med en sak framfor bare å se hva som ligger der: «jeg skal skrive en dybdeartikkel», «finn meg en sak å skrive», «jeg trenger noe å jobbe med i dag», «lag et saksforslag», «kjør saksløpet», «kjør runden», «start et nytt saksløp», «ta en sak fra radaren», «kan du researche denne og skrive et forslag?», «følg opp signal <id>». Også når bestillingen er et TEMA framfor et signal («skriv en dybdeartikkel om strømpriser», «kan vi gjøre noe på boligmarkedet i Bodø?»): temaet matches da semantisk mot radarens vindu, fordi API-et ikke har tekstsøk — men saksløpet KREVER et signal, og stopper med en begrunnelse hvis radaren ikke har noe på temaet. Skal IKKE brukes på spørsmål om hva radaren har funnet («er det noe nytt?», «er det noe om strømpriser?») — det svarer kasus-lookout på uten å kvittere — eller på spørsmål om egen dekning alene, som er kasus-archivist. Er utgangspunktet en av redaksjonens EGNE publiserte artikler («følg opp saken vår om X»), er det ferdigheten `oppfolgersak`.
+description: Prosessen for å lage en dybdeartikkel i denne redaksjonen — fra nytt radarsignal til et saksforslag på disk, i seks steg: nye signaler siden forrige saksløp pluss profilen og ukas egen produksjon, en prioritering journalisten velger fra, sjekk mot redaksjonens EGNE artikler, bredt søk med én agent per spørsmål, saksforslag i redaksjonens tone, og en kvittering. Skal brukes når noen vil JOBBE med en sak framfor bare å se hva som ligger der: «jeg skal skrive en dybdeartikkel», «finn meg en sak å skrive», «jeg trenger noe å jobbe med i dag», «lag et saksforslag», «kjør saksløpet», «kjør runden», «start et nytt saksløp», «ta en sak fra radaren», «kan du researche denne og skrive et forslag?», «følg opp signal <id>». Også når bestillingen er et TEMA framfor et signal («skriv en dybdeartikkel om strømpriser», «kan vi gjøre noe på boligmarkedet i Bodø?»): temaet matches da semantisk mot radarens vindu, fordi radarens søk bare er et ordsøk — men saksløpet KREVER et signal, og stopper med en begrunnelse hvis radaren ikke har noe på temaet. Skal IKKE brukes på spørsmål om hva radaren har funnet («er det noe nytt?», «er det noe om strømpriser?») — det svarer kasus-lookout på uten å kvittere — eller på spørsmål om egen dekning alene, som er kasus-archivist. Er utgangspunktet en av redaksjonens EGNE publiserte artikler («følg opp saken vår om X»), er det ferdigheten `oppfolgersak`.
 ---
 
 Gå fra radarsignal til saksforslag. Dette er **det eneste pluginen gjør**, og den
-gjør det i seks steg:
+gjør det i seks steg. Dataene kommer fra Kasus' MCP-server
+(`mcp__plugin_kasus_kasus__*`) — argumentene, feltene og reglene for kategori,
+GAMMEL SAK og «nytt siden sist» står i
+[`references/kasus-mcp.md`](../../references/kasus-mcp.md). Les den før steg 1.
 
 1. Hent radarsignalene som har kommet inn **siden forrige saksløp**, og premissene:
    profilen og **ukas egen produksjon**
@@ -45,20 +48,20 @@ bestillingen er svaret allerede gitt.
 Og uansett hvem som spør: **saksløpet krever et signal.** Finner radaren ingenting på
 temaet, stopper den — se «Signalet er inngangsvilkåret».
 
-## Vinduet: hvilke flagg saksløpet kjøres med
+## Vinduet: hva saksløpet kjøres med
 
 Uten noe sagt kjøres saksløpet på kvitteringen — «siden forrige saksløp». Ble det bedt
-om noe annet, sett det på `nytt` i steg 1:
+om noe annet, gjør det slik i steg 1:
 
-| Bestillingen | Flagget |
+| Bestillingen | Slik |
 |---|---|
-| «de siste tre døgnene», «litt bredere» | `--hours 72` |
-| «bare siste døgn» | `--hours 24` |
-| «ta med det som er forkastet» | `--all` |
-| «vis flere» | `--limit 40` |
+| «de siste tre døgnene», «litt bredere» | `--hours 72` på `kasus.mjs vindu` |
+| «bare siste døgn» | `--hours 24` på `kasus.mjs vindu` |
+| «ta med det som er forkastet» | hold ikke de med `status: dismissed` utenfor når du merker hva som er nytt |
+| «vis flere» | hent en side til med `cursor` |
 
 Ble ett bestemt signal nevnt (en id, eller en sak journalisten alt vet at hun vil
-ha), hopp over steg 2 og 3 for valget — hent signalet med `signal <id> --json` og
+ha), hopp over steg 2 og 3 for valget — hent signalet med `get_radar_signal` og
 gå rett til 4a. Steg 1 skal likevel kjøres: profilen og ukas produksjon er
 premissene for både dekningssjekken og skrivinga.
 
@@ -76,19 +79,17 @@ et sporbart utgangspunkt: `kasusSignalId` i forslaget, og noe å kvittere for.
 spørsmålet er hva radaren har på strømpriser — også det som ble vist og lagt til
 side for tre dager siden. Her gjelder derfor **ikke** vindusregelen: temasøket har
 sitt eget, faste vindu på sju døgn, fordi et tema ikke blir mindre aktuelt av at
-du kjørte et saksløp i går. Kjør dette i tillegg til kallene i steg 1:
+du kjørte et saksløp i går. Hent dette i tillegg til kallene i steg 1:
+`list_radar_signals` med `hours: 168, limit: 50`, og én side til med `cursor`.
 
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs signals --kort --hours 168 --limit 100 --json
-```
+Lista har tittel, sammendrag, begge datoer, mønster og lenke — ikke
+researchkonteksten. Den henter du med `get_radar_signal` for den saken som faktisk
+velges.
 
-`--kort` fordi vinduet skal leses her: tittel, kategori, begge datoer, mønster og
-lenke, ikke researchkonteksten. Den henter du med `signal <id> --json` for den
-saken som faktisk velges.
-
-**Temaet er ikke et filter.** `/api/v1/signals` har ingen tekstsøk, og `--pattern`
-matcher mønsternavn i profilen — ikke temaer. Match derfor selv, semantisk, mot
-tittel og sammendrag: «strømstøtte», «nettleie» og «kraftpris» er samme tema som
+**Temaet er ikke et filter.** `search_radar_signals` er et ordsøk, og
+`matchedPattern` er mønsternavn i profilen — ikke temaer. Match derfor selv,
+semantisk, mot tittel og sammendrag i vinduet, og bruk ordsøket med to–tre ord som
+et tillegg: «strømstøtte», «nettleie» og «kraftpris» er samme tema som
 «strømpriser», og har ikke ett ord til felles. Det er samme spørsmål
 `kasus-lookout` besvarer, og et RENT spørsmål hører fortsatt der; forskjellen er
 hva svaret skal brukes til. Her skal det velges fra, så lenkene må stå i samtalen.
@@ -108,7 +109,7 @@ Legg fram to veier med AskUserQuestion framfor å velge selv:
 
 | Alternativ | Hva det er |
 |---|---|
-| Bredere vindu | `signals --kort --hours 720 --limit 100` — radaren kan ha hatt noe for en måned siden. Finner du et signal der, fortsetter saksløpet normalt. |
+| Bredere vindu | `list_radar_signals` med `hours: 720`, to sider, pluss ordsøket uten `hours` — radaren kan ha hatt noe for en måned siden. Finner du et signal der, fortsetter saksløpet normalt. |
 | Egen dekning først | `kasus-archivist` på temaet. Svarer på om redaksjonen alt har skrevet om det, og hva som i så fall ville vært en oppfølging. Det er en opplysning, ikke en inngang: uten et signal finnes det ingen nye kilder, og da er neste skritt en telefon framfor et saksløp. |
 
 ## Signalet er inngangsvilkåret
@@ -138,33 +139,43 @@ research i samtalen, ikke et saksforslag: ingen fil, ingen kvittering, og si det
 
 ## 1. Hent saksløpet og premissene
 
-To runder, som i `/kasus:start`, og av samme grunn: **vinduet kommer fra
-kvitteringen**, og den er det bare `nytt` som kjenner. Kjør de to første i samme
-melding:
+Tre runder, som i `/kasus:start`, og av samme grunn: **vinduet kommer fra
+kvitteringen**, den ligger på disk per organisasjon, og organisasjonen kjenner
+bare MCP-serveren.
+
+**Runde 1 — profilen.** `get_editorial_profile`. Den er ikke et vedlegg: den er
+grunnlaget for både prioriteringen i steg 2 og tonen i steg 5 — uten
+`criteria.patterns` er en rangering magefølelse med tall på. Den har også
+`organization.slug`, som kvitteringen trenger.
+
+**Runde 2 — vinduet**, alene:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs nytt --json
-node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs profile --json
+node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs vindu --org <slug> --json
 ```
 
-`nytt` måler mot **kvitteringen** — tidspunktet forrige saksløp ble gjort, lagret i
-`.claude/kasus-state.json`. Den skriver ingenting.
+Det måler mot **kvitteringen** — tidspunktet forrige saksløp ble gjort, lagret i
+`.claude/kasus-state.json`. Det skriver ingenting. Vindusregelen står i
+[`references/vindu.md`](../../references/vindu.md); scriptet har regnet den ut, og
+`V` er `meta.listevindu`.
 
-Profilen er ikke et vedlegg. Den er grunnlaget for både prioriteringen i steg 2 og
-tonen i steg 5: uten `criteria.patterns` er en rangering magefølelse med tall på.
+**Runde 3 — signalene og produksjonen**, i samme melding:
 
-Regn så ut vinduet `V` etter **vindusregelen** i
-[`references/vindu.md`](../../references/vindu.md) — `max(24, meta.vindu.hours)`,
-eller brukerens `--hours N` om det er oppgitt — og hent produksjonen:
+| Verktøy | Argumenter |
+|---|---|
+| `list_radar_signals` | `hours: meta.vindu.hours, limit: 40` — «siden sist» |
+| `list_articles` | `hours: V, publication: "published", limit: 40` |
 
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs articles --kort --hours V --limit 40 --json
-```
+Merk så hvert signal etter regelen «Nytt siden sist» i `references/kasus-mcp.md`:
+holdt utenfor (forkastet), alt sett (`meta.altSett`), utenfor vinduet (før
+`meta.vindu.fra`) eller **nytt**. Saksløpet jobber på de nye. Hold id-ene deres —
+det er dem du kvitterer for i steg 5 — og tell de andre tre, så et tomt saksløp
+ikke forveksles med en stille utelatelse.
 
-Det er **redaksjonens produksjon i perioden**: de 40 nyeste publiserte sakene siden
-sist. Profilen sier hva som fungerer for disse leserne i prinsippet; denne sier hva
-redaksjonen faktisk holder på med akkurat nå. De to er ikke det samme, og det er
-den andre journalisten kjenner igjen — «vi kjørte den saken på tirsdag».
+Artiklene er **redaksjonens produksjon i perioden**: de 40 nyeste publiserte sakene
+siden sist. Profilen sier hva som fungerer for disse leserne i prinsippet; denne
+sier hva redaksjonen faktisk holder på med akkurat nå. De to er ikke det samme, og
+det er den andre journalisten kjenner igjen — «vi kjørte den saken på tirsdag».
 
 `V` er det samme vinduet `/kasus:start` brukte, så det journalisten så i inngangen
 er det du jobber videre på. Kjøres saksløpet daglig, er det et døgn — og da er
@@ -172,19 +183,18 @@ produksjonen en håndfull saker. Det er tynt som grunnlag for «hva står vi i n
 og tiltaket er å SI det framfor å utvide i stillhet: «én sak siden i går» er en
 opplysning, ikke et hull.
 
-Vinduet er lite med vilje. Det skal leses her, i samtalen, fordi det brukes til å
-begrunne en rangering journalisten skal se. Er `taketNådd` sann, publiserte
-redaksjonen mer enn 40 saker i perioden — si det, og behandle vinduet som «de 40
-siste».
+Vinduene er små med vilje. De skal leses her, i samtalen, fordi de brukes til å
+begrunne en rangering journalisten skal se. Er `nextCursor` ikke `null`, er det
+mer enn 40 — si det, og hent en side til for signalene (de nye MÅ med) eller
+behandle artiklene som «de 40 siste».
 
 Tre svar krever noe annet enn å gå videre:
 
-- **`MANGLER: …`** — oppsettet er ikke på plass. Si hva som mangler, foreslå
-  `/kasus:env`, og stopp.
-- **`nye: 0`** — ingenting nytt. Si når det sist ble kvittert, og hva som ble
-  holdt utenfor (`holdtUtenfor`). Tilby et bredere vindu (`--hours 72`) eller
-  `--all` for de forkastede. Ikke fyll saksløpet med gamle signaler for å ha noe å
-  vise.
+- **Verktøyene finnes ikke, eller ber om autentisering** — Kasus er ikke koblet
+  til. Si det i én setning, foreslå `/kasus:env`, og stopp.
+- **Ingen nye** — ingenting nytt. Si når det sist ble kvittert, og hva som ble
+  holdt utenfor. Tilby et bredere vindu (`--hours 72`) eller å ta med de
+  forkastede. Ikke fyll saksløpet med gamle signaler for å ha noe å vise.
 - **`kvittering: null`** — første saksløp. Si at vinduet er siste 24 timer, og at en
   kvittering til slutt gjør «siden sist» presist neste gang.
 
@@ -200,8 +210,9 @@ kategorinavnet. De fire krever ulike tiltak, og i rå API-felt ser de like ut:
 | **Konkurrentsak direkte** (`competitor_article`) | Konkurrentens egen sak, fra en overvåket forside. | Ikke et søketreff og ikke research. Skal den følges opp, starter researchen på null — og det må sies at utgangspunktet er en konkurrent. |
 | **Fritt temasøk** (`market_signal`, `origin: null`) | Søketreff på et tema, hentet **uavhengig av publiseringstidspunkt**. | Sjekk publisert-datoen FØR du prioriterer. Her ligger støyen, og her ligger de gamle sakene. |
 
-`meta.grupper` har kategoriene ferdig oppdelt med id-er og forklaring. Bruk dem —
-ikke utled kategorien selv.
+Regn ut kategorien etter tabellen i `references/kasus-mcp.md`, og bare slik — den
+krever at `origin` og `type` leses samtidig, og en egen variant ville betydd én ting
+her og en annen i inngangen.
 
 ### Har `kasus-triage` kjørt, er halve steget gjort
 
@@ -229,7 +240,7 @@ her `whatWorks`, `whatToAvoid` og `keywords` kommer inn, og det er hele forskjel
 mellom en luket liste og en prioritert.
 
 Og et signal som kom inn etter at agenten hentet sitt vindu er nytt for deg —
-`nytt` er ferskere. Legg det inn i lista på vanlig vis.
+din uthenting er ferskere. Legg det inn i lista på vanlig vis.
 
 **Dommen derfra klarerer ingenting.** Steg 4a kjører uansett, for hver valgte sak.
 Grunnen står i `${CLAUDE_PLUGIN_ROOT}/references/dekningsdom.md`, under «To nivåer,
@@ -242,9 +253,9 @@ den hører ikke i saksløpet. To grunner: den henter sitt eget vindu framfor sak
 prioriterte lista med **klikkbare lenker foran seg før han velger**. En
 oppsummering av en oppsummering er ikke noe man klikker på.
 
-**Ferskhet er to tall.** `oppdaget` er når radaren fant signalet, `publisert` er
-hvor gammel saken er. `meta.gamleSaker` lister det som er publisert mer enn en uke
-før det ble oppdaget — **si det ved hver slik sak**, og ranger den ned med mindre
+**Ferskhet er to tall.** `detectedAt` er når radaren fant signalet,
+`publishedDate` er hvor gammel saken er. Er saken publisert mer enn en uke før den
+ble oppdaget (GAMMEL SAK) — **si det ved hver slik sak**, og ranger den ned med mindre
 det gamle er poenget. Mangler datoen, er svaret «ukjent dato», ikke «fersk».
 
 Rangér så, i denne rekkefølgen:
@@ -307,15 +318,16 @@ Journalisten skal kunne **åpne kildene og lese seg opp før han velger**. Derfo
   Lenka er også det som gjør lista etterprøvbar: id-en kan han ikke åpne.
 - **Nummerér sakene, og hold id-ene selv.** Nummeret er håndtaket journalisten
   peker med — «3 og 7» — og koblingen fra nummer til signal-id blir liggende hos
-  deg, til `signal <id>` i 4a og `kvitter --ids` i 4d.
+  deg, til `get_radar_signal` i 4a og `kvitter --ids` i 4d.
 - **Lenkene skal stå i teksten FØR du stiller spørsmålet.** Alternativene i
   AskUserQuestion er korte og ikke noe man klikker på, så en URL som bare står
   der er en URL journalisten ikke får åpnet. Legg fram den prioriterte lista med
   lenker, og still spørsmålet etterpå.
-- **Har et signal flere kilder** (`+N kilder til` i outputen), si det og oppgi
-  lenkene fra `sources` — for et oppfølgingssøk er det ofte de ANDRE kildene som
-  er saken, ikke hovedlenka.
-- **Mangler et signal lenke** (`LENKE: (ingen …)`), si det rett ut, med egne ord:
+- **Har et signal flere kilder**, si det og oppgi lenkene fra `sources` i
+  `get_radar_signal` — for et oppfølgingssøk er det ofte de ANDRE kildene som er
+  saken, ikke hovedlenka. Lista har dem ikke; hent dem for de øverste kandidatene
+  før du legger fram, når kategorien er en oppfølging.
+- **Mangler et signal lenke** (`url: null`), si det rett ut, med egne ord:
   «denne har ingen lenke, så den må vurderes på tittelen». Det er ikke en
   formalitet — et signal ingen kan åpne er en grunn til å prioritere det ned.
 - Skriv gjerne én linje om hva som er verdt å se etter i lenka, slik at
@@ -346,11 +358,12 @@ signaler avhenger av hvor mange som finnes:
   det som faktisk mangler — de andre kandidatene — framfor på kandidat nummer
   fire.
 
-Navngi perioden i det alternativet, og hent den fra `meta.vindu`. Er vinduet rundt
+Navngi perioden i det alternativet, og hent den fra `meta.vindu` i svaret fra
+`kasus.mjs vindu`. Er vinduet rundt
 et døgn, er «for siste døgn» riktig. Er kvitteringen fire dager gammel, holder
 saksløpet fire dager, og da skal alternativet si det framfor å love et døgn. Er
 vinduet mye bredere enn et døgn og lista lang, tilby i samme åndedrag at
-`--hours 24` gir et saksløp på bare siste døgn.
+et saksløp på bare siste døgn er et alternativ.
 
 **Blir alternativet valgt**, legg fram HELE lista — hvert signal i prioritert
 rekkefølge, i samtaleformen: tittel, én til to linjer om hva saken er, hvor
@@ -377,11 +390,7 @@ kilderapporter ingen leser.
 
 ### 4a. Hent signalet og sjekk egne saker
 
-Hent først signalet i full bredde:
-
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs signal <signal-id> --json
-```
+Hent først signalet i full bredde med `get_radar_signal`.
 
 Send så ut **én `kasus-archivist`** for dette signalet, med spørsmålet **«har vi
 skrevet om dette før?»** — ordrett. Agenten besvarer spørsmål om egen dekning
@@ -397,7 +406,6 @@ Agenten henter artiklene selv. Gi den:
   og ikke et signal du spør på vegne av
 - **plugin-roten**, som absolutt sti: `${CLAUDE_PLUGIN_ROOT}` — skriv ut den
   faktiske verdien i prompten, ikke variabelnavnet
-- **`--env <navn>`** hvis saksløpet kjører mot et annet miljø
 - **signalet**: tittel, sammendrag, og de av `details` som sier hva saken er —
   `publishedDate`, `actors`, `keyFigures`, `matchedPattern`. Er saken konsolidert
   av flere signaler, gi den ALLE — det er saken som skal sjekkes, ikke ett av
@@ -414,8 +422,8 @@ sak som ikke skal skrives — og det er en dyrere feil enn å vente et halvminut
 **Ikke hent dekningsvinduet selv.** Du har ukas 40 saker fra steg 1, og det er alt
 du skal ha inline. Dekningssjekken går mot 200 artikler uten tidsgrense, og det
 vinduet hører i agentens kontekst — ikke i din. Trenger du én bestemt artikkel i
-full tekst etterpå, for tone eller for å bygge videre, er det
-`article <id> --json` du bruker (uten `--json` klippes teksten på 6 000 tegn).
+full tekst etterpå, for tone eller for å bygge videre, er det `get_article` du
+bruker.
 
 Og si til agenten hva du alt fant: fant du en kobling til ukas produksjon i steg 2,
 skal den vite det, slik at den ikke bruker et av sine fem kandidatplasser på å
@@ -428,8 +436,8 @@ redaksjonen faktisk har på temaet.
 **Gjenta begge forbeholdene fra agenten**, og hold dem fra hverandre — som
 setninger, ikke som feltnavn:
 
-- **Vindusgrensen.** Vurderingen gjelder de 200 nyeste artiklene, fordi API-et
-  ikke har tekstsøk. **«Ingen treff» betyr «ikke blant disse artiklene», ikke
+- **Vindusgrensen.** Vurderingen gjelder de 200 nyeste artiklene, pluss et ordsøk
+  i resten — og et ordsøk finner ikke samme sak skrevet med andre ord. **«Ingen treff» betyr «ikke blant disse artiklene», ikke
   «ikke dekket»** — en eldre sak om samme tema er usynlig. Sagt til journalisten:
   «jeg har sett de 200 nyeste sakene våre, ikke hele arkivet». Den forskjellen er
   det som skiller en ny sak fra en dublett.
@@ -508,7 +516,7 @@ med hull.
 Kvitter for **denne** saken alene, med en gang den er ferdig:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs kvitter --ids <signal-id> --ids-only
+node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs kvitter --org <slug> --ids <signal-id> --ids-only
 ```
 
 `--ids-only` flytter ikke kvitteringstidspunktet. Det betyr at saken er behandlet,
@@ -526,11 +534,12 @@ behandlet:
 
 | Alternativet han ser | Kommandoen du kjører | Betyr |
 |---|---|---|
-| «Regn resten som sett» | `kvitter --at <meta.kvitter.at> --ids <alle viste id-er>` | Alt som ble vist er sett. Neste saksløp starter her. |
+| «Regn resten som sett» | `kvitter --org <slug> --at <meta.kvitterAt> --ids <alle nye id-er>` | Alt som ble vist er sett. Neste saksløp starter her. |
 | «La resten ligge til neste gang» | — | De ubehandlede kommer igjen neste saksløp. |
 
-`meta.kvitter` i JSON-svaret fra steg 1 har tidspunktet og id-ene ferdig. Bruk dem
-ordrett — ikke lag et tidspunkt selv.
+`meta.kvitterAt` fra `kasus.mjs vindu` i steg 1 er tidspunktet, og id-ene er de du
+merket som nye. Bruk tidspunktet ordrett — ikke lag et selv: det som kom inn mens
+dere jobbet skal fortsatt være nytt neste gang.
 
 **Saksløpet kan kjøres på nytt umiddelbart.** Kom det inn noe mens dere jobbet, viser
 et nytt saksløp det nå; ellers sier den at det ikke er noe nytt. Det er den normale
@@ -547,5 +556,5 @@ Kort, og i samtaleformen — ingen id-er, ingen flagg:
   kontaktes
 - hva som nå regnes som sett, og hva som dermed kommer igjen neste gang
 
-Saksløpet publiserer ingenting. Pluginen skriver til disk i dette repoet, og API-et
-er read-only.
+Saksløpet publiserer ingenting. Pluginen skriver til disk i dette repoet, og den
+bruker bare leseverktøyene i Kasus — ingenting endres der.
