@@ -17,12 +17,10 @@ er det pluginen faktisk er avhengig av, og reglene den legger oppå.
   DENNE organisasjonen», ikke «tomt i Kasus», og «ikke funnet» på en id betyr
   «finnes ikke ELLER tilhører en annen organisasjon». `get_organization` sier
   hvilken organisasjon det er.
-- **Pluginen bruker bare leseverktøyene.** Serveren har tre skriveverktøy
-  (`update_radar_signal_status`, `promote_signal_to_brief`,
-  `update_story_brief_status`) for OAuth-tilkoblinger med skrivetilgang. Ingen
-  kommando, ferdighet eller agent i pluginen har dem i verktøylista si, og det er
-  en test i `/kasus:test`: signalstatus i Kasus er DELT av hele redaksjonen, mens
-  «hva har jeg sett» er journalistens egen kvittering, på disk.
+- **Serveren er read-only.** Den har ingen skriveverktøy og intet scope som kunne
+  gitt dem, så ingenting pluginen gjør kan endre noe i Kasus. Status på signaler
+  og briefs endres i web-appen; «hva har jeg sett» er journalistens egen
+  kvittering, på disk.
 
 ## Verktøyene
 

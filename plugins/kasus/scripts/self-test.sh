@@ -10,7 +10,7 @@
 # samtaleformen, at
 # manifestene er gyldig JSON, at verktøyets --list-kontrakt holder, at
 # kommandoene bare refererer til modi som FINNES, at MCP-oppsettet er på plass,
-# at ingen komponent har Kasus' skriveverktøy, og at enhetstestene er grønne.
+# at hvert MCP-verktøy i en verktøyliste finnes, og at enhetstestene er grønne.
 #
 # Tilkoblingen til Kasus testes ikke her: den er en MCP-server Claude Code
 # kobler til, og bare Claude kan kalle den. `/kasus:test --live` gjør det.
@@ -569,33 +569,14 @@ else
   fail ".mcp.json mangler, er ugyldig, eller serveren heter ikke «kasus» — verktøyene finnes da ikke"
 fi
 
-# Leseverktøyene pluginen bruker. Alt annet med prefikset er enten en skrivefeil
-# (et verktøy som ikke finnes) eller et skriveverktøy.
+# Verktøyene Kasus' MCP-server har — alle leseverktøy, serveren er read-only.
+# Alt annet med prefikset er en skrivefeil: et verktøy agenten aldri får.
 PREFIX="mcp__plugin_kasus_kasus__"
 LESEVERKTOY="get_organization get_editorial_profile list_radar_signals search_radar_signals get_radar_signal list_signal_buckets list_story_briefs search_story_briefs get_story_brief list_articles search_articles get_article"
 
-# Kasus har skriveverktøy (status på signaler og briefs), og en OAuth-innlogging
-# kan ha lov til å bruke dem. Pluginen skal ALDRI: signalstatus er delt av hele
-# redaksjonen, mens «hva har jeg sett» er journalistens egen kvittering, på disk.
-# Et løfte i en prompt er lett å bryte, så verktøylistene håndheves her — både
-# at ingen nevner et skriveverktøy, og at ingen gir seg alle med en wildcard.
-SKRIVERE=""
-for f in $(find "$ROOT/commands" "$ROOT/agents" "$ROOT/skills" -name '*.md' | sort); do
-  if grep -qE 'update_radar_signal_status|promote_signal_to_brief|update_story_brief_status' "$f"; then
-    SKRIVERE="${SKRIVERE} ${f#"$ROOT"/}"
-  fi
-  if grep -qE "${PREFIX}\\*\"" "$f"; then
-    SKRIVERE="${SKRIVERE} ${f#"$ROOT"/}(wildcard)"
-  fi
-done
-if [ -z "$SKRIVERE" ]; then
-  pass "ingen kommando, agent eller ferdighet har Kasus' skriveverktøy"
-else
-  fail "disse kan skrive til Kasus:${SKRIVERE} — pluginen bruker bare leseverktøyene"
-fi
-
 # Hvert MCP-verktøy i en `tools:`/`allowed-tools:`-liste må finnes. En skrivefeil
 # der er et verktøy agenten aldri får, og den oppdager det først midt i jobben.
+# Det fanger også et verktøy noen tror finnes: serveren har ingen skriveverktøy.
 UKJENTE=""
 for f in $(find "$ROOT/commands" "$ROOT/agents" -name '*.md' | sort); do
   for navn in $(sed -n '1,8p' "$f" | grep -E '^(tools|allowed-tools):' | grep -oE "${PREFIX}[a-z_]+" | sed "s/^${PREFIX}//"); do

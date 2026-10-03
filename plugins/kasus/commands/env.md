@@ -29,8 +29,8 @@ organisasjoner i samme repo — ikke deler «siden sist».
 `get_organization`.
 
 - **Svarer det**, si hvilken organisasjon tilkoblingen gjelder (navn og nettsted),
-  og om den kan skrive (`auth.canWrite`) — og legg til at pluginen uansett bare
-  bruker leseverktøyene. Minn om at det er **innloggingen** som avgjør
+  og at tilkoblingen bare kan lese — Kasus' MCP-server har ingen skriveverktøy.
+  Minn om at det er **innloggingen** som avgjør
   organisasjonen, ikke noe som sendes med: er det feil organisasjon, logg inn på
   nytt via `/mcp` og velg en annen.
 - **Finnes ikke verktøyet, eller ber det om autentisering**, er Kasus ikke koblet

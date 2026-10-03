@@ -166,13 +166,13 @@ Kvitteringen på disk har organisasjonens slug, ikke noe som kan autentisere.
 
 ## 4. Read-only, og garden er FRAVÆRET av verktøyet
 
-Kasus' MCP-server har skriveverktøy — status på signaler og briefs — og en
-innlogging kan ha lov til å bruke dem. Pluginen bruker dem aldri: ingen kommando,
-agent eller ferdighet har dem i verktøylista si, og ingen gir seg alle med en
-wildcard. `/kasus:test` håndhever det, fordi et løfte i en prompt er lett å bryte.
-Signalstatus i Kasus er DELT av hele redaksjonen; «hva har jeg sett» er
-journalistens egen kvittering. Det pluginen skriver, skriver den til disk i ditt
-eget repo, og scriptene har ingen nettverkskode i det hele tatt.
+Kasus' MCP-server har ingen skriveverktøy og intet scope som kunne gitt dem. Garden
+ligger altså på serveren, ikke i et løfte i en prompt: ingenting pluginen gjør kan
+endre status, løfte eller forkaste noe i Kasus. Signalstatus der er DELT av hele
+redaksjonen; «hva har jeg sett» er journalistens egen kvittering. Det pluginen
+skriver, skriver den til disk i ditt eget repo, og scriptene har ingen
+nettverkskode i det hele tatt. `/kasus:test` sjekker at hvert MCP-verktøy i en
+verktøyliste er et kjent leseverktøy.
 
 ## 5. Ingenting oppdiktet
 

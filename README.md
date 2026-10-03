@@ -160,7 +160,7 @@ Tilkoblingen er bundet til organisasjonen du valgte, så «0 signaler» betyr to
 for *den* organisasjonen. For staging eller en egen installasjon: sett
 `KASUS_MCP_URL` (default `https://app.kasus.io/api/mcp`).
 
-Pluginen bruker bare Kasus' **leseverktøy** — ingen status endres der. Det
+Kasus' MCP-server er **read-only** — ingen status endres der. Det
 pluginen skriver, skriver den i prosjektet: saksforslagene i `./artikler`,
 kvitteringen «siden sist» i `.claude/kasus-state.json`. Begge er relative til der
 du står, så to prosjekter teller sine egne saksløp.

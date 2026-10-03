@@ -32,9 +32,8 @@ Den dekker:
   kommandoene refererer til finnes**
 - at **`.mcp.json` kobler til serveren `kasus`** — heter den noe annet, peker hvert
   verktøynavn i pluginen på ingenting
-- at **ingen kommando, agent eller ferdighet har Kasus' skriveverktøy**, at ingen
-  gir seg alle verktøyene med en wildcard, at hvert MCP-verktøy i en verktøyliste
-  finnes, og at agentene har verktøyene teksten deres bruker
+- at hvert MCP-verktøy i en verktøyliste er et kjent leseverktøy, og at agentene
+  har verktøyene teksten deres bruker
 - at ingen instruks fortsatt nevner HTTP-API-et (`KASUS_API_KEY`, `/api/v1`), og at
   `scripts/` ikke har nettverkskode
 - enhetstestene (`node --test`): kvitteringen, at to organisasjoner ikke deler

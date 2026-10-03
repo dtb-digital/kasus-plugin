@@ -44,8 +44,8 @@ om hva som ligger der — det svarer `kasus-lookout` på, uten å kvittere. Saks
 researcher, skriver til disk og flytter kvitteringen, og skal derfor ikke starte
 fordi noen lurte på om det var noe.
 
-Dataene kommer fra **Kasus' MCP-server**, og pluginen bruker bare
-leseverktøyene — ingen status i Kasus endres. Det pluginen skriver, skriver den i
+Dataene kommer fra **Kasus' MCP-server**, som er read-only — ingen status i
+Kasus endres. Det pluginen skriver, skriver den i
 prosjektet:
 saksforslagene i `./artikler`, kvitteringen «siden sist» i
 `.claude/kasus-state.json`. Begge stiene er relative til der du står, så to

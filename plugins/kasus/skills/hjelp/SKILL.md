@@ -343,7 +343,7 @@ disk, fra et eldre svar, eller fra en som har sett verktøyets egen utskrift.
 - **Tilkoblingen avgjør organisasjonen.** Ingen organisasjons-id sendes noe sted.
 - **Ingenting dikter pluginen opp.** Mangler en kilde, står det som en markør.
 - **Mot Kasus er alt lesing.** Ingen status endres, ingenting løftes, ingenting
-  forkastes — også når innloggingen din ville tillatt det. Det pluginen skriver, skriver den til disk i ditt eget repo:
+  forkastes — tilkoblingen til Kasus kan bare lese. Det pluginen skriver, skriver den til disk i ditt eget repo:
   forslagene i `./artikler`, kvitteringen i `.claude/kasus-state.json`.
 
 Vil noen ha begrunnelsene bak dette framfor reglene, ligger de i
