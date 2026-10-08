@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "kasus": {
+      "type": "http",
+      "url": "${KASUS_MCP_URL:-https://app.kasus.io/api/mcp}"
+    }
+  }
+}

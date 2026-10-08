@@ -2,10 +2,10 @@
 
 Pluginen har to lesere, og de trenger ikke det samme.
 
-**Verktøyet og agentene** leser id-er, `meta.forbehold`, flagg og enum-verdier.
+**Verktøyene og agentene** leser id-er, feltnavn, argumenter og enum-verdier.
 Det er arbeidsmateriale, og det er ikke støy der: id-en er det som gjør at
-`article <id>` kan slås opp, at `kvitter --ids` treffer riktig signal, og at
-saksforslaget har et spor tilbake til opphavet.
+`get_article` kan slå opp saken, at `acknowledge_signals` treffer riktig signal,
+og at saksforslaget har et spor tilbake til opphavet.
 
 **Journalisten** leser en melding i en tråd, midt i en arbeidsdag, for å avgjøre
 om en sak er verdt en time. Der er den samme id-en støy: den kan ikke åpnes, den
@@ -46,8 +46,8 @@ er **datoen og lenka** som innfrir det i tråden, ikke id-en: en url kan åpnes 
 tretti sekunder, mens en id bare kan slås opp av verktøyet som skrev den.
 
 Så: **id-ene bæres, de skrives ikke ut.** Du trenger dem selv — til
-`signal <id>`, til `article <id>`, til `kvitter --ids` og til frontmatteren i
-saksforslaget — og du holder dem i din egen kontekst. Journalisten ser dato og
+`get_radar_signal`, til `get_article`, til `acknowledge_signals` og til
+metadataene i saksforslaget — og du holder dem i din egen kontekst. Journalisten ser dato og
 lenke.
 
 ## Det som utelates, og det som sies i stedet
@@ -56,15 +56,15 @@ lenke.
 |---|---|
 | id-er — signal, artikkel, brief | ingenting. Lenka er oppslaget |
 | kategorinavn: `egen_oppfolging`, `konkurrent_oppfolging`, `konkurrentsak`, `temasok`, `own_followup`, `market_signal` | hva det betyr for jobben: «ny kilde på vår egen sak», «konkurrenten har den — dette er kildene under den», «søketreff, så sjekk datoen» |
-| `oppdaget`, og «to datoer» som begrep | hvor gammel **saken** er. Oppdaget-tidspunktet nevnes bare når det forklarer noe: «radaren fant den i dag, men saken er fra 2023» |
+| `detectedAt`, og «to datoer» som begrep | hvor gammel **saken** er. Oppdaget-tidspunktet nevnes bare når det forklarer noe: «radaren fant den i dag, men saken er fra 2023» |
 | mønsternavn, «uten mønstertreff», `criteria.patterns` | begrunnelsen i prosa, når den er en grunn til å ta saken: «treffer det dere har hatt uttelling på» / «jeg ser ikke hvorfor denne er her» |
-| `meta.forbehold` ordrett, `taketNådd`, «vinduet», «hentet av», sideantall | perioden i klartekst, og «det kan finnes mer enn dette» når taket er nådd |
-| flagg og kommandoer: `--hours 72`, `--all`, `--limit`, `--json`, `--kort`, `kvitter --ids-only` | valget i klartekst: «vil du at jeg går en uke tilbake?», «skal resten regnes som sett?» |
+| vindusgrensen som feltnavn, `nextCursor`, `truncated`, «vinduet», «hentet av», sideantall | perioden i klartekst, og «det kan finnes mer enn dette» når taket er nådd |
+| verktøy og argumenter: `"hours": 72`, `include_dismissed`, `limit`, `get_new_signals`, `acknowledge_signals` med `ids_only` | valget i klartekst: «vil du at jeg går en uke tilbake?», «skal resten regnes som sett?» |
 | komponentnavn: `kasus-lookout`, `kasus-archivist`, `kasus-triage`, `kasus-researcher`, ferdighetsnavn | hva journalisten kan **si**: «si at du vil skrive saken», «jeg kan sjekke om vi har dekket det». Slash-kommandoene er unntaket — dem skriver hun selv |
 | statusord fra Kasus: `new`, `seen`, `promoted`, `dismissed`, `candidate`, `proposal`, `conversionPotential` | bare når det endrer hva man gjør: «noen i Kasus har alt forkastet denne» |
 | dommene `SAMME SAK` / `OPPFØLGING` / `FUNDAMENT` / `SAMME TEMA` som ord | tiltaket: «vi har den saken», «kan skrives som oppfølger på saken fra mai», «bakgrunnen ligger her» |
-| `MANGLER: KASUS_API_KEY`, feilkoder, filstier i pluginen | hva som mangler, i én setning, og `/kasus:env` |
-| feltnavn generelt: `details`, `sources`, `matchedPattern`, `publishedDate` | innholdet i feltet |
+| verktøyfeil, feilkoder, MCP-navn, filstier i pluginen | hva som mangler, i én setning, og `/kasus:env` |
+| feltnavn generelt: `details`, `sources`, `category`, `matchedPattern`, `publishedDate`, `storyAge` | innholdet i feltet |
 
 Er du i tvil om noe hører der, er spørsmålet: **endrer dette hva hun gjør i
 neste time?** Gjør det ikke det, hører det i din kontekst.
@@ -82,8 +82,8 @@ i én setning hver, framfor som en fotnote med feltnavn i:
 - **Hullene.** `[TRENGER VERIFISERING]` og `[SITAT MANGLER]` i forslaget, og hvem
   som må ringes.
 
-Et forbehold som ikke kan forstås er ikke et forbehold. `meta.forbehold` ordrett
-er nettopp det: en linje man hopper over. Si den samme begrensningen på norsk.
+Et forbehold som ikke kan forstås er ikke et forbehold. En begrensning sagt med
+feltnavn er nettopp det: en linje man hopper over. Si den samme begrensningen på norsk.
 
 ## Formen, før og etter
 
@@ -122,7 +122,7 @@ to ting.
 
 Rapporten fra en agent leses av **orkestratoren**, ikke av journalisten. Der hører
 id-ene: uten dem kan ikke saksløpet hente signalet i full bredde, kvittere for det
-eller skrive `egneSaker` i frontmatteren. Agentene beholder dem derfor, men samlet
+eller skrive `egneSaker` i saksforslaget. Agentene beholder dem derfor, men samlet
 og merket — én linje til slutt, som ikke skal videre:
 
 ```
@@ -142,7 +142,7 @@ hvert forbehold i sin tekniske form.
 - **Journalisten spør selv.** «Hent signal 1234», «hva var id-en på den saken?» —
   da er id-en spørsmålet, og svaret er id-en.
 - **Diagnostikk.** `/kasus:env` og `/kasus:test` er tekniske med vilje. Leseren er
-  den som setter opp pluginen, og der er variabelnavnet hele svaret.
-- **Filen på disk.** Saksforslagets frontmatter beholder `kasusSignalId`,
+  den som setter opp pluginen, og der er organisasjonen og tilgangen hele svaret.
+- **Saksforslaget i Kasus.** Metadataene beholder `kasusSignalId`,
   `kasusArtikkelId` og `signalUrl` — det er redaktørens spor tilbake til opphavet,
-  og halve verdien av filen. Den er ikke en melding i en tråd.
+  og halve verdien av forslaget. Det er ikke en melding i en tråd.

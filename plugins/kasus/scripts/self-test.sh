@@ -1,19 +1,16 @@
 #!/usr/bin/env bash
-# /kasus:test — selvtest av pluginen.
+# /kasus:test — selvtest av pluginen. Krever bare bash og python3.
 #
-# Tørt (default): syntaks på alle skript, at komponentmappene ikke er tomme, at
-# ferdighetene har navn som matcher mappa, at saksløpet bare kvitteres fra ett sted
-# og krever et signal, at statusen henter begge vinduene sine, at hjelpen nevner
-# alle inngangene som finnes, at inngangen henter alle fire kildene og sier at
-# lista er rå, at inngangen og saksløpet deler vindusregel, at ingen ferdighet
-# starter fra en story-brief, at alt brukervendt legger fram etter den felles
-# samtaleformen, at
-# manifestene er gyldig JSON, at verktøyets --list-kontrakt holder, at
-# kommandoene bare refererer til modi som FINNES, at enhetstestene er grønne, og
-# at mål-presedensen er den samme i shell og JS.
+# Pluginen har ingen egen kode: alt går gjennom Kasus' MCP-server. Det som kan
+# testes her er derfor tekstene — at komponentmappene ikke er tomme, at navnene
+# matcher, at manifestene er gyldige og har samme versjon, at verktøyene tekstene
+# refererer til FINNES på serveren, at bare saksløpet kvitterer og lagrer, at
+# agentene ikke har skriveverktøy, at inngangen henter alle fire kildene og sier
+# at lista er rå, at reglene er definert ETT sted, at hjelpen kjenner alle
+# inngangene, og at det ikke ligger Node-kode igjen.
 #
-# --live: i tillegg et ekte kall mot API-et, og en verifisering av at serveren
-# FAKTISK avviser skriv — ikke bare at pluginen ikke prøver.
+# Den levende delen (`/kasus:test --live`) gjøres av Claude med MCP-kall, ikke
+# herfra: et skript har ikke tilgang til OAuth-tokenet.
 
 set -u
 
@@ -21,17 +18,12 @@ if [ -n "${ZSH_VERSION:-}" ]; then setopt shwordsplit; fi
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
-# shellcheck source=lib/env.sh
-. "$HERE/lib/env.sh"
 
-LIVE=0
-ENV_NAME=""
 for arg in "$@"; do
   case "$arg" in
-    --live) LIVE=1 ;;
-    --help|-h) printf 'Bruk: self-test.sh [--live] [miljø]\n'; exit 0 ;;
-    --*) printf 'Ukjent flagg: %s\n' "$arg" >&2; exit 2 ;;
-    *) ENV_NAME="$arg" ;;
+    --help|-h) printf 'Bruk: self-test.sh\n'; exit 0 ;;
+    --live) ;;  # håndteres av /kasus:test med MCP-kall
+    *) printf 'Ukjent argument: %s\n' "$arg" >&2; exit 2 ;;
   esac
 done
 
@@ -39,70 +31,27 @@ FAILED=0
 pass() { printf 'OK    %s\n' "$1"; }
 fail() { printf 'FEIL  %s\n' "$1"; FAILED=$((FAILED + 1)); }
 
-printf 'kasus — selvtest%s\n\n' "$([ "$LIVE" -eq 1 ] && printf ' (--live)')"
+printf 'kasus — selvtest\n\n'
 
 # --- 1. Syntaks ------------------------------------------------------------
-# Bash-verktøyet kan bruke bash, sh eller zsh, så shell-skript må sjekkes i
-# begge dialekter. En zsh-only feil dukker ellers opp hos brukeren, ikke her.
+# Bash-verktøyet kan bruke bash eller zsh, så skriptet sjekkes i begge.
 for f in $(find "$ROOT/scripts" -name '*.sh' | sort); do
   rel="${f#"$ROOT"/}"
-  if bash -n "$f" 2>/dev/null && zsh -n "$f" 2>/dev/null; then
-    pass "syntaks (bash+zsh): $rel"
+  if bash -n "$f" 2>/dev/null && { ! command -v zsh >/dev/null 2>&1 || zsh -n "$f" 2>/dev/null; }; then
+    pass "syntaks: $rel"
   else
     fail "syntaks: $rel"
   fi
 done
 
-for f in $(find "$ROOT/scripts" -name '*.mjs' | sort); do
-  rel="${f#"$ROOT"/}"
-  if node --check "$f" >/dev/null 2>&1; then
-    pass "syntaks (node): $rel"
-  else
-    fail "syntaks: $rel"
-  fi
-done
-
-# --- 1b. Shell-felle: $VAR rett foran et ikke-ASCII-tegn -------------------
-# En ubeskyttet variabel klemt mellom typografiske anfoerselstegn er en tikkende
-# bombe: bash 3.2 (den som er paa macOS) med UTF-8-locale leser de multibyte
-# bytene som en DEL AV variabelnavnet, og feiler med «ORG?: unbound variable»
-# under `set -u`. zsh gjør det ikke, så feilen finnes
-# bare i den ene av de to dialektene Bash-verktøyet kan velge — og bare når
-# locale er satt. Verifisert: identisk linje virker med tom env og kræsjer med
-# LANG=en_US.UTF-8. `${ORG}` er entydig uansett locale.
-#
-# Sjekken bruker python3 framfor `grep -P`, som ikke finnes i BSD-grep overalt.
-if find "$ROOT/scripts" -name '*.sh' -print0 | python3 -c '
-import re, sys
-pattern = re.compile(r"\$[A-Za-z_][A-Za-z0-9_]*[^\x00-\x7F\s]")
-bad = []
-for path in sys.stdin.buffer.read().split(b"\0"):
-    if not path:
-        continue
-    name = path.decode()
-    for n, raw in enumerate(open(name, "rb").read().split(b"\n"), 1):
-        line = raw.decode("utf-8", "replace")
-        if pattern.search(line):
-            bad.append(name + ":" + str(n))
-if bad:
-    print(" ".join(bad))
-    sys.exit(1)
-' >/dev/null 2>&1; then
-  pass "ingen \$VAR rett foran et ikke-ASCII-tegn (bruk \${VAR})"
+# Pluginen skal ikke kreve Node. Ligger det en .mjs/.js eller et `node`-kall i
+# tekstene, er avhengigheten tilbake uten at noe sa fra.
+NODEKODE="$(find "$ROOT" \( -name '*.mjs' -o -name '*.js' -o -name 'package.json' \) -not -path '*/.git/*' 2>/dev/null | sed "s|$ROOT/||" | tr '\n' ' ')"
+NODEKALL="$(grep -rlE '(^|[[:space:]`])node[[:space:]]+[^[:space:]]+\.m?js' "$ROOT/commands" "$ROOT/agents" "$ROOT/skills" "$ROOT/references" 2>/dev/null | sed "s|$ROOT/||" | tr '\n' ' ')"
+if [ -z "$NODEKODE" ] && [ -z "$NODEKALL" ]; then
+  pass "ingen Node-kode og ingen node-kall — alt går gjennom MCP"
 else
-  fail "\$VAR rett foran et ikke-ASCII-tegn — bruk \${VAR}, ellers feiler bash med UTF-8-locale:"
-  find "$ROOT/scripts" -name '*.sh' -print0 | python3 -c '
-import re, sys
-pattern = re.compile(r"\$[A-Za-z_][A-Za-z0-9_]*[^\x00-\x7F\s]")
-for path in sys.stdin.buffer.read().split(b"\0"):
-    if not path:
-        continue
-    name = path.decode()
-    for n, raw in enumerate(open(name, "rb").read().split(b"\n"), 1):
-        line = raw.decode("utf-8", "replace")
-        if pattern.search(line):
-            print("      " + name + ":" + str(n) + ": " + line.strip())
-'
+  fail "Node er tilbake: ${NODEKODE}${NODEKALL}"
 fi
 
 # --- 2. Komponentmapper ----------------------------------------------------
@@ -128,11 +77,21 @@ else
 fi
 
 PLUGIN_VERSION="$(python3 -c "import json;print(json.load(open('$MANIFEST'))['version'])" 2>/dev/null || printf '')"
-TOOL_VERSION="$(node "$ROOT/scripts/kasus/kasus.mjs" --list --json 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["version"])' 2>/dev/null || printf '')"
-if [ -n "$PLUGIN_VERSION" ] && [ "$PLUGIN_VERSION" = "$TOOL_VERSION" ]; then
-  pass "versjon er den samme i plugin.json og verktøyet ($PLUGIN_VERSION)"
+
+# MCP-serveren er hele verktøyet. Heter den noe annet enn `kasus`, heter alle
+# verktøyene noe annet enn `mcp__plugin_kasus_kasus__…`, og allowed-tools og
+# agentenes tools-lister peker på ingenting.
+MCP_FILE="$ROOT/.mcp.json"
+if MCP_FILE="$MCP_FILE" python3 -c '
+import json, os
+m = json.load(open(os.environ["MCP_FILE"]))
+srv = m["mcpServers"]["kasus"]
+assert srv["type"] == "http", "type skal være http"
+assert "/api/mcp" in srv["url"], "url skal peke på /api/mcp"
+' 2>/dev/null; then
+  pass ".mcp.json registrerer MCP-serveren «kasus» (http)"
 else
-  fail "versjonsdrift: plugin.json=«${PLUGIN_VERSION}», kasus.mjs=«${TOOL_VERSION}»"
+  fail ".mcp.json mangler, er ugyldig, eller registrerer ikke serveren «kasus» mot /api/mcp"
 fi
 
 # Marketplace-oppføringen har sin EGEN versjon og beskrivelse, og de driftet fra
@@ -207,118 +166,139 @@ else
 fi
 
 # --- 4. Verktøy-kontrakten -------------------------------------------------
-LIST_JSON="$(node "$ROOT/scripts/kasus/kasus.mjs" --list --json 2>/dev/null || printf '')"
-if [ -z "$LIST_JSON" ]; then
-  fail "kasus.mjs --list --json ga ingen output"
-else
-  if printf '%s' "$LIST_JSON" | python3 -c '
-import json, sys
-m = json.load(sys.stdin)
-assert m["tool"] == "kasus", "tool skal være kasus"
-assert m["readOnly"] is True, "readOnly skal være true"
-assert m["modes"], "ingen modi i manifestet"
-for mode in m["modes"]:
-    navn = mode["name"]
-    assert navn, "modus uten navn"
-    assert mode["summary"], "modus " + navn + " mangler summary"
-    assert isinstance(mode["flags"], list) and mode["flags"], "modus " + navn + " mangler flagg"
-    for common in ("env", "json"):
-        assert common in mode["flags"], "modus " + navn + " mangler --" + common
-' 2>/dev/null; then
-    pass "kasus.mjs --list --json oppfyller manifest-kontrakten"
-  else
-    fail "kasus.mjs --list --json bryter manifest-kontrakten"
-  fi
-fi
+# Verktøyene på Kasus' MCP-server (apps/frontend/lib/mcp/server.ts i kasus-repoet).
+# Lista speiler serveren; et verktøy som får nytt navn der, må endres her OG i
+# tekstene — ellers blir det et kall som feiler hos brukeren.
+READ_TOOLS="get_organization get_editorial_profile get_new_signals list_radar_signals search_radar_signals get_radar_signal list_signal_buckets list_story_briefs search_story_briefs get_story_brief list_articles search_articles get_article list_story_proposals get_story_proposal"
+WRITE_TOOLS="acknowledge_signals create_story_proposal update_story_proposal"
+KNOWN=" $READ_TOOLS $WRITE_TOOLS "
 
-# Kommandoene, agentene og ferdighetene kaller verktøyet med modus-navn. En modus som fjernes eller får
-# nytt navn skal bli en rød test her, ikke en kommando som feiler hos brukeren.
-MODES="$(printf '%s' "$LIST_JSON" | python3 -c 'import json,sys;print(" ".join(m["name"] for m in json.load(sys.stdin)["modes"]))' 2>/dev/null || printf '')"
-USED="$(grep -rhoE 'kasus\.mjs[[:space:]]+[a-z][a-z-]*' "$ROOT/commands" "$ROOT/agents" "$ROOT/skills" 2>/dev/null | awk '{print $2}' | sort -u)"
+# Verktøynavn i tekstene: get_/list_/search_ + kjente skriveprefikser, enten
+# alene i backticks, først i et kall-eksempel, eller fullt kvalifisert.
+USED="$(find "$ROOT/commands" "$ROOT/agents" "$ROOT/skills" "$ROOT/references" -name '*.md' -print0 2>/dev/null | python3 -c '
+import re, sys
+pat = re.compile(r"(?<![A-Za-z0-9_])(?:mcp__plugin_kasus_kasus__)?((?:get|list|search|acknowledge|create|update)_[a-z_]+)")
+seen = set()
+for path in sys.stdin.buffer.read().split(b"\0"):
+    if path:
+        seen.update(pat.findall(open(path, encoding="utf-8").read()))
+print(" ".join(sorted(seen)))
+')"
 UNKNOWN=""
 for used in $USED; do
-  case " $MODES " in
+  case "$KNOWN" in
     *" $used "*) ;;
     *) UNKNOWN="$UNKNOWN $used" ;;
   esac
 done
 if [ -z "$UNKNOWN" ]; then
-  pass "alle modi kommandoene refererer til finnes i verktøyet"
+  pass "alle MCP-verktøy tekstene refererer til finnes på serveren"
 else
-  fail "kommandoer/agenter kaller ukjente modi:$UNKNOWN (kjente: $MODES)"
+  fail "tekstene refererer til ukjente verktøy:$UNKNOWN"
 fi
 
-# --- 4b. Hvem som får kvittere -------------------------------------------
-# Kommandoene og agentene lover at de ALDRI kvitterer, og et løfte i en prompt er
-# lett å bryte ved en senere redigering — så det håndheves her.
+# Fullt kvalifiserte navn (allowed-tools, agentenes tools:) må ha riktig prefiks.
+FEILPREFIKS="$(grep -rhoE 'mcp__[a-z_]+__[a-z_]+' "$ROOT/commands" "$ROOT/agents" "$ROOT/skills" 2>/dev/null | grep -v '^mcp__plugin_kasus_kasus__' | sort -u | tr '\n' ' ')"
+if [ -z "$FEILPREFIKS" ]; then
+  pass "fullt kvalifiserte verktøynavn bruker mcp__plugin_kasus_kasus__"
+else
+  fail "feil prefiks på verktøynavn: $FEILPREFIKS"
+fi
+
+# --- 4b. Hvem som får skrive --------------------------------------------
+# Kommandoene og agentene lover at de ALDRI kvitterer eller lagrer, og et løfte i
+# en prompt er lett å bryte ved en senere redigering — så det håndheves her.
 #
-# Agentene er den farlige halvparten: de har Bash, de trigges av naturlig språk,
-# og en kvittering fra en av dem ville tømt saksløpet for signaler UTEN at noen ba
-# om det. En kvittering er heller ikke til å angre — «siden sist» er borte.
-KVITTERERE=""
+# Agentene er den farlige halvparten: de trigges av naturlig språk, og en
+# kvittering fra en av dem ville tømt saksløpet for signaler UTEN at noen ba om
+# det. En kvittering er heller ikke til å angre — «siden sist» er borte, og den er
+# felles for hele redaksjonen.
+SKRIVERE=""
 for f in $(find "$ROOT/commands" "$ROOT/agents" -name '*.md' 2>/dev/null | sort); do
   [ -f "$f" ] || continue
-  if grep -qE 'kasus\.mjs[[:space:]]+kvitter' "$f"; then
-    KVITTERERE="$KVITTERERE ${f#"$ROOT"/}"
+  if grep -qE '(acknowledge_signals|create_story_proposal|update_story_proposal)' "$f"; then
+    SKRIVERE="$SKRIVERE ${f#"$ROOT"/}"
   fi
 done
-if [ -n "$KVITTERERE" ]; then
-  fail "disse kaller «kvitter», men skal være rent lesende:$KVITTERERE"
+if [ -n "$SKRIVERE" ]; then
+  fail "disse nevner skriveverktøy, men skal være rent lesende:$SKRIVERE"
 else
-  pass "kommandoer og agenter kvitterer aldri (bare ferdighetene gjør det)"
+  pass "kommandoer og agenter kvitterer og lagrer aldri (bare ferdighetene gjør det)"
 fi
+
+# Agentenes verktøyliste er garden, ikke prosaen: en agent uten skriveverktøy kan
+# ikke kvittere uansett hva den blir bedt om. Bash og Write er også ute — med dem
+# kunne en agent skrive noe lokalt, og pluginen skriver ingenting på disk.
+for f in $(find "$ROOT/agents" -name '*.md' | sort); do
+  rel="${f#"$ROOT"/}"
+  TOOLS_LINE="$(sed -n 's/^tools:[[:space:]]*//p' "$f" | head -1)"
+  case "$TOOLS_LINE" in
+    *acknowledge_signals*|*create_story_proposal*|*update_story_proposal*|*'"Bash"'*|*'"Write"'*|*'"Edit"'*)
+      fail "$rel har et skrivende verktøy i tools: — agentene skal bare lese" ;;
+    "")
+      fail "$rel mangler tools: — uten lista arver agenten alle verktøy, også skriveverktøyene" ;;
+    *) pass "$rel har bare leseverktøy" ;;
+  esac
+done
 
 # Ferdighetene får kvittere, men bare SAKSLØPET får flytte tidspunktet. En
 # oppfølgersak behandler ett signal av gangen og skal kvittere for nettopp det
-# (`--ids-only`) — en full kvittering derfra ville svelget en hel dags signaler
+# (`ids_only`) — en full kvittering derfra ville svelget en hel dags signaler
 # journalisten aldri fikk se, og det er ikke til å angre (prinsipp 9).
 for f in $(find "$ROOT/skills" -name 'SKILL.md' 2>/dev/null | sort); do
   [ "$f" = "$ROUND_SKILL" ] && continue
   rel="${f#"$ROOT"/}"
-  ANTALL="$(grep -cE 'kasus\.mjs[[:space:]]+kvitter' "$f" 2>/dev/null | tr -d ' ')"
-  if [ "${ANTALL:-0}" -eq 0 ]; then
+  KALL="$(grep -hE 'acknowledge_signals[[:space:]]*\{' "$f" 2>/dev/null)"
+  if [ -z "$KALL" ]; then
     pass "$rel kvitterer ikke"
     continue
   fi
   BARE_IDS=1
   while IFS= read -r linje; do
     case "$linje" in
-      ""|*--ids-only*) ;;
+      ""|*'"ids_only": true'*) ;;
       *) BARE_IDS=0 ;;
     esac
   done <<KVITT
-$(grep -hE 'kasus\.mjs[[:space:]]+kvitter' "$f" 2>/dev/null)
+$KALL
 KVITT
   if [ "$BARE_IDS" -eq 1 ]; then
-    pass "$rel kvitterer bare med --ids-only (flytter ikke tidspunktet)"
+    pass "$rel kvitterer bare med ids_only (flytter ikke tidspunktet)"
   else
-    fail "$rel kvitterer UTEN --ids-only — bare saksløpet får flytte «siden sist»"
+    fail "$rel kvitterer UTEN ids_only — bare saksløpet får flytte «siden sist»"
   fi
 done
 
-# ...og saksløpet må FAKTISK kvittere. Et steg som forsvinner i en omskriving gir
-# et saksløp som viser de samme signalene i morgen, uten at noe feiler.
-if grep -qE 'kasus\.mjs[[:space:]]+kvitter' "$ROUND_SKILL" 2>/dev/null; then
+# ...og saksløpet må FAKTISK kvittere og lagre. Et steg som forsvinner i en
+# omskriving gir et saksløp som viser de samme signalene i morgen, eller et
+# forslag som bare står i samtalen, uten at noe feiler.
+if grep -qE 'acknowledge_signals[[:space:]]*\{' "$ROUND_SKILL" 2>/dev/null; then
   pass "saksløpet kvitterer (steg 4d/5 er intakt)"
 else
-  fail "saksløpet kaller ikke «kvitter» — «siden sist» ville stått stille"
+  fail "saksløpet kaller ikke acknowledge_signals — «siden sist» ville stått stille"
 fi
+for f in "$ROUND_SKILL" "$ROOT/skills/oppfolgersak/SKILL.md"; do
+  [ -f "$f" ] || continue
+  if grep -q 'create_story_proposal' "$f"; then
+    pass "${f#"$ROOT"/} lagrer saksforslaget i Kasus"
+  else
+    fail "${f#"$ROOT"/} lagrer ikke saksforslaget (create_story_proposal mangler)"
+  fi
+done
 
 # --- 4b-bis. En brief er ikke opphavet til et saksforslag -----------------
-# `story-briefs` henter Kasus' EGNE saksforslag, laget av innholdspipelinen.
+# Story-briefene er Kasus' EGNE saksforslag, laget av innholdspipelinen.
 # Inngangen LEGGER DEM FRAM — «er dette alt tenkt på?» er et reelt spørsmål før
 # man setter i gang — men ingen FERDIGHET får bygge et saksforslag på en brief.
-# Saksløpet krever et signal: sporet tilbake til hvorfor saken ble tatt opp
-# (`kasusSignalId`, `signalUrl`) er halve verdien av fila, og en brief har ikke
-# det sporet. Kunne en ferdighet starte fra en brief, ville forslaget fått et
-# opphav ingen kan slå opp — og det er usynlig i filen etterpå.
+# Saksløpet krever et signal: sporet tilbake til hvorfor saken ble tatt opp er
+# halve verdien av forslaget, og en brief har ikke det sporet.
 #
 # Grensen går derfor mellom å VISE og å STARTE FRA: commands/ er utenfor,
 # skills/ og agents/ er innenfor.
 BRIEFBRUKERE=""
 for f in $(find "$ROOT/agents" "$ROOT/skills" -name '*.md' 2>/dev/null | sort); do
   [ -f "$f" ] || continue
-  if grep -qE 'kasus\.mjs[[:space:]]+story-brief' "$f"; then
+  if grep -qE '(list|get|search)_story_briefs?' "$f"; then
     BRIEFBRUKERE="${BRIEFBRUKERE} ${f#"$ROOT"/}"
   fi
 done
@@ -329,7 +309,7 @@ else
 fi
 
 # --- 4c. Signalet er inngangsvilkåret -------------------------------------
-# Saksløpet skriver ikke et saksforslag uten et signal: sporet tilbake til hvorfor
+# Saksløpet lagrer ikke et saksforslag uten et signal: sporet tilbake til hvorfor
 # saken ble tatt opp (`kasusSignalId`, `signalUrl`) er halve verdien av filen, og
 # et forslag uten opphav ser ut som noe det ikke er. Regelen sto i prosa i to
 # filer og ble myket opp én gang før — så den håndheves her.
@@ -350,8 +330,8 @@ if [ -f "$FOLLOWUP_SKILL" ]; then
   fi
 fi
 
-# Formatet må dokumentere BEGGE opphav, ellers skriver en av ferdighetene en fil
-# med felt formatet ikke kjenner.
+# Formatet må dokumentere BEGGE opphav, ellers lagrer en av ferdighetene et
+# forslag med felt formatet ikke kjenner.
 FORMAT="$ROOT/references/proposal-format.md"
 if grep -q 'kasusArtikkelId' "$FORMAT" && grep -q 'kasusSignalId' "$FORMAT"; then
   pass "proposal-format dokumenterer begge opphav (signal og egen artikkel)"
@@ -360,7 +340,7 @@ else
 fi
 
 # En `kasusSignalId: null` noe sted er signalfri-stien som sniker seg inn igjen.
-NULLSIGNAL="$(grep -rl 'kasusSignalId: *null' "$ROOT/skills" "$ROOT/references" 2>/dev/null | sed "s|$ROOT/||" | tr '\n' ' ')"
+NULLSIGNAL="$(grep -rlE 'kasusSignalId"?: *null' "$ROOT/skills" "$ROOT/references" 2>/dev/null | sed "s|$ROOT/||" | tr '\n' ' ')"
 if [ -n "$NULLSIGNAL" ]; then
   fail "disse tillater et saksforslag uten signal: $NULLSIGNAL"
 else
@@ -383,11 +363,11 @@ STATUS_CMD="$ROOT/commands/start.md"
 TRIAGE_AGENT="$ROOT/agents/kasus-triage.md"
 if [ -f "$STATUS_CMD" ]; then
   MANGLENDE_KALL=""
-  for modus in nytt signals story-briefs articles; do
-    grep -qE "kasus\.mjs[[:space:]]+${modus}([[:space:]]|\$)" "$STATUS_CMD" || MANGLENDE_KALL="${MANGLENDE_KALL} ${modus}"
+  for verktoy in get_new_signals list_radar_signals list_story_briefs list_articles; do
+    grep -qE "^${verktoy}[[:space:]]*\{" "$STATUS_CMD" || MANGLENDE_KALL="${MANGLENDE_KALL} ${verktoy}"
   done
   if [ -z "$MANGLENDE_KALL" ]; then
-    pass "inngangen henter alle fire: nytt + signals + story-briefs + articles"
+    pass "inngangen henter alle fire: get_new_signals + signaler + story-briefs + artikler"
   else
     fail "commands/start.md henter ikke:${MANGLENDE_KALL} — et neste-steg mangler i inngangen"
   fi
@@ -413,10 +393,10 @@ fi
 # ...og agenten må FAKTISK hente begge. Ett vindu er ingen dekningsdom: uten
 # artiklene kan den konsolidere, men ikke si hva som alt er skrevet.
 if [ -f "$TRIAGE_AGENT" ]; then
-  if grep -qE 'kasus\.mjs[[:space:]]+signals' "$TRIAGE_AGENT" && grep -qE 'kasus\.mjs[[:space:]]+articles' "$TRIAGE_AGENT"; then
-    pass "forarbeidet sveiper begge vinduene (signals + articles)"
+  if grep -qE '^list_radar_signals[[:space:]]*\{' "$TRIAGE_AGENT" && grep -qE '^list_articles[[:space:]]*\{' "$TRIAGE_AGENT"; then
+    pass "forarbeidet sveiper begge vinduene (signaler + artikler)"
   else
-    fail "agents/kasus-triage.md mangler ett av vinduene (signals + articles)"
+    fail "agents/kasus-triage.md mangler ett av vinduene (list_radar_signals + list_articles)"
   fi
 fi
 
@@ -425,7 +405,7 @@ fi
 # tiden siden kvitteringen. Sto regelen i begge filene, ville de drevet fra
 # hverandre uten at noe sa fra — og da viser inngangen ett vindu mens
 # arbeidsflyten den sender deg til viser et annet. Det var nettopp skjøten regelen
-# ble skrevet for å lukke: `nytt` måler mot kvitteringen, listene mot timer, og
+# ble skrevet for å lukke: `get_new_signals` måler mot kvitteringen, listene mot timer, og
 # signal-id-er som faller utenfor kan ikke merkes.
 WINDOW_REF="$ROOT/references/vindu.md"
 if [ ! -f "$WINDOW_REF" ]; then
@@ -535,106 +515,15 @@ else
     fail "hjelpen nevner ikke:$MANGLER — inngangen er usynlig for journalisten"
   fi
 
-  # Hjelpen orienterer, den arbeider ikke. Et API-kall herfra ville gjort den til
-  # et alternativt sted å gjøre jobben (prinsipp 0) — og et hjelpesvar som henter
-  # signaler er et saksløp som startet fordi noen spurte hvordan man starter en.
-  if grep -qE 'kasus\.mjs[[:space:]]+[a-z]' "$HELP_SKILL"; then
-    fail "hjelpen kaller en modus i verktøyet — den skal bare orientere (--list er unntaket)"
+  # Hjelpen orienterer, den arbeider ikke. Et verktøykall herfra ville gjort den
+  # til et alternativt sted å gjøre jobben (prinsipp 0) — og et hjelpesvar som
+  # henter signaler er et saksløp som startet fordi noen spurte hvordan man
+  # starter en.
+  if grep -qE '^[a-z_]+[[:space:]]*\{' "$HELP_SKILL"; then
+    fail "hjelpen har et verktøykall — den skal bare orientere"
   else
-    pass "hjelpen henter ingenting fra API-et"
+    pass "hjelpen henter ingenting fra Kasus"
   fi
-fi
-
-# --- 5. Enhetstester -------------------------------------------------------
-if node --test "$ROOT/scripts/kasus/" >"${TMPDIR:-/tmp}/kasus-unit-$$.log" 2>&1; then
-  pass "enhetstester ($(grep -c '^ok ' "${TMPDIR:-/tmp}/kasus-unit-$$.log" | tr -d ' ') tester)"
-else
-  fail "enhetstester feilet:"
-  sed -n '/^not ok/,+8p' "${TMPDIR:-/tmp}/kasus-unit-$$.log" | sed 's/^/      /'
-fi
-rm -f "${TMPDIR:-/tmp}/kasus-unit-$$.log"
-
-# --- 6. Mål-presedens: shell vs JS ----------------------------------------
-# De to har driftet fra hverandre i en annen plugin før: shell mappet a-z- til
-# A-Z_, JS brukte bare toUpperCase(). Resultatet var at env-sjekken ba om
-# KASUS_API_KEY_PRE_PROD mens verktøyet leste KASUS_API_KEY_PRE-PROD.
-PARITY_FAIL=0
-for env_case in production staging pre-prod PRE-PROD test-env-2 a; do
-  shell_out="$(env_suffix "$env_case")"
-  js_out="$(node --input-type=module -e "
-import { envSuffix } from '$ROOT/scripts/lib/env.mjs';
-process.stdout.write(envSuffix('$env_case'));
-" 2>/dev/null)"
-  if [ "$shell_out" != "$js_out" ]; then
-    fail "presedens-drift for «${env_case}»: shell=«${shell_out}», js=«${js_out}»"
-    PARITY_FAIL=1
-  fi
-done
-[ "$PARITY_FAIL" -eq 0 ] && pass "env-suffiks er identisk i shell og JS (6 miljøer)"
-
-# --- 7. Read-only: ingen skrivende kodesti --------------------------------
-if grep -rnE 'method:[[:space:]]*"(POST|PUT|PATCH|DELETE)"' "$ROOT/scripts" >/dev/null 2>&1; then
-  fail "et skript har en skrivende HTTP-metode — pluginen skal kun gjøre GET"
-else
-  pass "ingen skrivende HTTP-metode i scripts/"
-fi
-
-# --- 8. Live ---------------------------------------------------------------
-if [ "$LIVE" -eq 1 ]; then
-  printf '\nLIVE\n'
-  ENV_FLAG=""
-  [ -n "$ENV_NAME" ] && ENV_FLAG="--env $ENV_NAME"
-
-  OUT="${TMPDIR:-/tmp}/kasus-live-$$.json"
-  ERR="${TMPDIR:-/tmp}/kasus-live-$$.err"
-
-  if node "$ROOT/scripts/kasus/kasus.mjs" profile $ENV_FLAG --json >"$OUT" 2>"$ERR"; then
-    ORG="$(ORG_FILE="$OUT" python3 -c 'import json, os; print(json.load(open(os.environ["ORG_FILE"]))["data"][0]["organization"]["name"])' 2>/dev/null)"
-    [ -z "${ORG:-}" ] && ORG="(navn ikke i svaret)"
-    pass "tilkobling virker — nøkkelen tilhører organisasjonen «${ORG}»"
-  else
-    fail "kall mot /api/v1/profile feilet:"
-    sed 's/^/      /' "$ERR"
-  fi
-
-  if node "$ROOT/scripts/kasus/kasus.mjs" signals $ENV_FLAG --limit 1 >/dev/null 2>"$ERR"; then
-    pass "signals-endepunktet svarer"
-  else
-    fail "signals-endepunktet feilet:"
-    sed 's/^/      /' "$ERR"
-  fi
-
-  # Artiklene er halve saksløpet — «har vi dekket dette før?» er ikke mulig å svare
-  # på uten dem, og et manglende endepunkt ville ellers dukket opp midt i et saksløp.
-  if node "$ROOT/scripts/kasus/kasus.mjs" articles $ENV_FLAG --limit 1 >"$OUT" 2>"$ERR"; then
-    if grep -q "Ingen egne artikler" "$OUT"; then
-      pass "articles-endepunktet svarer — men organisasjonen har ingen artikler synkronisert"
-    else
-      pass "articles-endepunktet svarer"
-    fi
-  else
-    fail "articles-endepunktet feilet:"
-    sed 's/^/      /' "$ERR"
-  fi
-
-  # Verifiser at SERVEREN avviser skriv, ikke bare at pluginen ikke prøver.
-  # Ruten har ingen POST-handler, så et 405/404 er beviset. Ingen sideeffekt.
-  BASE="$(KASUS_SELFTEST_ENV="$ENV_NAME" node --input-type=module -e "
-import { resolveTarget } from '$ROOT/scripts/kasus/targets.mjs';
-const env = process.env.KASUS_SELFTEST_ENV || null;
-process.stdout.write(resolveTarget({ env }).baseUrl);
-" 2>/dev/null)"
-  if [ -n "$BASE" ]; then
-    CODE="$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/api/v1/signals" 2>/dev/null || printf '000')"
-    case "$CODE" in
-      405|404|401|403) pass "serveren avviser POST /api/v1/signals ($CODE) — API-et er read-only" ;;
-      000) fail "fikk ikke kontakt med $BASE for skrive-sjekken" ;;
-      *) fail "POST /api/v1/signals svarte $CODE — forventet 405/404/401/403" ;;
-    esac
-  else
-    fail "kunne ikke løse base-URL for skrive-sjekken"
-  fi
-  rm -f "$OUT" "$ERR"
 fi
 
 printf '\n'

@@ -47,22 +47,22 @@ andre ord, og en ordmatch svarte nei på nettopp de tilfellene (prinsipp 8).
 Prisen er at dommen ikke er reproduserbar. Den betales med etterprøvbarhet —
 **dato og url på hver kandidat**, slik at den som spurte kan åpne saken og
 overprøve deg på tretti sekunder. Du finner ikke opp en url, og du nevner ingen
-artikkel du ikke har sett i `data`.
+artikkel du ikke har sett i svaret.
 
 **Artikkel-id-en hører i rapporten, ikke i tråden.** Ta den med i svaret ditt til
-orkestratoren — den trengs til `article <id>` og til `egneSaker` i saksforslagets
-frontmatter — men det journalisten leser er tittel, dato, lenke og hva som skiller
+orkestratoren — den trengs til `get_article` og til `egneSaker` i saksforslagets
+metadata — men det journalisten leser er tittel, dato, lenke og hva som skiller
 saken fra signalet. En id kan hun ikke åpne. Formen står i
 [`samtaleform.md`](./samtaleform.md), og gjelder begge stedene dommen felles.
 
 ## «Ingen treff» er ikke «ikke dekket»
 
-Artikkel-API-et har ingen tekstsøk, så dommen felles mot et VINDU av de nyeste
-egne artiklene. En eldre sak er usynlig, og kladder er utenfor vinduet — så «ingen
+Et ordsøk finner ikke samme sak skrevet med andre ord, så dommen felles mot et
+VINDU av de nyeste egne artiklene. En eldre sak er usynlig, og kladder er utenfor vinduet — så «ingen
 treff» betyr heller ikke «ingen kollega jobber med dette».
 
-Vindusgrensen står i `meta.forbehold` og skal gjentas ordrett i rapporten. Er
-`meta.taketNådd` sann, mangler svaret data, og det er den ene opplysningen som gjør
+Vindusgrensen — hvor mange saker, tilbake til når — skal stå i rapporten. Er
+`nextCursor` satt på siste side som ble hentet, mangler svaret data, og det er den ene opplysningen som gjør
 en dom ubrukelig hvis den utelates. Videre til journalisten sies den samme
 grensen på norsk framfor ordrett: «dette er de nyeste sakene våre, ikke hele
 arkivet» — jf. `samtaleform.md`.
