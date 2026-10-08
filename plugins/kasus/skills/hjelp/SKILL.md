@@ -1,10 +1,10 @@
 ---
 name: hjelp
-description: Forklarer hvordan kasus-pluginen brukes — hva den gjør, hva den kan spørres om, hvordan man får tak i signalene, hva et signal ER, hvilken inngang som hører til hvilken jobb, hva ordene i outputen betyr, og hva som er galt når noe ikke virker. Skal brukes på spørsmål OM pluginen framfor bestillinger TIL den: «hvordan bruker jeg denne?», «hva kan kasus?», «hva kan jeg spørre om?», «hjelp», «hvor begynner jeg?», «hva er et signal?», «hvor kommer signalene fra?», «hvordan finner jeg signaler om et tema?», «kan jeg filtrere signalene?», «hva ser radaren etter?», «hva er forskjellen på et saksløp og en oppfølger?», «hvorfor får jeg ingen signaler?», «hvor legger den saksforslagene?», «hva står i et saksforslag?», «hva betyr GAMMEL SAK / kvitteringen / SAMME SAK?», «kan den skrive noe tilbake til Kasus?», «hvordan setter jeg opp API-nøkkelen?». Skal IKKE brukes når bestillingen er selve arbeidet: «finn meg en sak å skrive» er ferdigheten dybdeartikkel, «er det noe nytt?» er kasus-lookout, «har vi skrevet om X?» er kasus-archivist. Svarer på spørsmålet som ble stilt og tilbyr å starte riktig inngang — henter aldri signaler eller artikler, skriver ingenting og kvitterer aldri.
+description: Forklarer hvordan kasus-pluginen brukes — hva den gjør, hva den kan spørres om, hvordan man får tak i signalene, hva et signal ER, hvilken inngang som hører til hvilken jobb, hva ordene i outputen betyr, og hva som er galt når noe ikke virker. Skal brukes på spørsmål OM pluginen framfor bestillinger TIL den: «hvordan bruker jeg denne?», «hva kan kasus?», «hva kan jeg spørre om?», «hjelp», «hvor begynner jeg?», «hva er et signal?», «hvor kommer signalene fra?», «hvordan finner jeg signaler om et tema?», «kan jeg filtrere signalene?», «hva ser radaren etter?», «hva er forskjellen på et saksløp og en oppfølger?», «hvorfor får jeg ingen signaler?», «hvor legger den saksforslagene?», «hva står i et saksforslag?», «hva betyr GAMMEL SAK / kvitteringen / SAMME SAK?», «kan den skrive noe tilbake til Kasus?», «hvordan kobler jeg den til Kasus?». Skal IKKE brukes når bestillingen er selve arbeidet: «finn meg en sak å skrive» er ferdigheten dybdeartikkel, «er det noe nytt?» er kasus-lookout, «har vi skrevet om X?» er kasus-archivist. Svarer på spørsmålet som ble stilt og tilbyr å starte riktig inngang — henter aldri signaler eller artikler, lagrer ingenting og kvitterer aldri.
 ---
 
 Hjelp en journalist bruke pluginen. Den gjør **én ting**: går fra et radarsignal
-til et saksforslag på disk, i seks steg — signaler siden sist, journalisten
+til et saksforslag lagret i Kasus, i seks steg — signaler siden sist, journalisten
 velger sak, sjekk mot egne artikler, bredt søk, forslag, kvittering.
 
 Alt annet i pluginen er enten et blikk inn i det samme materialet, eller
@@ -18,8 +18,8 @@ diagnostikk.
 2. **Bare når spørsmålet ER «hva kan denne?»** legger du fram tabellen under —
    som fire–fem linjer om hva journalisten kan si, ikke som en kommandoliste.
 3. **Snakk om jobben, ikke om verktøyet.** Journalisten skal vite hva som må sies
-   for å få gjort noe. Kommandonavn er en snarvei, ikke inngangen, og flaggene i
-   denne filen er noe maskinen setter — ikke noe han skal skrive. **Agent- og
+   for å få gjort noe. Kommandonavn er en snarvei, ikke inngangen, og argumentene
+   i denne filen er noe maskinen setter — ikke noe han skal skrive. **Agent- og
    ferdighetsnavnene i tabellen under er heller ikke svar**: «jeg leser sakene
    deres og sier hva vi har skrevet» er svaret, `kasus-archivist` er navnet mitt
    på den jobben. Formen på alt som legges fram står i
@@ -29,21 +29,15 @@ diagnostikk.
    nå?» er riktig avslutning på et hjelpesvar. Å starte den uoppfordret er det
    ikke: saksløpet koster tid og **flytter kvitteringen**.
 5. **Du gjør ikke arbeidet herfra.** Ingen signaler, ingen artikler, ingen
-   research, ingen fil på disk, aldri en kvittering. Blir spørsmålet underveis en
+   research, ingenting lagret, aldri en kvittering. Blir spørsmålet underveis en
    bestilling — «ok, finn meg en sak da» — går du over i riktig ferdighet
    framfor å svare på den her.
 
-Du kan kjøre to ting selv, og begge er rent lokale — de leser env-variabler og
-pluginens eget manifest, uten å røre nettverket:
-
-```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/check-env.sh --resolve
-node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs --list
-```
-
-Den første når spørsmålet er «hvorfor virker det ikke» — det er samme sjekk som
-`/kasus:env`, og du skal si at det er den. Den andre når du er i tvil om hva
-verktøyet faktisk har av modi, framfor å gjette.
+Du kaller ingen verktøy i Kasus herfra — heller ikke for å «vise hvordan det ser
+ut». Er spørsmålet «hvorfor virker det ikke», er svaret `/kasus:env`, som sjekker
+tilkoblingen; si at det er den. Er du i tvil om hvilke verktøy Kasus har, står de i
+[`references/kasus-mcp.md`](../../references/kasus-mcp.md) — les den framfor å
+gjette.
 
 ## Hva journalisten kan si
 
@@ -56,7 +50,7 @@ hvem som gjør det.
 
 | Vil du… | Si noe sånt som | Hva som skjer |
 |---|---|---|
-| **finne en sak å skrive** | «jeg skal skrive en dybdeartikkel», «finn meg en sak», «jeg trenger noe å jobbe med i dag», «kjør saksløpet» (eller «kjør runden» — det gamle ordet virker fortsatt) | Hele saksløpet — ferdigheten `dybdeartikkel`. Seks steg, du velger saken, den skriver et **saksforslag på disk** og kvitterer. |
+| **finne en sak å skrive** | «jeg skal skrive en dybdeartikkel», «finn meg en sak», «jeg trenger noe å jobbe med i dag», «kjør saksløpet» (eller «kjør runden» — det gamle ordet virker fortsatt) | Hele saksløpet — ferdigheten `dybdeartikkel`. Seks steg, du velger saken, den lagrer et **saksforslag i Kasus** og kvitterer. |
 | **jobbe med ett bestemt signal** | «følg opp signal 1234», «lag et forslag på denne» | Samme saksløp, men den hopper over prioriteringen. |
 | **jobbe med et tema** | «kan vi gjøre noe på boligmarkedet i Bodø?» | Samme saksløp. Temaet matches mot radarens vindu først — **finner den ingen signaler, stopper den**, for et forslag uten opphav er bare et nettsøk. |
 | **følge opp en av deres EGNE saker** | «hva har skjedd siden vi skrev om strømstøtte?», «kan vi følge opp denne?» | Ferdigheten `oppfolgersak`. Vinklingen finnes alt — den leter etter **det nye**, og stopper hvis det ikke finnes noe. |
@@ -65,8 +59,8 @@ hvem som gjør det.
 | **rydde i hele bildet på én gang** | «rydd opp i signalene», «hva av dette henger sammen?», «hva har vi alt dekket av dette?» | `kasus-triage` sveiper alle signalene og alle publiserte egne saker, slår sammen det som er samme sak og merker det som er dekket. Bearbeider — velger ingenting. |
 | **komme i gang, uten å ha bestemt deg** | `/kasus:start` | **Siste døgn av alt, på én skjerm**: radarsignalene, Kasus' egne story-briefs, deres egne ferske saker og «hva er nytt siden sist» — og så **ett spørsmål**: en oppfølger, en dybdeartikkel, eller et spørsmål. Går på sekunder. Har du ikke kjørt den på en uke, henter den uka. `--hours 72` overstyrer. **Bearbeider ingenting**: ingenting er slått sammen, ingenting er dekningssjekket. Utfører ingenting selv — svaret ditt sender deg videre. |
 | **vite hvorfor radaren fant noe** | «hva ser radaren etter?», «hvilke mønstre har vi?», «hva er profilen vår?» | Ett oppslag mot **profilen**. Se «Profilen — hvorfor signalet er der». |
-| **se hva Kasus selv har foreslått** | «hva ligger det av saksforslag i Kasus?», «har pipelinen laget noe på dette?» | Ett oppslag mot **story-briefs** — Kasus' egne forslag, laget inne i systemet. Ikke det samme som saksforslagene pluginen skriver på disk, og **ikke et utgangspunkt for saksløpet**: det går fra et rått radarsignal. Se «Story-briefs — Kasus' egne forslag». |
-| **sjekke oppsettet** | `/kasus:env`, eller `--resolve` for å se hvilken installasjon et kall treffer | Diagnostikk. |
+| **se hva Kasus selv har foreslått** | «hva ligger det av saksforslag i Kasus?», «har pipelinen laget noe på dette?» | Ett oppslag mot **story-briefs** — Kasus' egne forslag, laget inne i systemet. Ikke det samme som saksforslagene saksløpet lagrer, og **ikke et utgangspunkt for saksløpet**: det går fra et rått radarsignal. Se «Story-briefs — Kasus' egne forslag». |
+| **sjekke oppsettet** | `/kasus:env` | Diagnostikk: hvilken organisasjon tilkoblingen er bundet til, og om den kan kvittere og lagre. |
 | **sjekke at pluginen er hel** | `/kasus:test` | Diagnostikk. `--live` tester også tilkoblingen. |
 
 Vil du velge en arbeidsflyt med vilje framfor å beskrive jobben, er
@@ -116,14 +110,16 @@ faktisk velges — «hent signal 1234» gir hele det bildet.
 
 **Signalets `status` i Kasus er ikke kvitteringen din.** `new`, `seen`,
 `promoted` (løftet videre i Kasus) og `dismissed` (forkastet der) er felt Kasus
-eier, og **pluginen skriver dem aldri** — mot Kasus er alt lesing. Kvitteringen
-er noe helt annet: en linje i ditt eget repo om hva DU har sett. Forkastede
+eier, og **pluginen skriver dem aldri**. Kvitteringen er noe helt annet: en
+markering i Kasus av hva redaksjonen har SETT i saksløpet — felles for alle som
+bruker pluginen i organisasjonen. Forkastede
 signaler holdes utenfor med mindre man ber om dem, og antallet sies.
 
 ## Slik får du tak i signalene
 
-**Det finnes ikke noe tekstsøk.** Kasus-API-et har ingen `q`, verken på signaler
-eller artikler. Et tema er derfor ikke et filter — det er noe som må **leses**. Det
+**Det finnes bare ordsøk.** Kasus kan finne et ord, men ikke et tema: «strømpriser»
+finner ikke saken om nettleie. Et tema er derfor ikke et filter — det er noe som må
+**leses**. Det
 er hele grunnen til at `kasus-lookout` finnes: den henter et vindu av signaler
 inn i sin egen kontekst, leser det, og svarer. Du trenger ingen kommando; du sier
 hva du lurer på.
@@ -157,7 +153,7 @@ Tre ting er verdt å si videre til den som spør:
   serverside; resten sorterer det som alt er hentet. Derfor sier hvert svar hvor
   mange som passerte av hvor mange hentede, og om taket ble nådd. «2 treff» betyr
   «2 av de 100 vi så».
-- **Tomt betyr tomt for DENNE organisasjonen.** Nøkkelen avgjør hvilken. Det
+- **Tomt betyr tomt for DENNE organisasjonen.** Tilkoblingen avgjør hvilken. Det
   betyr aldri «ingenting i Kasus».
 
 Ingen av disse spørsmålene rører kvitteringen, og ingen av dem starter et
@@ -165,8 +161,8 @@ saksløp. Du kan spørre så mye du vil uten å bruke opp noe.
 
 ## Slik spør du om egen dekning
 
-Samme begrensning, andre side av huset: artikkel-API-et har heller ikke tekstsøk,
-så «har vi skrevet om dette?» besvares ved at `kasus-archivist` henter et vindu av
+Samme begrensning, andre side av huset: et ordsøk finner ikke samme sak skrevet
+med andre ord, så «har vi skrevet om dette?» besvares ved at `kasus-archivist` henter et vindu av
 de nyeste egne artiklene og leser det. Hvert svar kommer med dato og lenke, så du
 kan åpne saken og overprøve det på tretti sekunder.
 
@@ -188,21 +184,20 @@ artiklene» — aldri «ikke dekket», og aldri «ingen kollega jobber med dette
 
 Kasus lager sine egne saksforslag inne i systemet, av innholdspipelinen: en
 **story-brief** med tittel, plott, vinkling, begrunnelse og en vurdering av
-konverteringspotensial. De ligger i Kasus, ikke på disk, og journalisten kan slå
-dem opp:
+konverteringspotensial. Journalisten kan slå dem opp:
 
 - **status** — `candidate` (plukket ut, ikke vurdert ferdig), `proposal` (vurdert
   og lagt fram), `draft` (noen har begynt å skrive), `final`, `dismissed`. De to
   første ser ut som synonymer og er det ikke.
 - **opphav** — `innhold` (pipelinen holdt egne saker mot mønstrene), `radar` (et
   radarsignal), `url` (noen limte inn en lenke), `triage`.
-- **`--hours` måler når KASUS laget briefen**, ikke når noe ble publisert. Et tomt
+- **Perioden måles mot når KASUS laget briefen**, ikke når noe ble publisert. Et tomt
   svar betyr «ingenting ble laget i perioden».
 
 To ting må sies når du svarer på et slikt spørsmål:
 
-1. **Dette er ikke saksforslagene pluginen skriver.** Ordet betyr to ting. Bare
-   fila på disk har et signal, en dekningssjekk mot egne artikler og daterte
+1. **Dette er ikke saksforslagene saksløpet lagrer.** Ordet betyr to ting. Bare
+   saksløpets forslag har et signal, en dekningssjekk mot egne artikler og daterte
    kilder bak seg — en brief er pipelinens vurdering, og ingen har etterprøvd
    `plot`, `angle` eller `reason`.
 2. **Det er et oppslag, ikke en inngang.** Vil journalisten JOBBE med en sak, er
@@ -232,8 +227,8 @@ ikke hjelpen som gjør det. Si hva det koster (ingenting), og tilby det.
 
 **Se eller jobbe.** «Er det noe nytt?» og «finn meg en sak» ser like ut og er det
 ikke. Det første er et spørsmål om hva som ligger der, og det svarer en agent på
-uten å røre noe. Det andre setter i gang et saksløp som researcher, skriver til
-disk og **flytter kvitteringen**. Er du i tvil om hva du vil, spør først — det
+uten å røre noe. Det andre setter i gang et saksløp som researcher, lagrer et
+saksforslag og **flytter kvitteringen**. Er du i tvil om hva du vil, spør først — det
 koster ingenting, og spørsmålet kan ikke spise saksløpet ditt.
 
 **Signal eller egen artikkel.** Saksløpet starter på noe radaren fant. Oppfølgeren
@@ -260,8 +255,9 @@ signalet. To nivåer, og bare det andre klarerer.
 
 ## Det du sitter igjen med: saksforslaget
 
-Saksløpet og oppfølgeren leverer **én fil per sak**, i `./artikler/` — datert, med
-tittelen som filnavn, og aldri en overskriving av noe som finnes. Filen er hele
+Saksløpet og oppfølgeren leverer **ett saksforslag per sak**, lagret i Kasus —
+ingen filer i prosjektet. Det kan hentes opp igjen («vis saksforslagene fra i
+går»), og kollegaer i samme organisasjon ser de samme. Forslaget er hele
 leveransen, så en redaktør som skal sjekke ett tall slipper å lete i to
 dokumenter:
 
@@ -272,52 +268,50 @@ dokumenter:
 - **hullene** — det som må ringes på før saken kan publiseres
 - **et utkast** i redaksjonens tone, og **kildelista** bak hvert tall
 
-`status: forslag` står øverst, og det er en påstand om hva filen er: et utkast fra
-en maskin, også når teksten leser godt. Ingenting i den er publisert noe sted.
+Det er merket som generert av pluginen, og det er en påstand om hva det er: et
+utkast fra en maskin, også når teksten leser godt. Ingenting i det er publisert
+noe sted.
 
 ## Første gang: oppsettet
 
-Fire ting, og den fjerde er den folk glemmer:
+Tre ting, og ingen av dem er en nøkkel:
 
 1. Pluginen installeres med **prosjekt-scope** i redaksjonens repo, så den følger
    repoet framfor din maskin.
-2. Nøkkelen lages i Kasus under **Innstillinger → API-nøkler**. Den vises **kun
-   én gang**.
-3. Den settes som `KASUS_API_KEY` under `env` i `.claude/settings.local.json` —
-   den fila hører til deg og skal i `.gitignore`. **`.env`-filer leses ikke av
-   Claude Code**, og det er den desidert vanligste feilen.
-4. **Start sesjonen på nytt.** Nye `env`-innslag og nye komponenter plukkes opp
+2. **Start sesjonen på nytt.** Nye komponenter og pluginens MCP-server plukkes opp
    ved oppstart, ikke underveis.
+3. **Logg inn:** `/mcp` → `kasus` → *Authenticate*. Kasus åpnes i nettleseren; logg
+   inn, velg organisasjon og godkjenn. Det gjøres én gang per maskin.
 
-Så: `/kasus:env --resolve`. Den sier hvilken installasjon kallene går mot og
-hvilken variabel hver verdi kom fra. Detaljene, inkludert de tre scopene, står i
+Så: `/kasus:env`. Den sier hvilken organisasjon tilkoblingen er bundet til, og om
+den kan kvittere og lagre saksforslag. Detaljene står i
 [`README.md`](../../README.md).
 
 ## Når noe ikke virker
 
 | Det du ser | Som regel fordi | Gjør dette |
 |---|---|---|
-| `MANGLER: KASUS_API_KEY` | Nøkkelen står i en `.env`, eller sesjonen er ikke startet på nytt | Flytt den til `env` i `.claude/settings.local.json`, og start sesjonen på nytt |
-| «Ingen signaler» | Vinduet er tomt for **denne organisasjonen** — nøkkelen avgjør hvilken | `/kasus:start` henter bare siste døgn, så prøv `--hours 168` først, eller spør `kasus-lookout` om en lengre periode. `/kasus:env --resolve` sier hvilken installasjon du treffer, `/kasus:test --live` hvilken organisasjon nøkkelen tilhører |
+| Kasus-verktøyene finnes ikke, eller svarer med tilgangsfeil | Tilkoblingen er ikke logget inn, eller sesjonen er ikke startet på nytt etter installasjon | `/mcp` → `kasus` → *Authenticate*. Står `kasus` ikke der, start sesjonen på nytt i prosjektmappa |
+| Saksløpet kan ikke kvittere eller lagre | Tilkoblingen kan bare lese (API-nøkkel, eller godkjent før skrivetilgangen fantes) | Logg inn på nytt med OAuth: `/mcp` → `kasus` → *Clear authentication*, så *Authenticate* |
+| «Ingen signaler» | Vinduet er tomt for **denne organisasjonen** — tilkoblingen avgjør hvilken | `/kasus:start` henter bare siste døgn, så be om en uke først, eller spør `kasus-lookout` om en lengre periode. `/kasus:env` sier hvilken organisasjon du er koblet til |
 | Saksløpet sier «ingenting nytt», men du vet det ligger signaler der | Kvitteringen er flyttet — de er sett før | Be om et bredere vindu, eller «ta med det som er forkastet». Vil du starte «siden sist» helt på nytt, kan kvitteringen nullstilles |
 | Et spørsmål gir færre treff enn du tror finnes | Filteret kjørte på et avkortet vindu | Be om et større vindu. Svaret sier hvor mange som ble hentet, og om taket ble nådd |
-| `404` på et signal eller en artikkel | Finnes ikke, **eller** tilhører en annen organisasjon | Sjekk id-en, og hvilken nøkkel som er i bruk |
-| `401` | Nøkkelen er ugyldig, utløpt, tilbakekalt — eller hører til en annen installasjon | `/kasus:env --resolve`, og se hvilken variabel verdien kom fra |
+| «ikke funnet» på et signal eller en artikkel | Finnes ikke, **eller** tilhører en annen organisasjon | Sjekk id-en, og hvilken organisasjon `/kasus:env` sier du er koblet til |
 | Ferdigheten trigges ikke, eller `/kasus:…` finnes ikke | Sesjonen er ikke startet på nytt, eller pluginen er ikke slått på i dette prosjektet | Start på nytt i prosjektmappa, og sjekk `enabledPlugins` i `.claude/settings.json` |
-| Saksforslagene dukker ikke opp der du venter | `./artikler` og `.claude/kasus-state.json` er **relative til der du står** | Sjekk at sesjonen kjører fra prosjektmappa |
+| Saksforslagene dukker ikke opp | De ligger i Kasus, ikke i prosjektet — og i organisasjonen tilkoblingen er bundet til | Be om å se saksforslagene, og sjekk organisasjonen med `/kasus:env` |
 | Noe annet er rart | — | `/kasus:test` sier om pluginen selv er hel, `--live` om tilkoblingen er det |
 
 ## Ordene du møter i outputen
 
 Du møter færre av dem enn pluginen har: det som legges fram er ryddet etter
-`references/samtaleform.md`, så id-er, kategorinavn, feltnavn og flagg står ikke i
-svarene. Tabellen står fordi spørsmålet likevel kommer — fra et saksforslag på
-disk, fra et eldre svar, eller fra en som har sett verktøyets egen utskrift.
+`references/samtaleform.md`, så id-er, kategorinavn, feltnavn og argumenter står
+ikke i svarene. Tabellen står fordi spørsmålet likevel kommer — fra et lagret
+saksforslag, fra et eldre svar, eller fra en som har sett verktøyenes egne svar.
 
 | Ordet | Betyr |
 |---|---|
 | **signal** | Noe radaren har funnet. Alltid med en lenke, og det er inngangsvilkåret for et saksforslag |
-| **kvitteringen / «siden sist»** | Tidspunktet forrige saksløp ble gjort, lagret i ditt eget repo. Derfor kan saksløpet si «tre nye» framfor «de 20 nyeste» — og derfor kommer ikke den samme saken tre ganger på en dag. Bare kvitteringssteget skriver den; å se på noe flytter den aldri |
+| **kvitteringen / «siden sist»** | Tidspunktet forrige saksløp ble gjort, lagret i Kasus og felles for redaksjonen. Derfor kan saksløpet si «tre nye» framfor «de 20 nyeste» — og derfor kommer ikke den samme saken tre ganger på en dag. Bare kvitteringssteget skriver den; å se på noe flytter den aldri |
 | **oppdaget vs. publisert** | Når radaren fant signalet, kontra hvor gammel saken er. **To ulike tall** |
 | **GAMMEL SAK** | De to datoene ligger mer enn en uke fra hverandre. Et fritt temasøk kan levere en sak fra 2023 «oppdaget for 45 min siden» |
 | **ukjent dato** | Publiseringsdatoen mangler. Det er ikke det samme som gammel |
@@ -328,8 +322,8 @@ disk, fra et eldre svar, eller fra en som har sett verktøyets egen utskrift.
 | **kandidatsak** | Én sak, satt sammen av de signalene som handler om det samme. `kasus-triage` konsoliderer, så tre kilder på samme SSB-tall blir én linje og ikke tre. `/kasus:start` gjør det IKKE — der står de som tre |
 | **grovsortering** | Dekningsdommen fra inngangen, felt på signalets tittel og sammendrag. Den rangerer og advarer — den klarerer ingen sak |
 | **forbeholdet** | Linja som sier hva vinduet faktisk dekket: hvor mange som ble hentet, hvilke filtre som var i bruk, og om taket ble nådd. Den er en del av svaret, ikke en fotnote |
-| `[TRENGER VERIFISERING: …]`, `[SITAT MANGLER: …]` | Et hull som er markert framfor fylt ut. Antallet står i forslagets frontmatter som `apenePunkter` |
-| **`status: forslag`** | Filen er et utkast fra en maskin, også når teksten leser godt |
+| `[TRENGER VERIFISERING: …]`, `[SITAT MANGLER: …]` | Et hull som er markert framfor fylt ut. Antallet står i forslagets metadata som `apenePunkter` |
+| **saksforslag** | Det saksløpet lagrer i Kasus: et utkast fra en maskin, også når teksten leser godt. Ikke det samme som en story-brief |
 
 ## Det du bør si når noen stoler for mye på svaret
 
@@ -337,14 +331,14 @@ disk, fra et eldre svar, eller fra en som har sett verktøyets egen utskrift.
   200 nyeste egne artiklene. En eldre sak er usynlig for den, og **kladder er
   utenfor vinduet** — «ingen treff» betyr heller ikke «ingen kollega jobber med
   dette».
-- **Ingenting her er et søk i alt.** Verken signaler eller artikler kan
-  tekstsøkes. Hvert svar er et vindu som er lest, og størrelsen på vinduet står i
+- **Ingenting her er et søk i alt.** Verken signaler eller artikler kan søkes på
+  tema, bare på ord. Hvert svar er et vindu som er lest, og størrelsen på vinduet står i
   svaret.
-- **Nøkkelen avgjør organisasjonen.** Ingen organisasjons-id sendes noe sted.
+- **Tilkoblingen avgjør organisasjonen.** Ingen organisasjons-id sendes noe sted.
 - **Ingenting dikter pluginen opp.** Mangler en kilde, står det som en markør.
-- **Mot Kasus er alt lesing.** Ingen status endres, ingenting løftes, ingenting
-  forkastes. Det pluginen skriver, skriver den til disk i ditt eget repo:
-  forslagene i `./artikler`, kvitteringen i `.claude/kasus-state.json`.
+- **Pluginen skriver bare sitt eget.** Ingen status på signaler, briefs eller
+  artikler endres, ingenting løftes, ingenting forkastes. Det pluginen skriver,
+  er saksforslagene og kvitteringen — begge i Kasus, ingenting på disk.
 
 Vil noen ha begrunnelsene bak dette framfor reglene, ligger de i
 [`references/principles.md`](../../references/principles.md).

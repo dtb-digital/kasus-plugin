@@ -1,86 +1,104 @@
-# Saksforslaget — formatet på det som legges på disk
+# Saksforslaget — formatet på det som lagres i Kasus
 
 Lastes av begge arbeidsflytene — `dybdeartikkel` (som starter på et radarsignal)
-og `oppfolgersak` (som starter på en av redaksjonens egne artikler). **Én fil per
-sak**, og den er hele leveransen: hva utgangspunktet er, hva redaksjonen alt har
-skrevet om det, hva et bredt søk fant, hva som fortsatt mangler, og et utkast som
-kan skrives videre på.
+og `oppfolgersak` (som starter på en av redaksjonens egne artikler). **Ett
+saksforslag per sak**, og det er hele leveransen: hva utgangspunktet er, hva
+redaksjonen alt har skrevet om det, hva et bredt søk fant, hva som fortsatt
+mangler, og et utkast som kan skrives videre på.
 
-Grunnen til at det er ÉN fil og ikke et researchnotat pluss en artikkel: et utkast
-som ligger for seg selv mister sporet tilbake til kildene, og en redaktør som skal
-sjekke ett tall må da lete i to filer. Her står tallet, kilden og setningen som
-bruker det i samme dokument.
+Grunnen til at det er ETT dokument og ikke et researchnotat pluss en artikkel: et
+utkast som ligger for seg selv mister sporet tilbake til kildene, og en redaktør
+som skal sjekke ett tall må da lete i to dokumenter. Her står tallet, kilden og
+setningen som bruker det samme sted.
 
-## Filsti
+## Lagring
+
+Forslaget lagres i Kasus, ikke som en fil — det er ingen lokale filer i
+saksløpet. Kallet er:
 
 ```
-${KASUS_ARTICLES_DIR:-artikler}/<ÅÅÅÅ-MM-DD>-<slug>.md
+create_story_proposal {
+  "title":           "<foreslått tittel>",
+  "content":         "<hele dokumentet under «Struktur», som markdown>",
+  "category":        "egen_oppfolging | konkurrent_oppfolging | konkurrentsak | temasok | annet",
+  "radar_signal_id": "<signal-id>",          // når et signal er opphavet
+  "article_id":      "<artikkel-id>",        // når en egen artikkel er opphavet
+  "metadata":        { … feltene under … }
+}
 ```
 
-`<slug>` er den foreslåtte tittelen, små bokstaver, bindestreker, uten æøå
-(`å` → `a`). Finnes filen, legg på `-2` og si det — overskriv aldri.
+Svaret har forslagets `id`. Hold den: skal noe endres i samme samtale, er det
+`update_story_proposal { "id": …, … }` — `content` og `metadata` erstattes da i
+sin helhet, så send hele dokumentet, ikke bare endringen. Lagre aldri det samme
+forslaget to ganger.
 
-## Frontmatter
+Status er `proposal` når det lagres. `draft`, `final` og `dismissed` setter
+journalisten selv, når hun ber om det.
 
-```yaml
----
-tittel: <foreslått tittel>
-dato: <ÅÅÅÅ-MM-DD>
-status: forslag
-kategori: egen_oppfolging | konkurrent_oppfolging | konkurrentsak | temasok | annet
-kasusSignalId: <signal-id>
-signalUrl: <URL-en signalet peker på>
-signalPublisert: <publiseringsdato på kilden, eller «ukjent»>
-monster: <matchedPattern, eller null>
-egneSaker:                 # treffene fra artikkel-sjekken, tomme hvis ingen
-  - id: <artikkel-id>
-    tittel: <tittel>
-    url: <URL>
-    publisert: <ÅÅÅÅ-MM-DD>
-    forhold: bygger videre på | overlapper | samme sak — ikke skriv
-kilderTotalt: <antall unike URL-er i KILDER>
-apenePunkter: <antall [TRENGER VERIFISERING] + [SITAT MANGLER] i filen>
-generertAv: claude-code/kasus-plugin
----
+## Metadata
+
+```json
+{
+  "dato": "<ÅÅÅÅ-MM-DD>",
+  "kasusSignalId": "<signal-id>",
+  "signalUrl": "<URL-en signalet peker på>",
+  "signalPublisert": "<publiseringsdato på kilden, eller «ukjent»>",
+  "monster": "<matchedPattern, eller null>",
+  "egneSaker": [
+    {
+      "id": "<artikkel-id>",
+      "tittel": "<tittel>",
+      "url": "<URL>",
+      "publisert": "<ÅÅÅÅ-MM-DD>",
+      "forhold": "bygger videre på | overlapper | samme sak — ikke skriv"
+    }
+  ],
+  "kilderTotalt": <antall unike URL-er i KILDER>,
+  "apenePunkter": <antall [TRENGER VERIFISERING] + [SITAT MANGLER] i teksten>,
+  "generertAv": "claude-code/kasus-plugin"
+}
 ```
+
+`egneSaker` er treffene fra artikkel-sjekken, tom liste hvis ingen.
 
 **Opphavet er påkrevd.** Feltene over er sporet tilbake til hvorfor saken ble tatt
-opp, og en fil uten dem er et notat uten opphav. Hvilke felt det er, avhenger av
-hvilken arbeidsflyt som skrev filen — og **ett av de to settene skal alltid være
-utfylt:**
+opp, og et forslag uten dem er et notat uten opphav. Hvilke felt det er, avhenger
+av hvilken arbeidsflyt som skrev det — og **ett av de to settene skal alltid være
+utfylt.** Kasus avviser et forslag uten `radar_signal_id` og uten `article_id`.
 
-| Utgangspunkt | Påkrevde felt | Skrevet av |
+| Utgangspunkt | Påkrevd | Skrevet av |
 |---|---|---|
-| Et radarsignal | `kasusSignalId`, `signalUrl` | `dybdeartikkel` |
-| En egen artikkel | `kasusArtikkelId`, `opprinneligUrl`, `opprinneligPublisert` | `oppfolgersak` |
+| Et radarsignal | `radar_signal_id`, og `kasusSignalId` + `signalUrl` i metadataene | `dybdeartikkel` |
+| En egen artikkel | `article_id`, og `kasusArtikkelId` + `opprinneligUrl` + `opprinneligPublisert` i metadataene | `oppfolgersak` |
 
-Oppfølger-varianten bytter `signal`-feltene for `artikkel`-feltene og setter
-`kategori: egen_oppfolging`. Ble det ALT brukt et signal i en oppfølger — radaren
+Oppfølger-varianten bytter `signal`-feltene for `artikkel`-feltene og har
+`category: egen_oppfolging`. Ble det ALT brukt et signal i en oppfølger — radaren
 hadde nye kilder på saken — står begge sett, og det er den beste varianten: to
 spor er bedre enn ett.
 
-```yaml
-kategori: egen_oppfolging
-kasusArtikkelId: <artikkel-id-en oppfølgeren bygger på>
-opprinneligUrl: <URL til den egne saken>
-opprinneligPublisert: <ÅÅÅÅ-MM-DD>
-nyhetenErAv: nytt tall | ny handling | konsekvensen | løftet
+```json
+{
+  "kasusArtikkelId": "<artikkel-id-en oppfølgeren bygger på>",
+  "opprinneligUrl": "<URL til den egne saken>",
+  "opprinneligPublisert": "<ÅÅÅÅ-MM-DD>",
+  "nyhetenErAv": "nytt tall | ny handling | konsekvensen | løftet"
+}
 ```
 
 `nyhetenErAv` er påkrevd i oppfølger-varianten. Det er feltet som svarer på hva
 som gjør dette til en sak framfor en gjentakelse, og et forslag som ikke kan fylle
 det, skal ikke skrives.
 
-Finnes ikke opphavet, skrives ikke filen — arbeidsflyten stopper i stedet og sier
-hvilket vindu som ble lest. En **lånt** id fra et signal eller en artikkel som
+Finnes ikke opphavet, lagres ikke forslaget — arbeidsflyten stopper i stedet og
+sier hvilket vindu som ble lest. En **lånt** id fra et signal eller en artikkel som
 «nesten» handler om det samme er verre enn å stoppe: sporet peker da på en kilde
-som ikke er grunnlaget, og feilen er usynlig i filen. `monster` er det ene feltet
-som kan være `null` — et signal kan være funnet uten mønstertreff.
+som ikke er grunnlaget, og feilen er usynlig i forslaget. `monster` er det ene
+feltet som kan være `null` — et signal kan være funnet uten mønstertreff.
 
-`status: forslag` og `generertAv` skal ALLTID stå. Filen er maskinskrevet, og den
-skal være merkbar som det for enhver som åpner den senere — også når teksten leser
-godt. `apenePunkter: 0` betyr komplett på kilder; alt over 0 betyr at den ikke er
-klar, og tallet skal stemme med antallet markører i teksten.
+`generertAv` skal ALLTID stå. Forslaget er maskinskrevet, og det skal være
+merkbart som det for enhver som åpner det senere — også når teksten leser godt.
+`apenePunkter: 0` betyr komplett på kilder; alt over 0 betyr at det ikke er
+klart, og tallet skal stemme med antallet markører i teksten.
 
 ## Struktur
 

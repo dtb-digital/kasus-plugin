@@ -29,7 +29,7 @@ pluginen, men ikke redaksjonen.
 | Scope | Fil | Betyr |
 |---|---|---|
 | `project` | `.claude/settings.json` | **Bruk denne.** Sjekkes inn, følger repoet. Alle som jobber i det får samme plugin og samme versjon. |
-| `local` | `.claude/settings.local.json` | Prosjektet, men bare for deg. Ikke sjekket inn. Hit hører **API-nøkkelen**, ikke pluginen. |
+| `local` | `.claude/settings.local.json` | Prosjektet, men bare for deg. Ikke sjekket inn. Hit hører personlige innstillinger som `KASUS_MCP_URL`, ikke pluginen. |
 | `user` | `~/.claude/settings.json` | Deg, på tvers av prosjekter. Riktig hvis du bruker Kasus i flere repoer som ikke skal dele oppsett. |
 
 Dette er hva `--scope project` skriver, hvis du heller vil sette det selv:
@@ -51,7 +51,7 @@ Dette er hva `--scope project` skriver, hvis du heller vil sette det selv:
 ```
 
 Start sesjonen på nytt i prosjektmappa etterpå — marketplacet hentes, pluginen
-installeres, og kommandoer, ferdigheter, agenter og `env`-innslag plukkes opp ved
+installeres, og kommandoer, ferdigheter, agenter, MCP-serveren og `env`-innslag plukkes opp ved
 oppstart. Neste person som kloner repoet trenger ikke gjøre noe: de svarer ja på
 at mappa er til å stole på, og kan si «jeg skal skrive en dybdeartikkel».
 
@@ -63,16 +63,17 @@ Vil du starte den med vilje, er `/kasus:dybdeartikkel` samme ferdighet valgt fra
 menyen. Fra radarsignal til saksforslag, og det eneste pluginen gjør:
 
 1. **Nye radarsignaler siden forrige saksløp** — ikke «de 20 nyeste». Målt mot en
-   kvittering på disk.
+   kvittering i Kasus, felles for redaksjonen.
 2. **Prioritering, du velger.** Hvert signal merket med hva det er: oppfølging av
    **deres egen** sak, oppfølging av et sakskompleks en **konkurrent** har tatt,
    konkurrentens **egen sak** fra en overvåket forside, eller et **fritt temasøk**
    som kan være år gammelt. De fire krever ulike tiltak og er ikke til å skille
-   fra hverandre i rå API-felt.
+   fra hverandre i rå datafelt.
 3. **Sjekk mot egne artikler.** Er saken skrevet før? Finnes det en egen sak å
    bygge videre på? Hvilken tone har redaksjonen på temaet?
 4. **Bredt søk** — én agent per spørsmål, primærkilden framfor omtalen, alt datert.
-5. **Saksforslag på disk** i redaksjonens tone, med hull markert framfor utfylt.
+5. **Saksforslag lagret i Kasus** i redaksjonens tone, med hull markert framfor
+   utfylt.
 6. **Kvittering**, og videre til neste sak.
 
 Laget for å gjentas: kjør saksløpet, ta én sak, kvitter, kjør igjen.
@@ -83,7 +84,8 @@ strømstøtte», «hva har skjedd siden vi skrev om dette?». Den leser saken i 
 tekst, spør radaren om den har funnet nye kilder på den, sjekker at redaksjonen
 ikke alt har fulgt den opp, og søker med **datogolv** på artikkelens egen
 publiseringsdato — ellers kommer researchen tilbake med kildene den forrige saken
-var bygget på. Samme format på disk, med en påkrevd «Den forrige saken»-seksjon.
+var bygget på. Samme format, lagret i Kasus, med en påkrevd «Den forrige
+saken»-seksjon.
 
 Den har sitt eget vilkår: **ingen oppfølger uten et nytt faktum med kilde og
 dato.** «Det har gått en måned» er ikke noe nytt, og en oppfølger uten noe nytt er
@@ -96,7 +98,7 @@ signaler, Kasus' egne story-briefs, redaksjonens egne ferske saker, og statusen
 «hva er nytt siden sist», målt mot kvitteringen. De tre kildene peker mot ulike
 neste steg, og det er hele grunnen til at de står side om side: en egen sak mot en
 **oppfølger**, et signal mot en **ny sak**. Så **spør den hva du vil gjøre**, og
-svaret sender deg videre i riktig ferdighet. Kommandoen kvitterer aldri, skriver
+svaret sender deg videre i riktig ferdighet. Kommandoen kvitterer aldri, lagrer
 ingenting og gjør ingen research — den kan spørre, ikke utføre.
 
 **Den legger materialet fram slik det ligger, og bearbeider ingenting.** Er tre av
@@ -126,15 +128,15 @@ signaler, ingen research, ingen kvittering — den tilbyr å starte riktig innga
 
 **Alt som legges fram har én form, og den er journalistens:** tittel, én til to
 linjer om hva saken er, og en klikkbar lenke. Ingen id-er, ingen kategorinavn,
-ingen feltnavn og ingen flagg — de er arbeidsmateriale, og en id kan verken åpnes
+ingen feltnavn og ingen verktøyargumenter — de er arbeidsmateriale, og en id kan verken åpnes
 eller ringes. Etterprøvbarheten ligger i lenka og datoen, som gjør samme jobb
 bedre. Forbeholdene består, men på norsk: hvilken periode svaret gjelder, at
 ingenting her er et søk i alt, og hvert hull i utkastet. Formen er definert ett
 sted, [`references/samtaleform.md`](plugins/kasus/references/samtaleform.md), og
 håndhevet i `/kasus:test`.
 
-I tillegg finnes `/kasus:env` (sjekker oppsettet) og `/kasus:test` (selvtest) som
-diagnostikk.
+I tillegg finnes `/kasus:env` (sjekker tilkoblingen) og `/kasus:test` (selvtest)
+som diagnostikk.
 
 Spørsmål om hva radaren eller arkivet inneholder trenger heller ingen kommando:
 `kasus-lookout` svarer på «er det noe om strømpriser?» og `kasus-archivist` på
@@ -146,40 +148,58 @@ Full dokumentasjon: [`plugins/kasus/README.md`](plugins/kasus/README.md).
 ## Krav
 
 - Claude Code
-- Node 18+ (verktøyet er avhengighetsfri ESM, ingen byggesteg)
-- En API-nøkkel fra Kasus: **Innstillinger → API-nøkler**
+- En Kasus-konto med tilgang til redaksjonens organisasjon
 
-Nøkkelen settes som `KASUS_API_KEY` under `env` i prosjektets
-`.claude/settings.local.json`. Den fila hører til deg og ikke repoet — legg den i
-`.gitignore`, så blir nøkkelen liggende hos deg mens plugin-oppsettet i
-`.claude/settings.json` deles. Ikke i en `.env`-fil: **Claude Code leser ikke
-`.env`**. Verifiser med `/kasus:env --resolve`.
+Det er alt. Pluginen har **ingen egen kode og ingen Node-avhengighet**: alt går
+gjennom Kasus' MCP-server, som pluginen registrerer selv (`plugins/kasus/.mcp.json`).
+
+## Koble til Kasus
+
+Første gang, etter at sesjonen er startet på nytt i prosjektmappa:
+
+1. Skriv `/mcp`, velg **`kasus`** og **Authenticate**.
+2. Kasus åpnes i nettleseren. Logg inn, velg organisasjon hvis du har flere, og
+   godkjenn tilgangen.
+3. Verifiser med `/kasus:env` — den sier hvilken organisasjon tilkoblingen er
+   bundet til, og om den kan kvittere og lagre saksforslag.
+
+Ingen nøkkel skal limes inn noe sted, og ingenting havner i repoet: tokenet holdes
+av Claude Code. **Tilkoblingen avgjør organisasjonen**, så «0 signaler» betyr tomt
+for *den* organisasjonen.
+
+Jobber du mot et annet Kasus-miljø (test, staging), sett `KASUS_MCP_URL` under
+`env` i `.claude/settings.local.json` og start sesjonen på nytt:
 
 ```json
 {
   "env": {
-    "KASUS_API_KEY": "kasus_sk_…"
+    "KASUS_MCP_URL": "https://staging.kasus.io/api/mcp"
   }
 }
 ```
 
-API-et er org-scopet av nøkkelen: den avgjør hvilken organisasjon kallene treffer,
-så «0 signaler» betyr tomt for *den* organisasjonen. Nøkkelen ekkoes aldri av
-verktøyet — den rapporteres som `(satt)` med variabelnavnet.
+## Hva som lagres hvor
 
-API-laget er **read-only**. Det pluginen skriver, skriver den i prosjektet:
-saksforslagene i `./artikler`, kvitteringen «siden sist» i
-`.claude/kasus-state.json`. Begge er relative til der du står, så to prosjekter
-teller sine egne saksløp.
+Ingenting på disk. Pluginen skriver bare **sine egne** data, og begge deler ligger
+i Kasus:
+
+| Hva | Hvor | Merk |
+|---|---|---|
+| Kvitteringen «siden sist» | Kasus, én per organisasjon | Felles for redaksjonen: et saksløp én fullfører, flytter «siden sist» for alle |
+| Saksforslagene | Kasus, som saksforslag knyttet til signalet eller artikkelen de startet på | Kan hentes opp igjen av alle i organisasjonen |
+
+Status på signaler, story-briefs og artikler endres ikke herfra — det gjøres i
+web-appen. Skrivingen krever OAuth-pålogging; en tilkobling satt opp med
+API-nøkkel kan bare lese, og da kan saksløpet verken kvittere eller lagre.
 
 ## Utvikling
 
 ```bash
-claude --plugin-dir plugins/kasus              # last pluginen lokalt
-bash plugins/kasus/scripts/self-test.sh        # tørt
-bash plugins/kasus/scripts/self-test.sh --live # + ekte kall mot API-et
-node --test plugins/kasus/scripts/kasus/       # bare enhetstestene
+claude --plugin-dir plugins/kasus          # last pluginen lokalt
+bash plugins/kasus/scripts/self-test.sh    # selvtesten (bash + python3)
 ```
+
+`/kasus:test --live` i en sesjon gjør i tillegg ekte MCP-kall mot Kasus.
 
 ## Lisens
 

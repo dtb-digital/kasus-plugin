@@ -1,54 +1,53 @@
 ---
-description: Selvtest av kasus-pluginen — syntaks, manifest-kontrakt, enhetstester og mål-presedens
-argument-hint: [--live] [miljø]
-allowed-tools: ["Bash"]
+description: Selvtest av kasus-pluginen — struktur, regler og at tilkoblingen til Kasus faktisk svarer
+argument-hint: [--live]
+allowed-tools: ["Bash", "mcp__plugin_kasus_kasus__get_organization", "mcp__plugin_kasus_kasus__get_new_signals", "mcp__plugin_kasus_kasus__list_radar_signals", "mcp__plugin_kasus_kasus__list_articles"]
 ---
 
-Kjør selvtesten:
+Kjør den tørre selvtesten:
 
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/self-test.sh $ARGUMENTS
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/self-test.sh
 ```
 
-Tørt dekker den:
+Den krever bare `bash` og `python3`, og dekker:
 
-- syntaks på alle `*.sh` i **både bash og zsh** (Bash-verktøyet kan bruke begge,
-  så en zsh-only feil dukker ellers opp hos brukeren) og `node --check` på alle `*.mjs`
 - at `commands/`, `agents/`, `skills/` og `references/` ikke er tomme — komponentene
   oppdages fra mappa, så en tom mappe er en plugin uten kommandoer, ikke en
   feilmelding. `skills/` er den viktigste: arbeidsflytene bor der
-- at `plugin.json` er gyldig JSON, og at versjonen der er den samme som i verktøyet
+- at `plugin.json`, `marketplace.json` og `.mcp.json` er gyldig JSON, at
+  versjonene er like, og at MCP-serveren heter `kasus`
 - at hver agents `name:` matcher filnavnet og hver ferdighets `name:` matcher
   MAPPENAVNET, ellers lastes de ikke
-- at bare saksløpet flytter kvitteringen, og at ingen kommando eller agent kvitterer
-  i det hele tatt — et løfte i en prompt er lett å bryte i en senere redigering
-- at `/kasus:start` henter **begge** vinduene sine (`nytt` + `articles`) — faller
-  artikkelkallet ut i en forenkling, ser inngangen like komplett ut med ett kall
-  som med to
-- at **ingen kommando sender ut researchagenter**. Researchen er saksløpets steg
-  4; en kommando som gjorde den ville hatt egne steg som kan drifte fra
-  ferdighetens. (Sjekken leter etter agentnavnet, så dette avsnittet omtaler den
-  uten å nevne det.), mens koblingen til ukas egen produksjon er borte
-- at **hjelpen nevner hver kommando, agent og ferdighet som finnes**. Komponentene
-  oppdages fra mappa, så en ny inngang sier ikke fra noe sted — den blir bare
-  usynlig i `kasus:hjelp`, og journalisten konkluderer med at den ikke finnes
-- at `kasus.mjs --list --json` oppfyller manifest-kontrakten, og at **alle modi
-  kommandoene refererer til finnes** — en modus som får nytt navn blir en rød test
-  her framfor en kommando som feiler hos brukeren
-- enhetstestene (`node --test`), som blant annet holder fast på at nøkkelen ikke
-  lekker i output, at maskeringen tar dybden uten å spise `keyFigures`, og at
-  pagineringen sier fra når taket er nådd
-- at env-suffikset er identisk i shell og JS — de har driftet fra hverandre før
-- at ingen skrivende HTTP-metode finnes i `scripts/`
+- at **alle MCP-verktøy tekstene refererer til finnes** på serveren — et verktøy
+  som får nytt navn blir en rød test her framfor et kall som feiler hos brukeren
+- at bare saksløpet flytter kvitteringen, at ingen kommando eller agent kvitterer
+  eller lagrer i det hele tatt, og at agentene ikke har skriveverktøy — et løfte i
+  en prompt er lett å bryte i en senere redigering
+- at saksløpet faktisk kvitterer og lagrer, og krever et signal
+- at `/kasus:start` henter alle fire kildene og sier at lista er rå
+- at **ingen kommando sender ut researchagenter**
+- at **hjelpen nevner hver kommando, agent og ferdighet som finnes**, og selv ikke
+  henter noe
+- at pluginen ikke har Node-kode igjen
 
-Med `--live` i tillegg: et ekte kall mot `/api/v1/profile` (som også sier hvilken
-organisasjon nøkkelen tilhører), et kall mot `/api/v1/signals`, og en
-verifisering av at **serveren** avviser `POST` mot en v1-rute. Det siste er
-poenget: at pluginen ikke prøver å skrive er noe pluginen selv hevder — at ruten
-ikke finnes, er noe serveren svarer.
+Med `--live` i tillegg — gjør disse kallene selv, i samme melding, etter skriptet:
 
-`--live` krever `KASUS_API_KEY`. Feiler den på tilkobling, kjør `/kasus:env` før
-du konkluderer.
+```
+get_organization {}
+get_new_signals { "limit": 1 }
+list_radar_signals { "limit": 1 }
+list_articles { "limit": 1 }
+```
 
-Rapporter resultatet som det er. Feiler noe, si hvilken fil som må endres — ikke
-bare at testen er rød.
+Rapporter: hvilken organisasjon tilkoblingen tilhører, om `auth.canWrite` er sann
+(uten den kan saksløpet verken kvittere eller lagre), og om hvert kall svarte. En
+tom artikkelliste er ikke en feil, men si at organisasjonen ikke har artikler
+synkronisert — saksløpets dekningssjekk har da ingenting å lese. `--live`
+kvitterer og lagrer ALDRI: en test som flyttet «siden sist» ville spist
+redaksjonens saksløp.
+
+Feiler et kall, kjør `/kasus:env` før du konkluderer.
+
+Rapporter resultatet som det er. Feiler noe i skriptet, si hvilken fil som må
+endres — ikke bare at testen er rød.

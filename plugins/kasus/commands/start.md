@@ -1,11 +1,11 @@
 ---
 description: Kom i gang — henter siste døgn av alt (radarsignaler, Kasus' egne story-briefs og redaksjonens egne artikler, pluss «nytt siden sist»), eller helt tilbake til forrige kvittering om det er lenger siden, legger det fram slik det er, og spør hva du vil gjøre: en oppfølger, en dybdeartikkel eller et spørsmål. `--hours N` overstyrer alle fire. Bearbeider ingenting, utfører ingenting
 argument-hint: [--hours 72] [--all]
-allowed-tools: ["Bash", "Agent", "Task", "AskUserQuestion"]
+allowed-tools: ["mcp__plugin_kasus_kasus__get_new_signals", "mcp__plugin_kasus_kasus__list_radar_signals", "mcp__plugin_kasus_kasus__list_story_briefs", "mcp__plugin_kasus_kasus__list_articles", "Agent", "Task", "AskUserQuestion"]
 ---
 
 Legg fram **materialet slik det ligger**, og kom i gang. Fire kall og **ett
-spørsmål** — ingen agent, ingen research, ingen fil på disk, **ingen kvittering.**
+spørsmål** — ingen agent, ingen research, ingenting lagret, **ingen kvittering.**
 
 Kommandoen henter **siste døgn** av tre ting journalisten ellers måtte be om hver
 for seg: radarens signaler, **Kasus' egne story-briefs** (forslagene
@@ -27,52 +27,53 @@ Vil journalisten ha det luket, finnes `kasus-triage` — se «Merk».
 ## 1. Hent statusen først, så listene
 
 To runder, og det er ikke en forglemmelse: **vinduet kommer fra kvitteringen**, og
-den er det bare `nytt` som kjenner.
+den er det bare `get_new_signals` som kjenner. Alle kallene går til Kasus'
+MCP-server — notasjonen står i
+[`references/kasus-mcp.md`](../references/kasus-mcp.md).
 
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs nytt $ARGUMENTS --json
+```
+get_new_signals {}            # med { "hours": N } hvis $ARGUMENTS har --hours N,
+                              # og { "include_dismissed": true } hvis --all
 ```
 
 Regn ut vinduet `V` etter **vindusregelen** — den står i
 [`references/vindu.md`](../references/vindu.md), og skal leses derfra framfor å
 gjengis her: `V = brukerens --hours N` hvis oppgitt, ellers
-`max(24, meta.vindu.hours)`. Døgnet er et **gulv**, ikke et tak.
+`max(24, window.hours)`. Døgnet er et **gulv**, ikke et tak.
 
-Hent så de tre listene i **samme melding**, alle med `--hours V`:
+Hent så de tre listene i **samme melding**, alle med `"hours": V`:
 
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs signals --kort --hours V --limit 100
-node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs story-briefs --hours V --limit 40
-node ${CLAUDE_PLUGIN_ROOT}/scripts/kasus/kasus.mjs articles --kort --hours V --limit 60
 ```
-
-Jobbes det mot et annet miljø, skal `--env <navn>` med på **alle fire**.
+list_radar_signals { "hours": V, "limit": 100 }
+list_story_briefs  { "hours": V, "limit": 40 }
+list_articles      { "hours": V, "limit": 60, "publication": "published" }
+```
 
 | Kall | Vindu | Tak |
 |---|---|---|
-| `nytt` | mot kvitteringen (24 t om den mangler) | `--limit`, default 40 |
-| `signals --kort` | `V` | maks 100 |
-| `story-briefs` | `V` | maks 40 |
-| `articles --kort` | `V` | maks 60 |
+| `get_new_signals` | mot kvitteringen (24 t om den mangler) | `limit`, default 40 |
+| `list_radar_signals` | `V` | 100 |
+| `list_story_briefs` | `V` | 40 |
+| `list_articles` | `V` | 60 |
 
 **Perioden skal stå i svaret**, og den skal være den faktiske: «siste døgn» når
 `V` er 24, «siste fem døgn — siden du kvitterte tirsdag» når kvitteringen hevet
 den. En periode som ikke sies, leses som «alt».
 
 Takene er satt over normalt døgnvolum. Vokser `V`, binder de oftere: en radar som
-leverer seksti signaler i døgnet fyller `--limit 100` på under to døgn. Er
-`taketNådd` sann, mangler svaret data — **si det, og hev `--limit`** framfor å
-krympe vinduet. Det er nettopp de gamle usette signalene gulvet skulle fange. I
+leverer seksti signaler i døgnet fyller 100 på under to døgn. Er `nextCursor`
+satt (eller `truncated` sann på `get_new_signals`), mangler svaret data — **si
+det, og hent neste side** framfor å krympe vinduet. Det er nettopp de gamle usette signalene gulvet skulle fange. I
 tråden er formen «det kan finnes mer enn dette»; flagget er ditt.
 
-Tre svar fra `nytt` krever noe annet enn å gå videre:
+Tre svar fra `get_new_signals` krever noe annet enn å gå videre:
 
-- **`MANGLER: …`** — oppsettet er ikke på plass. Da feiler alle fire likt. Si hva
-  som mangler, foreslå `/kasus:env`, og stopp.
-- **`nye: 0`** — ingenting nytt **siden sist**. Det er ikke det samme som at det
+- **Verktøyet finnes ikke, eller kallet feiler på tilgang** — tilkoblingen er
+  ikke på plass. Da feiler alle fire likt. Si det, foreslå `/kasus:env`, og stopp.
+- **`count: 0`** — ingenting nytt **siden sist**. Det er ikke det samme som at det
   ikke ligger noe der: de tre listene svarer på det andre spørsmålet, og de kan
   være fulle. Si når det sist ble kvittert, og gå videre.
-- **`kvittering: null`** — første gang. Si at «nytt siden sist» derfor betyr siste
+- **`checkpoint: null`** — første gang. Si at «nytt siden sist» derfor betyr siste
   24 timer, og at en kvittering til slutt gjør det presist neste gang.
 
 ## 2. Fire svar som måler fire forskjellige ting
@@ -82,33 +83,33 @@ det samme i de tre listene.**
 
 | Kall | `hours` måles mot | Et tomt svar betyr |
 |---|---|---|
-| `signals` | `detectedAt` — når radaren **fant** signalet | radaren har ikke funnet noe det siste døgnet |
-| `story-briefs` | `createdAt` — når **Kasus laget** briefen | pipelinen har ikke laget noe det siste døgnet |
-| `articles` | `published` — når **redaksjonen publiserte** | redaksjonen har ikke publisert det siste døgnet |
+| `list_radar_signals` | `detectedAt` — når radaren **fant** signalet | radaren har ikke funnet noe det siste døgnet |
+| `list_story_briefs` | `createdAt` — når **Kasus laget** briefen | pipelinen har ikke laget noe det siste døgnet |
+| `list_articles` | `published` — når **redaksjonen publiserte** | redaksjonen har ikke publisert det siste døgnet |
 
 **Er `V` et døgn, er tomt vanlig.** En redaksjon som ikke publiserte i går har
 ikke sluttet å publisere, og pipelinen kjører i puljer — så et tomt felt er et
 fravær i perioden, aldri et fravær i Kasus. Er to av tre tomme, er tiltaket å
-tilby et bredere vindu (`--hours 168`) framfor å konkludere med at det ikke er noe
+tilby et bredere vindu (en uke, `"hours": 168`) framfor å konkludere med at det ikke er noe
 å jobbe med.
 
 Og innad i signalene er `oppdaget` og `publisert` to forskjellige tall: et fritt
 temasøk hentes uavhengig av publiseringstidspunkt, så et signal oppdaget i dag kan
-være en sak fra 2023. Er det merket `GAMMEL SAK`, si det.
+være en sak fra 2023. Er `storyAge` `stale`, si at det er en gammel sak.
 
-Fra `nytt` er det tre ting som ER statusen: **hvor lenge det er siden du så på
-dette sist**, **hvor mye som er nytt av det som ligger der**, og **`fordeling`** —
+Fra `get_new_signals` er det tre ting som ER statusen: **hvor lenge det er siden du så på
+dette sist**, **hvor mye som er nytt av det som ligger der**, og **`patternDistribution`** —
 hva funnene handler om, flest først. Den ene linja som svarer på «hva skjer» uten
 at man leser sju signaler, og den sies med temaene i klartekst: «tolv om
 boligmarkedet, åtte om samferdsel». En topp på «uten mønstertreff» er også en
 opplysning — sagt som «og elleve som ikke ligner på noe dere pleier å dekke».
 
-Signal-id-ene fra `nytt` brukes til én ting: å **merke** hvilke av signalene i den
+Signal-id-ene fra `get_new_signals` brukes til én ting: å **merke** hvilke av signalene i den
 rå lista som er nye siden sist. Merkingen er et ord i tråden — «ny siden i går» —
 ikke en id. Et signal som lå der forrige gang også er fortsatt en sak: det skal
 med, men det skal sies.
 
-Alle id-ene fra `nytt` **skal** finnes i signal-lista, fordi vinduet er minst så
+Alle id-ene derfra **skal** finnes i signal-lista, fordi vinduet er minst så
 bredt som «siden sist» (vindusregelen). Finner du likevel en id som ikke er der,
 er taket nådd på lista — ikke en feil i merkingen. Si det framfor å utelate
 signalet i stillhet.
@@ -132,7 +133,7 @@ Bolkene i denne rekkefølgen — nærmest redaksjonens eget arbeid først:
    eget CMS — Labrador hos de fleste — og bare det som er **publisert**: ruten
    sorterer kladder bakerst, så de faller utenfor i det øyeblikket taket nås.
    Lista er «hva vi publiserte», ikke «hva noen sitter og jobber med»; kladdene er
-   et eget oppslag (`articles --status D`). Alle, om det er få — er `V` et døgn, er
+   et eget oppslag (`"publication": "unpublished"`). Alle, om det er få — er `V` et døgn, er
    det gjerne en håndfull. Tittel, når den ble publisert, og lenka. Dette er det
    billigste utgangspunktet som finnes: vinklingen er alt gjort, og det som mangler
    er det nye. Én linje om bildet: «sju saker i går, tyngst på samferdsel».
@@ -157,7 +158,7 @@ Bolkene i denne rekkefølgen — nærmest redaksjonens eget arbeid først:
    opp på, og det er i seg selv en grunn til å prioritere det ned.
 3. **FORSLAG SOM ALT LIGGER I KASUS.** De tre-fem nyeste, med tittel og vinklingen
    i én linje. Si hva de ER: forslag innholdspipelinen har laget inne i Kasus,
-   ikke saksforslagene pluginen skriver på disk, og **ikke etterprøvd av noen** —
+   ikke saksforslagene journalistene lagrer fra saksløpet, og **ikke etterprøvd av noen** —
    plottet, vinklingen og begrunnelsen er skrevet av en modell. Kildelenkene er det
    eneste i en brief som peker utenfor Kasus — det er der etterprøvingen begynner.
    Er et av dem uten tittel, er det en kandidat ingen har skrevet ut ennå; si det
@@ -198,7 +199,7 @@ liggende ubesvart. Alternativene bygges på hva som faktisk sto på skjermen:
 | **alt tomt** | se en uke tilbake · ta med det som er forkastet · sjekk oppsettet · ikke nå |
 
 **Alternativene sier hva som skal gjøres, i journalistens ord.** Flagget som får
-det til å skje — `--hours 168`, `--all` — setter du selv etterpå; det er ikke noe
+det til å skje — `"hours": 168`, `"include_dismissed": true` — setter du selv etterpå; det er ikke noe
 hun skal velge mellom. `/kasus:env` er unntaket: den skriver hun selv, så den kan
 nevnes ved navn.
 
@@ -207,8 +208,8 @@ kilder på — legg det først og si hvorfor. Det er den billigste gode saken so
 finnes.
 
 **Spørsmålet gjelder hva som skal GJØRES, ikke hvilken sak som skal skrives.**
-Valget av sak hører i ferdigheten, der et valg fører til research, en fil på disk
-og en kvittering. Her velges bare inngangen:
+Valget av sak hører i ferdigheten, der et valg fører til research, et lagret
+saksforslag og en kvittering. Her velges bare inngangen:
 
 | Svaret | Hvem tar over |
 |---|---|
@@ -247,9 +248,8 @@ ingenting — så det koster ett kall, mot to ulike start-tilstander å virke i.
   er det et døgn; har det ligget en uke, er det en uke — se
   [`references/vindu.md`](../references/vindu.md). Døgn-gulvet er rullerende og
   ikke «siden midnatt», og de tre listene kjenner ingen kvittering: hva som er NYTT
-  mellom to kjøringer er det bare `nytt` som svarer på.
-- Header-linja sier hvilken installasjon og nøkkel-variabel som ble brukt.
-  **Nøkkelen avgjør organisasjonen** — «ingenting» betyr «ingenting for DENNE
+  mellom to kjøringer er det bare `get_new_signals` som svarer på.
+- **Tilkoblingen avgjør organisasjonen** — «ingenting» betyr «ingenting for DENNE
   organisasjonen», aldri «ingenting i Kasus».
-- Mangler `KASUS_API_KEY`, stopper alle fire kallene med `MANGLER: …`. Kjør
-  `/kasus:env`.
+- Er Kasus ikke tilkoblet, finnes ikke verktøyene, og alle fire kallene stopper.
+  Kjør `/kasus:env`.
