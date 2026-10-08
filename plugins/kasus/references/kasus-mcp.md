@@ -94,7 +94,7 @@ Det ENESTE som kjenner kvitteringen. Leser, skriver ingenting.
 | `patternDistribution` | Antall per `matchedPattern`, flest først, med «uten mønstertreff» for seg |
 | `staleStories` | Signalene der saken er gammel selv om signalet er ferskt |
 | `signals` | Sammendragene |
-| `ack` | `{ at, ids }` — kvitteringen som skal brukes hvis saksløpet fullføres |
+| `ack` | Argumentene til `acknowledge_signals` hvis saksløpet fullføres, og de sendes uendret: `{ at, ids }`, eller `{ ids, ids_only: true }` når lista er avkortet — da ville et tidspunkt svelget eldre usette signaler |
 
 ### Story-briefs er et OPPSLAG, ikke en inngang
 
@@ -151,12 +151,13 @@ journalist. Et saksløp én journalist fullfører, flytter «siden sist» for al
 
 | Kall | Virkning |
 |---|---|
-| `acknowledge_signals { "at": ack.at, "ids": ack.ids }` | Saksløpets kvittering: alt oppdaget før `at` er sett, pluss id-ene |
+| `acknowledge_signals` med `ack` fra `get_new_signals`, uendret | Saksløpets kvittering: det som ble vist er sett — og når lista var hel, alt oppdaget før `at` |
 | `acknowledge_signals { "ids": ["<id>"], "ids_only": true }` | Bare disse id-ene er sett; tidspunktet står. Trygt når bare én sak ble behandlet |
 | `acknowledge_signals {}` | Alt oppdaget før NÅ er sett — også det ingen fikk se. Sies alltid |
 | `acknowledge_signals { "reset": true }` | Kvitteringen fjernes; neste saksløp ser siste døgn |
 
-`at` kan ikke ligge fram i tid (en tastefeil i årstallet ville slått av saksløpet
+Tidspunktet flyttes aldri bakover (bare `reset` gjør det), og samtidige kvitteringer
+fra flere journalister overskriver ikke hverandre. `at` kan ikke ligge fram i tid (en tastefeil i årstallet ville slått av saksløpet
 i stillhet). `unknownIds` i svaret er id-er som ikke finnes i organisasjonen og
 ble ignorert. Inntil 300 id-er huskes.
 

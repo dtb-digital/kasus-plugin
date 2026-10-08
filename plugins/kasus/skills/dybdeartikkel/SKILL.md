@@ -538,11 +538,14 @@ behandlet:
 
 | Alternativet han ser | Kallet du gjør | Betyr |
 |---|---|---|
-| «Regn resten som sett» | `acknowledge_signals { "at": <ack.at>, "ids": <ack.ids> }` | Alt som ble vist er sett. Neste saksløp starter her — for hele redaksjonen. |
+| «Regn resten som sett» | `acknowledge_signals` med `ack` som argumenter, uendret | Alt som ble vist er sett. Neste saksløp starter her — for hele redaksjonen. |
 | «La resten ligge til neste gang» | — | De ubehandlede kommer igjen neste saksløp. |
 
-`ack` i svaret fra `get_new_signals` i steg 1 har tidspunktet og id-ene ferdig.
-Bruk dem ordrett — ikke lag et tidspunkt selv.
+`ack` i svaret fra `get_new_signals` i steg 1 er argumentene ferdig utfylt. Send
+dem ordrett — ikke lag et tidspunkt selv, og ikke legg til et. Var lista
+avkortet, har `ack` `ids_only` og ikke noe tidspunkt: da ligger det eldre usette
+signaler i vinduet, og en tidspunkt-kvittering ville svelget dem. Si det i så
+fall — «det kan finnes mer enn det vi så, og det kommer igjen neste gang».
 
 **Saksløpet kan kjøres på nytt umiddelbart.** Kom det inn noe mens dere jobbet, viser
 et nytt saksløp det nå; ellers sier den at det ikke er noe nytt. Det er den normale
